@@ -688,7 +688,7 @@ void r_scroll_end(r_ui_list* parent, r_ui_list* v)
 	if(v->has_scrollbar)
 	{
 		r_style(parent, track, R_STYLE_SCROLLBAR | R_VARIANT_VERT | R_COMPONENT_TRACK);
-		r_drawable_thumb(parent, r_style(parent, thumb, R_STYLE_SCROLLBAR | R_VARIANT_VERT | R_COMPONENT_THUMB), R_PTR(&v->scroll_y), 0, data.max_scroll, track, R_TOP);
+		r_drawable* thumb_d = r_drawable_thumb(parent, r_style(parent, thumb, R_STYLE_SCROLLBAR | R_VARIANT_VERT | R_COMPONENT_THUMB), R_PTR(&v->scroll_y), 0, data.max_scroll, track, R_TOP);
 
 		for(int i = 0; cap && i < 2; i++)
 		{
@@ -702,6 +702,7 @@ void r_scroll_end(r_ui_list* parent, r_ui_list* v)
 		r_callback* press = r_attach_callback(parent, track, R_MOUSE_PRESSED, scroll_track_press);
 		r_callback_share_data(parent, press, wheel);
 		r_callback* start = r_attach_callback(parent, thumb, R_MOUSE_DRAG_START, scroll_thumb_drag);
+		start->parent->dynamic = thumb_d->dynamic;
 		if(r_copy_last_frame_data(parent, start)) data.drag_start = ((struct scroll_data*)start->data)->drag_start;
 		r_callback_set_data(parent, start, &data, sizeof(data));
 		r_callback* move = r_attach_callback(parent, thumb, R_MOUSE_DRAG_MOVE, scroll_thumb_drag);

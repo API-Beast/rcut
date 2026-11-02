@@ -92,7 +92,7 @@ static r_interact* list_hit(r_context* c, r_ui_list* l, uint64_t target, float x
 	{
 		r_interact* it = &l->interact_items[j];
 		if(!should_receive_mouse_event(c, it)) continue;
-		if(point_in(it->r, cx, cy)) hit = it;
+		if(point_in(r_dynamic_rect(it->dynamic, it->r), cx, cy)) hit = it;
 	}
 	return hit;
 }
@@ -142,8 +142,9 @@ static r_event make_mouse_event(r_context* c, r_interact* it, float x, float y)
 	e.mouse_button = c->mouse_buttons;
 	float cx, cy; xform_from_target(l, x, y, &cx, &cy);
 	e.list_mouse_x = cx; e.list_mouse_y = cy;
-	e.rect_mouse_x = cx - it->r.x;
-	e.rect_mouse_y = cy - it->r.y;
+	rect r = r_dynamic_rect(it->dynamic, it->r);
+	e.rect_mouse_x = cx - r.x;
+	e.rect_mouse_y = cy - r.y;
 	xform_from_target(l, c->drag_origin_x, c->drag_origin_y, &e.drag_start_x, &e.drag_start_y);
 	e.drag_delta_x = x - c->drag_origin_x;
 	e.drag_delta_y = y - c->drag_origin_y;

@@ -786,29 +786,27 @@ void r_callback_share_data(r_ui_list* l, r_callback* dst, r_callback* src)
 	}
 }
 
-static float dynamic_fraction(const r_dynamic_drawable_data* y)
+static float dynamic_fraction(const r_dynamic_rect_data* y)
 {
 	float min = y->aligned.min, max = y->aligned.max;
 	return max != min ? clampf(((float)r_getd(y->binding) - min) / (max - min), 0.0f, 1.0f) : 0.0f;
 }
 
-r_drawable r_drawable_eval(r_context* c, const r_drawable* d)
+rect r_dynamic_rect(const r_dynamic_rect_data* y, rect r)
 {
-	r_drawable out = *d;
-	const r_dynamic_drawable_data* y = d->dynamic;
-	if(!y) return out;
+	if(!y) return r;
 	switch(y->kind)
 	{
-		case R_DRAWABLE_ALIGNED:
+		case R_DYN_ALIGNED:
 		{
 			rect a = y->aligned.area;
 			float t = dynamic_fraction(y);
 			if(y->aligned.from & (R_RIGHT | R_BOTTOM)) t = 1.0f - t;
-			if(y->aligned.from & (R_LEFT | R_RIGHT)) out.r.x = (int)(a.x + (a.w - d->r.w) * t);
-			else                                     out.r.y = (int)(a.y + (a.h - d->r.h) * t);
+			if(y->aligned.from & (R_LEFT | R_RIGHT)) r.x = (int)(a.x + (a.w - r.w) * t);
+			else                                     r.y = (int)(a.y + (a.h - r.h) * t);
 			break;
 		}
-		case R_DRAWABLE_FILLED:
+		case R_DYN_FILLED:
 		{
 			rect a = y->filled.area;
 			float t = dynamic_fraction(y);
@@ -816,10 +814,22 @@ r_drawable r_drawable_eval(r_context* c, const r_drawable* d)
 			if(y->filled.from & R_RIGHT)  a.x += a.w - w;
 			if(y->filled.from & R_BOTTOM) a.y += a.h - h;
 			if(y->filled.from & (R_LEFT | R_RIGHT)) a.w = w; else a.h = h;
-			out.r = (rect){ a.x, a.y, a.w, a.h, d->r.id };
+			r = (rect){ a.x, a.y, a.w, a.h, r.id };
 			break;
 		}
-		case R_DRAWABLE_TOGGLED:
+	}
+	return r;
+}
+
+r_drawable r_drawable_eval(r_context* c, const r_drawable* d)
+{
+	r_drawable out = *d;
+	const r_dynamic_rect_data* y = d->dynamic;
+	if(!y) return out;
+	out.r = r_dynamic_rect(y, d->r);
+	switch(y->kind)
+	{
+		case R_DYN_TOGGLED:
 		{
 			int64_t v = r_geti(y->binding);
 			bool on = y->toggled.set_value ? v == y->toggled.value : v != 0;
@@ -827,7 +837,7 @@ r_drawable r_drawable_eval(r_context* c, const r_drawable* d)
 			if(y->toggled.icon) out.icon = on ? y->toggled.icon : R_ICON_NONE;
 			break;
 		}
-		case R_DRAWABLE_CUSTOM: y->custom.update(c, &out); break;
+		case R_DYN_CUSTOM: y->custom.update(c, &out); break;
 	}
 	return out;
 }
@@ -837,7 +847,7 @@ static bool is_bound(r_data_binding b)
 	return b.use_function_indirection ? b.getter != NULL : b.ptr != NULL;
 }
 
-static r_drawable* set_dynamic(r_ui_list* l, r_drawable* d, r_dynamic_drawable_data y)
+static r_drawable* set_dynamic(r_ui_list* l, r_drawable* d, r_dynamic_rect_data y)
 {
 	if(is_bound(y.binding)) y.drawn = r_getd(y.binding);
 	d->dynamic = r_storage_alloc(l, sizeof(y));
@@ -847,32 +857,32 @@ static r_drawable* set_dynamic(r_ui_list* l, r_drawable* d, r_dynamic_drawable_d
 
 r_drawable* r_drawable_thumb(r_ui_list* l, r_drawable* d, r_data_binding binding, float min, float max, rect area, r_alignment from)
 {
-	return set_dynamic(l, d, (r_dynamic_drawable_data){ R_DRAWABLE_ALIGNED, binding, .aligned = { area, min, max, from } });
+	return set_dynamic(l, d, (r_dynamic_rect_data){ R_DYN_ALIGNED, binding, .aligned = { area, min, max, from } });
 }
 
 r_drawable* r_drawable_fill(r_ui_list* l, r_drawable* d, r_data_binding binding, float min, float max, rect area, r_alignment from)
 {
-	return set_dynamic(l, d, (r_dynamic_drawable_data){ R_DRAWABLE_FILLED, binding, .filled = { area, min, max, from } });
+	return set_dynamic(l, d, (r_dynamic_rect_data){ R_DYN_FILLED, binding, .filled = { area, min, max, from } });
 }
 
 r_drawable* r_drawable_toggled(r_ui_list* l, r_drawable* d, r_data_binding binding, int64_t value, bool set_value, int state, int icon)
 {
-	return set_dynamic(l, d, (r_dynamic_drawable_data){ R_DRAWABLE_TOGGLED, binding, .toggled = { value, set_value, state, icon } });
+	return set_dynamic(l, d, (r_dynamic_rect_data){ R_DYN_TOGGLED, binding, .toggled = { value, set_value, state, icon } });
 }
 
 r_drawable* r_drawable_custom(r_ui_list* l, r_drawable* d, r_data_binding binding, void (*update)(r_context* c, r_drawable* d), void* data)
 {
-	return set_dynamic(l, d, (r_dynamic_drawable_data){ R_DRAWABLE_CUSTOM, binding, .custom = { update, data } });
+	return set_dynamic(l, d, (r_dynamic_rect_data){ R_DYN_CUSTOM, binding, .custom = { update, data } });
 }
 
 bool r_drawable_take_change(r_drawable* d, rect* damage)
 {
-	r_dynamic_drawable_data* y = d->dynamic;
+	r_dynamic_rect_data* y = d->dynamic;
 	if(!y || !is_bound(y->binding)) return false;
 	double v = r_getd(y->binding);
 	if(v == y->drawn) return false;
 	y->drawn = v;
-	*damage = y->kind == R_DRAWABLE_ALIGNED || y->kind == R_DRAWABLE_FILLED ? rect_expand(y->aligned.area, d->r) : d->r;
+	*damage = y->kind == R_DYN_ALIGNED || y->kind == R_DYN_FILLED ? rect_expand(y->aligned.area, d->r) : d->r;
 	return true;
 }
 

@@ -242,6 +242,8 @@ typedef struct r_interact
 	struct r_interact* previous_focus; // Switch to this element on pressing Shift-Tab.
 	// Arrow key focus.
 	struct r_interact* directional_focus[4]; // Switch to this element when pressing Up/Left/Down/Right
+
+	struct r_dynamic_rect_data* dynamic;
 } r_interact;
 
 typedef struct r_drawable
@@ -257,7 +259,7 @@ typedef struct r_drawable
 	bool    wrap_text;
 	void*   text_cache;
 
-	struct r_dynamic_drawable_data* dynamic;
+	struct r_dynamic_rect_data* dynamic;
 } r_drawable;
 
 typedef enum r_modifier_flags
@@ -709,16 +711,16 @@ int64_t r_geti(r_data_binding binding);
 void    r_setd(r_data_binding binding, double value);
 double  r_getd(r_data_binding binding);
 
-typedef enum r_dynamic_drawable_kind
+typedef enum r_dynamic_rect_kind
 {
-	R_DRAWABLE_STATIC,  // No custom update.
-	R_DRAWABLE_ALIGNED, // Align by fraction.
-	R_DRAWABLE_FILLED,  // Stretch by fraction.
-	R_DRAWABLE_TOGGLED, // Draw with state if toggled.
-	R_DRAWABLE_CUSTOM,  // Custom update function.
-} r_dynamic_drawable_kind;
+	R_DYN_STATIC,  // No custom update.
+	R_DYN_ALIGNED, // Align by fraction.
+	R_DYN_FILLED,  // Stretch by fraction.
+	R_DYN_TOGGLED, // Draw with state if toggled.
+	R_DYN_CUSTOM,  // Custom update function.
+} r_dynamic_rect_kind;
 
-typedef struct r_dynamic_drawable_data
+typedef struct r_dynamic_rect_data
 {
 	uint8_t kind;
 	r_data_binding binding;
@@ -728,8 +730,9 @@ typedef struct r_dynamic_drawable_data
 		struct{ int64_t value; bool set_value; int state; int icon; } toggled;
 		struct{ void (*update)(r_context* c, r_drawable* d); void* data; } custom;
 	};
-} r_dynamic_drawable_data;
+} r_dynamic_rect_data;
 
+rect        r_dynamic_rect    (const r_dynamic_rect_data* y, rect r);
 r_drawable  r_drawable_eval   (r_context* c, const r_drawable* d);
 r_drawable* r_drawable_thumb  (r_ui_list* l, r_drawable* d, r_data_binding binding, float min, float max, rect area, r_alignment from);
 r_drawable* r_drawable_fill   (r_ui_list* l, r_drawable* d, r_data_binding binding, float min, float max, rect area, r_alignment from);
