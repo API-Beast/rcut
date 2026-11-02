@@ -1,0 +1,59 @@
+#pragma once
+#include "rcut_draw.h"
+#include <SDL3/SDL.h>
+
+#define RCUT_SDL_MAX_WINDOWS 128
+#define RCUT_SDL_CACHE_PIXELS (2048 * 2048) // Software cache shared by all windows, it must hold everything a frame uses.
+
+typedef struct r_sdl_window
+{
+	SDL_Window*  window;
+	SDL_Surface* convert;
+	int      domain;
+	int      x, y;
+	bool     used;
+	bool     close_requested;
+	int      parent;
+	int      w, h;
+	void*    drawn;
+	int      drawn_x, drawn_y, drawn_w, drawn_h;
+} r_sdl_window;
+
+typedef struct r_sdl_frontend
+{
+	r_draw    draw;
+	r_context context;
+	r_draw_software software;
+
+	r_sdl_window windows[RCUT_SDL_MAX_WINDOWS];
+	r_ui_list* root;
+	uint64_t last_tick_time;
+	bool no_popup_windows;
+	bool quit_requested;
+	SDL_Window* text_input_window;
+	bool auto_scale;
+	char* clipboard;
+	int   cursor;
+	SDL_Cursor* cursors[8];
+} r_sdl_frontend;
+
+enum r_sdl_flags
+{
+	R_SDL_RESIZABLE = 1 << 0,
+};
+
+r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags);
+void r_sdl_free  (r_sdl_frontend* c);
+bool r_sdl_process_event(r_sdl_frontend* c, SDL_Event* e);
+bool r_sdl_quit_requested(r_sdl_frontend* c, bool clear);
+r_ui_list* r_sdl_dialog(r_sdl_frontend* c, uint64_t root_id, int w, int h, char* title);
+bool r_sdl_close_requested(r_sdl_frontend* c, r_ui_list* dialog, bool clear);
+void r_sdl_update(r_sdl_frontend* c);
+void r_sdl_render_ui(r_sdl_frontend* c);
+void r_sdl_set_scale(r_sdl_frontend* c, float scale);
+
+r_ui_list* r_sdl_make_sublist(r_sdl_frontend* c, r_ui_list* parent, rect r);
+r_ui_list* r_sdl_make_popup  (r_sdl_frontend* c, r_ui_list* parent, rect r);
+void       r_sdl_delete_list (r_sdl_frontend* c, r_ui_list* to_delete);
+void       r_sdl_hide_list   (r_sdl_frontend* c, r_ui_list* to_hide);
+void       r_sdl_show_list   (r_sdl_frontend* c, r_ui_list* to_show);
