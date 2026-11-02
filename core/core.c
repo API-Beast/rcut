@@ -414,8 +414,11 @@ static void r_context_insert_into_chain(r_context* c, r_ui_list* new)
 r_ui_list* r_create_ui_list(r_context* c, uint64_t target, uint64_t root_id, int width, int height)
 {
 	r_ui_list* l = NULL;
+
 	for(int i = 0; i < c->count_ui_lists && !l; i++)
-		if(c->ui_lists[i].context == NULL) l = &c->ui_lists[i];
+	if(c->ui_lists[i].context == NULL)
+		l = &c->ui_lists[i];
+
 	if(!l) l = c->ui_lists + c->count_ui_lists++;
 	r_ui_list keep = *l;
 	memset(l, 0, sizeof(r_ui_list));
@@ -459,8 +462,11 @@ static r_ui_list* create_ephemeral(r_ui_list* parent, rect root, uint64_t target
 {
 	r_context* c = parent->context;
 	r_ui_list* l = NULL;
+
 	for(int i = 0; i < c->count_ephemeral && !l; i++)
-		if(c->ephemeral[i].context == NULL) l = &c->ephemeral[i];
+	if(c->ephemeral[i].context == NULL)
+		l = &c->ephemeral[i];
+
 	if(!l)
 	{
 		bool success = pbuffer_ensure(&c->ephemeral_buffer, (size_t)(c->count_ephemeral + 1) * sizeof(r_ui_list));
@@ -644,20 +650,25 @@ void r_list_clear(r_ui_list* l)
 	hash_clear(&l->id_hash[np]);
 
 	r_context* c = l->context;
+
 	for(int i = 0; i < c->count_ephemeral; i++)
-		if(c->ephemeral[i].context && c->ephemeral[i].ephemeral_parent == l)
-		{
-			c->ephemeral[i].is_marked_as_unused = true;
-			l->needs_ephemeral_sweep = true;
-		}
+	if(c->ephemeral[i].context && c->ephemeral[i].ephemeral_parent == l)
+	{
+		c->ephemeral[i].is_marked_as_unused = true;
+		l->needs_ephemeral_sweep = true;
+	}
 }
 
 rect r_list_get_content_rect(r_ui_list* l)
 {
 	rect result = (rect){0};
-	if(l->count_draw_items >= 1) result = l->draw_items[0].r;
+	
+	if(l->count_draw_items >= 1)
+		result = l->draw_items[0].r;
+
 	for(int i = 1; i < l->count_draw_items; i++)
 		result = rect_expand(result, l->draw_items[i].r);
+		
 	return result;
 }
 
@@ -670,8 +681,10 @@ void r_list_get_transform(r_ui_list* l, int* ox, int* oy, rect* clip)
 		*clip = l->root_area;
 		return;
 	}
+
 	int px, py; rect pclip;
 	r_list_get_transform(l->ephemeral_parent, &px, &py, &pclip);
+	
 	if(l->is_viewport)
 	{
 		rect area = r_offset(l->root_area, px, py);
@@ -689,7 +702,9 @@ void r_list_get_transform(r_ui_list* l, int* ox, int* oy, rect* clip)
 bool r_list_is_visible(r_ui_list* l)
 {
 	for(; l; l = l->ephemeral_parent)
-		if(l->is_hidden) return false;
+	if(l->is_hidden)
+		return false;
+
 	return true;
 }
 
@@ -935,13 +950,17 @@ r_interact* r_list_find_last_frame_interact(r_ui_list* l, uint64_t id)
 r_drawable* r_list_find_this_frame_drawable(r_ui_list* l, uint64_t id)
 {
 	for(int i = 0; i < l->count_draw_items; i++)
-		if(l->draw_items[i].r.id == id) return &l->draw_items[i];
+	if(l->draw_items[i].r.id == id)
+		return &l->draw_items[i];
+
 	return NULL;
 }
 
 r_drawable* r_list_find_last_frame_drawable(r_ui_list* l, uint64_t id)
 {
 	for(int i = 0; i < l->count_draw_items_last_frame; i++)
-		if(l->draw_items_last_frame[i].r.id == id) return &l->draw_items_last_frame[i];
+	if(l->draw_items_last_frame[i].r.id == id)
+		return &l->draw_items_last_frame[i];
+
 	return NULL;
 }

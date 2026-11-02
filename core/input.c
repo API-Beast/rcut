@@ -190,7 +190,9 @@ static bool widget_dispatch(r_interact* first, r_event_type t, r_event* e)
 {
 	if(first)
 	for(r_interact* it = first; it->r.id == first->r.id; it++)
-		if(r_dispatch(it, t, e)) return true;
+	if(r_dispatch(it, t, e))
+		return true;
+
 	return false;
 }
 
@@ -202,7 +204,9 @@ static bool widget_dispatch_ex(r_interact* first, r_event_type t, r_event e)
 static bool widget_has_callback(r_interact* first, r_event_type type)
 {
 	for(r_interact* it = first; it->r.id == first->r.id; it++)
-		if(has_callback(it, type)) return true;
+	if(has_callback(it, type))
+		return true;
+
 	return false;
 }
 
@@ -222,8 +226,11 @@ static inline bool is_focusable(r_interact* first)
 static r_ui_list* modal_scope(r_context* c)
 {
 	r_ui_list* m = NULL;
+
 	for(r_ui_list* l = c->chain_start; l; l = l->chain_next)
-		if(((l->is_ephemeral && !l->is_viewport && l->block_event_fallthrough) || l->is_modal) && r_list_is_visible(l)) m = l;
+	if(((l->is_ephemeral && !l->is_viewport && l->block_event_fallthrough) || l->is_modal) && r_list_is_visible(l))
+		m = l;
+
 	return m;
 }
 
@@ -680,8 +687,9 @@ uint64_t r_post_key_input(r_context* c, uint64_t target, int32_t keycode, int32_
 	// Hotkeys of context menu entries.
 	for(r_interact* part = key_focus; part->r.id == key_focus->r.id; part++)
 	for(r_callback* cb = part->callbacks; cb; cb = cb->next)
-		if(cb->event == R_CONTEXT && cb->hotkey && cb->hotkey == (uint32_t)keycode && cb->hotkey_modifier == modifier_flags)
-			if(cb->function && cb->function(&e, cb)) return key_focus->r.id;
+	if(cb->event == R_CONTEXT && cb->hotkey && cb->hotkey == (uint32_t)keycode && cb->hotkey_modifier == modifier_flags)
+	if(cb->function && cb->function(&e, cb))
+		return key_focus->r.id;
 
 	bool wants_text = widget_has_callback(key_focus, R_TEXT_INPUT);
 	if(keycode == R_KEY_ENTER || (keycode == R_KEY_SPACE && !wants_text))

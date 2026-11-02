@@ -200,8 +200,11 @@ static int add_box(theme_state* t, const r_draw_stylebox_def* d)
 {
 	static const r_draw_stylebox_def none;
 	if(!memcmp(d, &none, sizeof(*d))) return 0;
+
 	for(int i = 1; i < t->next_slot; i++)
-		if(!memcmp(&t->c->styleboxes[i].definition, d, sizeof(*d))) return i;
+	if(!memcmp(&t->c->styleboxes[i].definition, d, sizeof(*d)))
+		return i;
+
 	if(t->next_slot >= RCUT_DRAW_USER_STYLEBOXES) { assert(false && "theme stylebox slots exhausted"); return 0; }
 	int slot = t->next_slot++;
 	r_draw_generate_stylebox(t->c, slot, (r_draw_stylebox_def*)d);
@@ -372,8 +375,11 @@ static void run(theme_state* t, box* b, r_draw_style_rule* r, const theme_op* o)
 static bool applies(int decl_key, int key)
 {
 	static const int fields[] = { R_STYLE_BASE_MASK, R_VARIANT_MASK, R_COMPONENT_MASK };
+
 	for(int i = 0; i < COUNTOF(fields); i++)
-		if((decl_key & fields[i]) && (decl_key & fields[i]) != (key & fields[i])) return false;
+	if((decl_key & fields[i]) && (decl_key & fields[i]) != (key & fields[i]))
+		return false;
+
 	return !(decl_key & R_STATE_MASK & ~key);
 }
 
@@ -399,14 +405,18 @@ static void make(theme_state* t, int key)
 	}
 	box b = {0};
 	r_draw_style_rule r = {0};
+
 	for(int i = 0; i < n; i++)
-		for(int k = 0; k < list[i]->num_ops; k++) run(t, &b, &r, &list[i]->ops[k]);
+	for(int k = 0; k < list[i]->num_ops; k++)
+		run(t, &b, &r, &list[i]->ops[k]);
 
 	int comp = key & R_COMPONENT_MASK;
 	if(comp == R_COMPONENT_ENDCAP_START || comp == R_COMPONENT_JOINED || comp == R_COMPONENT_ENDCAP_END)
 	{
 		if(!(b.corners[0] || b.corners[1] || b.corners[2] || b.corners[3]))
-			for(int i = 0; i < 4; i++) b.corners[i] = b.radius;
+		for(int i = 0; i < 4; i++)
+			b.corners[i] = b.radius;
+
 		if(comp != R_COMPONENT_ENDCAP_START) b.corners[0] = b.corners[2] = 0.001f;
 		if(comp != R_COMPONENT_ENDCAP_END)   b.corners[1] = b.corners[3] = 0.001f;
 	}
@@ -419,9 +429,10 @@ static void make(theme_state* t, int key)
 		uint32_t roles[] = { p->text_dim, p->text, p->text_strong };
 		for(int k = 0; k < 3; k++) if(*colors[i] == roles[k]) { *colors[i] = text_on(surface, k); break; }
 	}
+
 	for(int i = 0; i < 2; i++)
-		if(*colors[i] && (*colors[i] & 0xFFFFFF) == (p->accent_text & 0xFFFFFF))
-			*colors[i] = (text_on_accent(surface) & 0xFFFFFF) | (*colors[i] & 0xFF000000);
+	if(*colors[i] && (*colors[i] & 0xFFFFFF) == (p->accent_text & 0xFFFFFF))
+		*colors[i] = (text_on_accent(surface) & 0xFFFFFF) | (*colors[i] & 0xFF000000);
 
 	if(r.focus_overlay)
 	{
@@ -593,8 +604,10 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	};
 	#undef ACCENT
 	const r_draw_theme_options* options = &resolved;
+
 	for(int i = 0; i < R_ICON_USER; i++)
-		if(default_icons[i]) c->icons[i].ops = default_icons[i];
+	if(default_icons[i])
+		c->icons[i].ops = default_icons[i];
 
 	hash_clear(&c->style_rules);
 	for(int i = 1; i < RCUT_DRAW_USER_STYLEBOXES; i++)

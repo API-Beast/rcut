@@ -146,8 +146,8 @@ static inline void  hash_resize(r_hashmap* map, int new_num_slots)
 
 	if(old_values != NULL && old_keys != NULL)
 	for(int i = 0; i < old_num_slots; i++)
-		if(old_keys[i] >= 0)
-			memcpy(hash_insert(map, old_keys[i]), (uint8_t*)old_values + i * map->sizeof_value, map->sizeof_value);
+	if(old_keys[i] >= 0)
+		memcpy(hash_insert(map, old_keys[i]), (uint8_t*)old_values + i * map->sizeof_value, map->sizeof_value);
 
 	free(old_values);
 	free(old_keys);
@@ -242,7 +242,9 @@ static inline void r__show_state(r_drawable* d, int state, bool on)
 static inline bool r__is_descendant(r_ui_list* l, r_ui_list* ancestor)
 {
 	for(r_ui_list* p = l->ephemeral_parent; p; p = p->ephemeral_parent)
-		if(p == ancestor) return true;
+	if(p == ancestor)
+		return true;
+
 	return false;
 }
 

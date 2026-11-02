@@ -525,8 +525,11 @@ static bool spin_press(const r_event* e, r_callback* self)
 	if(e->mouse_button != R_MOUSE_LEFT) return false;
 	r_interact* field = r_list_find_this_frame_interact(e->ui_list, self->parent->r.id);
 	struct spin_data* d = NULL;
+
 	for(r_callback* cb = field ? field->callbacks : NULL; cb && !d; cb = cb->next)
-		if(cb->function == spin_key) d = cb->data;
+	if(cb->function == spin_key)
+		d = cb->data;
+
 	if(!d) return false;
 	spin_commit(e, self, d);
 	set_value(d->binding, d->min, d->max, d->step, (float)r_getd(d->binding) + b->direction * spin_step(d->step, 0));

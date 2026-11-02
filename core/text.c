@@ -393,6 +393,8 @@ void r_text_area(r_ui_list* l, rect r, char* buffer, int capacity, char* placeho
 void r_line_edit_on_submit(r_ui_list* l, rect r, void (*on_submit)(char* buffer))
 {
 	r_interact* it = r_list_find_this_frame_interact(l, r.id);
+
 	for(r_callback* cb = it ? it->callbacks : NULL; cb; cb = cb->next)
-		if(cb->function == edit_text_input) ((r_text_edit_state*)cb->data)->on_submit = on_submit;
+	if(cb->function == edit_text_input)
+		((r_text_edit_state*)cb->data)->on_submit = on_submit;
 }

@@ -35,8 +35,11 @@ static void flow_newline(r_layout_iter* s, int min_h)
 {
 	r_ui_list* l = s->l;
 	int h = MAX(s->line_h, min_h), text_h = 0;
+
 	for(int i = s->line_first; i < l->count_draw_items; i++)
-		if(l->draw_items[i].style == R_STYLE_TEXT && !l->draw_items[i].parent_id) text_h = MAX(text_h, l->draw_items[i].r.h);
+	if(l->draw_items[i].style == R_STYLE_TEXT && !l->draw_items[i].parent_id)
+		text_h = MAX(text_h, l->draw_items[i].r.h);
+
 	for(int i = s->line_first; i < l->count_draw_items; i++)
 	{
 		r_drawable* d = &l->draw_items[i];

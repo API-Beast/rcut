@@ -43,7 +43,9 @@ static bool popup_is_open(r_context* c, rect r, uint64_t salt)
 static bool has_activation(r_interact* it)
 {
 	for(r_callback* cb = it->callbacks; cb; cb = cb->next)
-		if(cb->event == R_ACTIVATION && cb->function) return true;
+	if(cb->event == R_ACTIVATION && cb->function)
+		return true;
+
 	return false;
 }
 
@@ -51,8 +53,11 @@ static bool popup_focus(r_context* c, r_ui_list* popup, int dir, bool relative)
 {
 	int n = popup->count_interact_items, cur = -1;
 	if(n == 0) return false;
+
 	for(int i = 0; i < n && relative; i++)
-		if(popup->interact_items[i].r.id == c->focus_id) cur = i;
+	if(popup->interact_items[i].r.id == c->focus_id)
+		cur = i;
+
 	int i = cur < 0 ? (dir > 0 ? 0 : n - 1) : cur + dir;
 	for(int k = 0; k < n; k++, i += dir)
 	{
@@ -295,10 +300,12 @@ void r__open_context_menu(r_interact* it, float list_x, float list_y)
 	r_menu_item* items = r_storage_alloc(p, sizeof(r_menu_item) * (n + 1));
 	memset(items, 0, sizeof(r_menu_item) * (n + 1));
 	n = 0;
+
 	for(r_interact* part = it; part->r.id == it->r.id; part++)
 	for(r_callback* cb = part->callbacks; cb; cb = cb->next)
-		if(cb->event == R_CONTEXT)
-			items[n++].label = cb->menu_label ? cb->menu_label : "?";
+	if(cb->event == R_CONTEXT)
+		items[n++].label = cb->menu_label ? cb->menu_label : "?";
+
 	rect anchor = {.x = (int)list_x, .y = (int)list_y, .w = 1, .h = 1};
 	menu_build(p, l, anchor, items, R_BOTTOM, it->r.id);
 	r_list_set_visibility(p, true);
