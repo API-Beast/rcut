@@ -108,7 +108,7 @@ static inline bool pbuffer_contains_ptr(r_paged_buffer* a, void* ptr)
 	return true;
 }
 
-static uint64_t r_load(uint8_t* p, int offset, int num_bits) {
+static uint64_t bits_load(uint8_t* p, int offset, int num_bits) {
     if(offset == 0 && num_bits == 32) return *(uint32_t*)p;
     if(offset == 0 && num_bits == 64) return *(uint64_t*)p;
     int lo = offset >> 3, hi = (offset + num_bits - 1) >> 3;
@@ -118,7 +118,7 @@ static uint64_t r_load(uint8_t* p, int offset, int num_bits) {
     return num_bits < 64 ? raw & (((uint64_t)1 << num_bits) - 1) : raw;
 }
 
-static void r_store(uint8_t* p, int offset, int num_bits, uint64_t value) {
+static void bits_store(uint8_t* p, int offset, int num_bits, uint64_t value) {
     if(offset == 0 && num_bits == 32) { *(uint32_t*)p = (uint32_t)value; return; }
     if(offset == 0 && num_bits == 64) { *(uint64_t*)p = value; return; }
     uint64_t mask = num_bits < 64 ? (((uint64_t)1 << num_bits) - 1) : ~(uint64_t)0;
@@ -167,7 +167,7 @@ int64_t r_geti(r_data_binding b) {
         default: assert(false); return 0;
         }
     }
-    uint64_t raw = r_load(b.ptr, b.bit_offset, b.num_bits);
+    uint64_t raw = bits_load(b.ptr, b.bit_offset, b.num_bits);
     switch (b.ptr_type) {
     case R_BOOL: return raw != 0;
     case R_UINT: return (int64_t)raw;
@@ -193,7 +193,7 @@ double r_getd(r_data_binding b) {
         default: assert(false); return 0;
         }
     }
-    uint64_t raw = r_load(b.ptr, b.bit_offset, b.num_bits);
+    uint64_t raw = bits_load(b.ptr, b.bit_offset, b.num_bits);
     switch (b.ptr_type) {
     case R_BOOL: return raw != 0;
     case R_UINT: return (double)raw;
@@ -228,7 +228,7 @@ void r_seti(r_data_binding b, int64_t value) {
         break;
     default: raw = (uint64_t)value; break;
     }
-    r_store(b.ptr, b.bit_offset, b.num_bits, raw);
+    bits_store(b.ptr, b.bit_offset, b.num_bits, raw);
 }
 
 void r_setd(r_data_binding b, double value) {
@@ -255,7 +255,7 @@ void r_setd(r_data_binding b, double value) {
     case R_INT: raw = (uint64_t)(int64_t)value; break;
     default: raw = (uint64_t)value; break;
     }
-    r_store(b.ptr, b.bit_offset, b.num_bits, raw);
+    bits_store(b.ptr, b.bit_offset, b.num_bits, raw);
 }
 
 static r_drawable* push_drawable(r_ui_list* l)
@@ -305,6 +305,17 @@ void* r_storage_alloc(r_ui_list* l, int size)
 	void* ptr = l->storage_buffer + l->storage_buffer_cur_tail;
 	l->storage_buffer_cur_tail += size;
 	return ptr;
+}
+
+void* r_store(r_ui_list* l, const void* data, int size)
+{
+	void* p = r_storage_alloc(l, size);
+	return data ? memcpy(p, data, size) : memset(p, 0, size);
+}
+
+char* r_store_string(r_ui_list* l, const char* s)
+{
+	return r_store(l, s, (int)strlen(s) + 1);
 }
 
 void r_init_context(r_context* c)
@@ -786,9 +797,7 @@ r_callback* r_attach_callback_to(r_ui_list* l, r_interact* it, r_event_type even
 
 void r_callback_set_data(r_ui_list* l, r_callback* c, void* data, int data_length)
 {
-	void* p = r_storage_alloc(l, data_length);
-	if(data) memcpy(p, data, data_length); else memset(p, 0, data_length);
-	c->data = p; c->size = data_length;
+	c->data = r_store(l, data, data_length); c->size = data_length;
 }
 
 void r_callback_share_data(r_ui_list* l, r_callback* dst, r_callback* src)

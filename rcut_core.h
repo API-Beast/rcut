@@ -564,7 +564,6 @@ r_cursor r_hover_cursor(r_context* c);
 r_interact* r_find_interact(r_context* c, uint64_t id);
 bool r_close_popups(r_context* c, bool only_topmost);
 void r_list_print(r_ui_list* l);
-void* r_storage_alloc(r_ui_list* l, int size);
 
 // Low level input
 uint64_t r_post_mouse_move (r_context* r, uint64_t target, float x, float y);
@@ -633,6 +632,9 @@ r_drawable* r_labeled             (r_ui_list* l, rect r, int style, const char* 
 r_callback* r_attach_callback     (r_ui_list* l, rect r, r_event_type event, r_callback_fn* function);
 void        r_callback_set_data   (r_ui_list* l, r_callback* c, void* data, int data_length);
 void        r_callback_share_data (r_ui_list* l, r_callback* dst, r_callback* src);
+void*       r_storage_alloc       (r_ui_list* l, int size); // Returns a pointer to a block of memory with lifetime scoped to this rebuild.
+void*       r_store               (r_ui_list* l, const void* data, int size); // r_storage_alloc + copy, zeroed if data is NULL.
+char*       r_store_string        (r_ui_list* l, const char* s);
 
 bool        r_copy_last_frame_data(r_ui_list* l, r_callback* c);
 void        r_set_press_group     (r_ui_list* l, rect r, uint64_t group_id);
@@ -758,10 +760,10 @@ bool        r_drawable_take_change(r_drawable* d, rect* damage);
     .ptr_type = R_TYPEOF(*(P)) })
 
 #define R_BITFIELD(BASE, OFFSET, LENGTH) ((r_data_binding){      \
-    .ptr        = (void*)&(BASE),                                \
+    .ptr        = (void*)(BASE),                                 \
     .num_bits   = (LENGTH),                                      \
     .bit_offset = (OFFSET),                                      \
-    .ptr_type   = R_TYPEOF(BASE) })
+    .ptr_type   = R_TYPEOF(*(BASE)) })
 
 static inline r_data_binding r_data_compact(r_data_desc d) {
     r_data_binding b = {0};

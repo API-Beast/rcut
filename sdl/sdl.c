@@ -76,11 +76,11 @@ static void close_window(r_sdl_frontend* c, int i)
     if(!w->window) return;
     for(int j = 1; j < RCUT_SDL_MAX_WINDOWS; j++)
         if(j != i && c->windows[j].parent == i) close_window(c, j);
-    SDL_DestroySurface(w->convert);
+    SDL_DestroySurface(w->internal_surface);
     SDL_DestroyWindow(w->window);
-    w->convert = NULL;
+    w->internal_surface = NULL;
     w->window = NULL;
-    w->drawn = NULL;
+    w->last_window_surface = NULL;
 }
 
 void r_sdl_free(r_sdl_frontend* c)
@@ -115,6 +115,7 @@ r_ui_list* r_sdl_dialog(r_sdl_frontend* c, uint64_t root_id, int w, int h, char*
 {
     int i = 1;
     while(i < RCUT_SDL_MAX_WINDOWS && c->windows[i].used) i++;
+    if(i < RCUT_SDL_MAX_WINDOWS) close_window(c, i);
     if(i < RCUT_SDL_MAX_WINDOWS) c->windows[i] = (r_sdl_window){ .used = true, .domain = i };
     else i = 0;
     r_ui_list* l = r_create_ui_list(&c->context, (uint64_t)i, root_id, w, h);
@@ -184,7 +185,9 @@ static uint64_t r_sdl_popup_target(r_ui_list* parent, rect r)
     for(int i = 1; i < RCUT_SDL_MAX_WINDOWS; i++)
         if(!c->windows[i].used)
         {
-            c->windows[i] = (r_sdl_window){ .used = true, .parent = (int)parent->target };
+            r_sdl_window* w = &c->windows[i];
+            if(w->parent != (int)parent->target) close_window(c, i);
+            w->used = true; w->parent = (int)parent->target; w->domain = 0; w->last_window_surface = NULL;
             return (uint64_t)i;
         }
     return parent->target;
@@ -233,15 +236,36 @@ static void update_dialog_window(r_sdl_frontend* c, r_ui_list* l, int i)
     w->w = ww; w->h = wh;
 }
 
+static void take_spare(r_sdl_frontend* c, int i, bool tooltip)
+{
+    r_sdl_window* w = &c->windows[i];
+    for(int j = 1; j < RCUT_SDL_MAX_WINDOWS; j++)
+    {
+        r_sdl_window* s = &c->windows[j];
+        if(j == i || s->used || !s->window || s->parent != w->parent || s->tooltip != tooltip) continue;
+        for(int k = 1; k < RCUT_SDL_MAX_WINDOWS; k++)
+            if(k != j && c->windows[k].parent == j) close_window(c, k);
+        r_sdl_window keep = *w;
+        *w = *s;
+        w->used = true; w->parent = keep.parent; w->domain = keep.domain; w->last_window_surface = NULL;
+        *s = (r_sdl_window){0};
+        return;
+    }
+}
+
 static void update_windows(r_sdl_frontend* c)
 {
     uint8_t state[RCUT_SDL_MAX_WINDOWS] = {0};
     float s = c->draw.scale, density = SDL_GetWindowPixelDensity(c->windows[0].window);
     for(r_ui_list* l = c->context.chain_start; l; l = l->chain_next)
+        if(l->target > 0 && l->target < RCUT_SDL_MAX_WINDOWS) state[l->target] = 1;
+    for(int i = 1; i < RCUT_SDL_MAX_WINDOWS; i++)
+        if(!state[i]) c->windows[i].used = false;
+
+    for(r_ui_list* l = c->context.chain_start; l; l = l->chain_next)
     {
         uint64_t i = l->target;
         if(i == 0 || i >= RCUT_SDL_MAX_WINDOWS || !c->windows[i].used) continue;
-        if(!state[i]) state[i] = 1;
         r_sdl_window* w = &c->windows[i], *p = &c->windows[w->parent];
         if(!l->ephemeral_parent)
         {
@@ -262,9 +286,11 @@ static void update_windows(r_sdl_frontend* c)
         int x = (int)SDL_floorf((b.x * s - p->x) / density), y = (int)SDL_floorf((b.y * s - p->y) / density);
         int ww = (int)SDL_ceilf(((b.x + b.w) * s - p->x) / density) - x, wh = (int)SDL_ceilf(((b.y + b.h) * s - p->y) / density) - y;
         int px = p->x + (int)SDL_roundf(x * density), py = p->y + (int)SDL_roundf(y * density);
-        if(ww != w->w || wh != w->h) close_window(c, (int)i);
+        if(w->window && w->tooltip != l->is_tooltip) close_window(c, (int)i);
+        if(!w->window) take_spare(c, (int)i, l->is_tooltip);
         if(!w->window)
         {
+            w->tooltip = l->is_tooltip;
             SDL_PropertiesID props = SDL_CreateProperties();
             SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER, p->window);
             SDL_SetNumberProperty (props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
@@ -284,14 +310,21 @@ static void update_windows(r_sdl_frontend* c)
                 continue;
             }
         }
-        else if(px != w->x || py != w->y) SDL_SetWindowPosition(w->window, x, y);
+        else if(px != w->x || py != w->y || ww != w->w || wh != w->h)
+        {
+            SDL_SetWindowPosition(w->window, x, y);
+            SDL_SetWindowSize(w->window, ww, wh);
+        }
+        if(w->hidden) { SDL_ShowWindow(w->window); w->hidden = false; }
         w->x = px; w->y = py;
         w->w = ww; w->h = wh;
     }
     for(int i = 1; i < RCUT_SDL_MAX_WINDOWS; i++)
     {
-        if(state[i] < 2) close_window(c, i);
-        if(state[i] < 1) c->windows[i].used = false;
+        r_sdl_window* w = &c->windows[i];
+        if(state[i] == 2 || !w->window) continue;
+        if(w->domain == i) close_window(c, i);
+        else if(!w->hidden) { SDL_HideWindow(w->window); w->hidden = true; w->last_window_surface = NULL; }
     }
 }
 
@@ -414,10 +447,10 @@ static void draw_into(r_sdl_frontend* c, int i, SDL_Surface* s, rect area)
     r_draw_render_area(&c->draw, (uint64_t)i, area);
 }
 
-static bool keeps_contents(r_sdl_window* w, void* drawn, int pw, int ph)
+static bool keeps_contents(r_sdl_window* w, void* surface, int pw, int ph)
 {
-    bool kept = w->drawn == drawn && w->drawn_x == w->x && w->drawn_y == w->y && w->drawn_w == pw && w->drawn_h == ph;
-    w->drawn = drawn; w->drawn_x = w->x; w->drawn_y = w->y; w->drawn_w = pw; w->drawn_h = ph;
+    bool kept = w->last_window_surface == surface && w->drawn_x == w->x && w->drawn_y == w->y && w->drawn_w == pw && w->drawn_h == ph;
+    w->last_window_surface = surface; w->drawn_x = w->x; w->drawn_y = w->y; w->drawn_w = pw; w->drawn_h = ph;
     return kept;
 }
 
@@ -429,14 +462,14 @@ static void render_window(r_sdl_frontend* c, int i)
     if(!surface) return;
     if(surface->format != SDL_PIXELFORMAT_ARGB8888 && surface->format != SDL_PIXELFORMAT_XRGB8888)
     {
-        if(!w->convert || w->convert->w != surface->w || w->convert->h != surface->h)
+        if(!w->internal_surface || w->internal_surface->w != surface->w || w->internal_surface->h != surface->h)
         {
-            SDL_DestroySurface(w->convert);
-            w->convert = SDL_CreateSurface(surface->w, surface->h, SDL_PIXELFORMAT_ARGB8888);
-            if(!w->convert) return;
-            SDL_SetSurfaceBlendMode(w->convert, SDL_BLENDMODE_NONE);
+            SDL_DestroySurface(w->internal_surface);
+            w->internal_surface = SDL_CreateSurface(surface->w, surface->h, SDL_PIXELFORMAT_ARGB8888);
+            if(!w->internal_surface) return;
+            SDL_SetSurfaceBlendMode(w->internal_surface, SDL_BLENDMODE_NONE);
         }
-        s = w->convert;
+        s = w->internal_surface;
     }
     rect whole = { w->x, w->y, s->w, s->h };
     damage = keeps_contents(w, surface, s->w, s->h) ? rect_intersect(damage, whole) : whole;
@@ -451,8 +484,28 @@ void r_sdl_render_ui(r_sdl_frontend* c)
 {
     update_windows(c);
     for(int i = 0; i < RCUT_SDL_MAX_WINDOWS; i++)
-        if(c->windows[i].window) render_window(c, i);
+        if(c->windows[i].window && !c->windows[i].hidden) render_window(c, i);
     r_damage_clear(&c->context);
+}
+
+bool r_sdl_screenshot(r_sdl_frontend* c, const char* path)
+{
+    r_sdl_render_ui(c);
+    int w = 0, h = 0;
+    SDL_GetWindowSizeInPixels(c->windows[0].window, &w, &h);
+    SDL_Surface* s = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_ARGB8888);
+    if(!s) return false;
+    r_draw_software_set_target(&c->software, s->pixels, s->w, s->h, s->pitch / 4, 0, 0);
+    c->software.clear_color = c->draw.clear_color;
+    r_draw_render(&c->draw, 0);
+    if(c->draw.cache_full || c->draw.glyphs_full) r_draw_render(&c->draw, 0);
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+    bool ok = SDL_SavePNG(s, path);
+#else
+    bool ok = SDL_SaveBMP(s, path);
+#endif
+    SDL_DestroySurface(s);
+    return ok;
 }
 
 r_ui_list* r_sdl_make_sublist(r_sdl_frontend* c, r_ui_list* parent, rect r) { return r_viewport(parent, r); }

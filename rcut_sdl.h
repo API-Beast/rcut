@@ -8,15 +8,18 @@
 typedef struct r_sdl_window
 {
 	SDL_Window*  window;
-	SDL_Surface* convert;
-	int      domain;
-	int      x, y;
-	bool     used;
-	bool     close_requested;
-	int      parent;
-	int      w, h;
-	void*    drawn;
-	int      drawn_x, drawn_y, drawn_w, drawn_h;
+	SDL_Surface* internal_surface;
+	SDL_Surface* last_window_surface; // NULL if not drawn yet.
+	int drawn_x, drawn_y, drawn_w, drawn_h;
+
+	int domain;
+	int parent;
+	int x, y, w, h;
+	
+	bool used:1;
+	bool close_requested:1;
+	bool tooltip:1;
+	bool hidden:1;
 } r_sdl_window;
 
 typedef struct r_sdl_frontend
@@ -51,6 +54,7 @@ bool r_sdl_close_requested(r_sdl_frontend* c, r_ui_list* dialog, bool clear);
 void r_sdl_update(r_sdl_frontend* c);
 void r_sdl_render_ui(r_sdl_frontend* c);
 void r_sdl_set_scale(r_sdl_frontend* c, float scale);
+bool r_sdl_screenshot(r_sdl_frontend* c, const char* path);
 
 r_ui_list* r_sdl_make_sublist(r_sdl_frontend* c, r_ui_list* parent, rect r);
 r_ui_list* r_sdl_make_popup  (r_sdl_frontend* c, r_ui_list* parent, rect r);

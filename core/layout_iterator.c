@@ -94,8 +94,7 @@ void r_text(r_layout_iter* s, int style, char* text)
 			flow_newline(s, 0);
 			continue;
 		}
-		char* fragment = r_storage_alloc(l, n + 1);
-		memcpy(fragment, text + pos, n);
+		char* fragment = r_store(l, text + pos, n + 1);
 		fragment[n] = 0;
 		r_label_ex(l, flow_item(s, w, h), style, R_ICON_NONE, fragment);
 		pos += n;

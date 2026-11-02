@@ -2,37 +2,38 @@
 
 ```c
 #include <SDL3/SDL.h>
-#include <rcut_sdl.h>
-#include <stdlib.h>
+#include "rcut_sdl.h"
 
-void on_button_press()
+static bool quit;
+
+static void on_ok(void)
 {
-    exit(0);
+	quit = true;
 }
 
-int main(int argc, char** argv)
+int main(void)
 {
-    r_sdl_frontend* frontend = r_sdl_init("rcut Test", 200, 150, 0);
-    r_ui_list* ui = frontend->root;
+	r_sdl_frontend* f = r_sdl_init("rcut tutorial", 320, 150, 0);
+	if(!f) return 1;
+	r_ui_list* ui = f->root;
 
-    r_label (ui, (rect){0, 0, 200, 75, .id=1},   "Hello World from rcut! 😎👍");
-    r_button(ui, (rect){50, 75, 100, 50, .id=2}, "OK");
-    r_on_click(ui, button, &on_button_press);
+	rect ok = { 110, 75, 100, 50, .id = 2 };
+	r_label(ui, (rect){ 63, 0, 194, 75, .id = 1 }, "Hello World from rcut! 😎👍");
+	r_button(ui, ok, "OK");
+	r_on_click(ui, ok, on_ok);
 
-    while(true)
-    {
-        SDL_Event e;
-        while(SDL_PollEvent(&e))
-            r_sdl_process_event(f, &e);
-        
-        r_sdl_update(f);
-        r_sdl_render_ui(f);
-
-        // Someone clicked the [X] (or used Alt+F4)
-        if(r_sdl_quit_requested(frontend, true)) break;
-    }
-
-    return 0;
+	while(!quit && !r_sdl_quit_requested(f, true))
+	{
+		SDL_Event e;
+		if(SDL_WaitEventTimeout(&e, 50))
+		{
+			do r_sdl_process_event(f, &e); while(SDL_PollEvent(&e));
+		}
+		r_sdl_update(f);
+		r_sdl_render_ui(f);
+	}
+	r_sdl_free(f);
+	return 0;
 }
 ```
 <-- screenshot -->

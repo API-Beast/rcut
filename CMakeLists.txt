@@ -33,6 +33,10 @@ add_executable(gallery example/gallery.c)
 target_link_libraries(gallery rcut_sdl)
 add_executable(styles_example example/styles.c)
 target_link_libraries(styles_example rcut_sdl)
+foreach(step tutorial_1_0_hello tutorial_1_1_binding)
+	add_executable(${step} example/${step}.c)
+	target_link_libraries(${step} rcut_sdl)
+endforeach()
 
 # A misaligned hot loop in the rasterization can lead to up to 40% performance loss.
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")

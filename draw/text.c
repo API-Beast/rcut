@@ -642,9 +642,11 @@ static int get_codepoint_glyph(r_draw* c, r_draw_font* font, uint32_t codepoint)
     return -1; // Full.
 }
 
+static bool is_emoji(uint32_t cp) { return cp >= 0x1F300 && cp <= 0x1FAFF; }
+
 static int resolve_codepoint_glyph(r_draw* c, r_draw_font* font, uint32_t cp)
 {
-    uint32_t gi = get_codepoint_glyph(c, font, cp);
+    uint32_t gi = is_emoji(cp) ? -1 : get_codepoint_glyph(c, font, cp);
     if(gi != -1) return (int)gi;
 
     struct r_draw_base_font* base_font = &c->base_fonts[font->base_font_idx];
@@ -656,7 +658,7 @@ static int resolve_codepoint_glyph(r_draw* c, r_draw_font* font, uint32_t cp)
         gi = get_codepoint_glyph(c, ff, cp);
         if(gi != -1) return (int)gi;
     }
-    return -1;
+    return is_emoji(cp) ? (int)get_codepoint_glyph(c, font, cp) : -1;
 }
 
 typedef struct run_glyph { int32_t glyph, cluster, x_advance; int16_t x_offset, y_offset; } run_glyph;

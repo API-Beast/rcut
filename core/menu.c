@@ -78,8 +78,7 @@ static bool tooltip_mouse_hover(const r_event* e, r_callback* self)
 	r_ui_list* p = r_popup(e->ui_list, self->parent->r, R_POPUP_TOOLTIP, P400);
 	if(p->count_draw_items == 0)
 	{
-		char* text = r_storage_alloc(p, self->size);
-		memcpy(text, self->data, self->size);
+		char* text = r_store(p, self->data, self->size);
 		rect inner = r_measure_wrapped(c, R_STYLE_TOOLTIP, text, 320);
 		rect outer = r_outer(c, R_STYLE_TOOLTIP, &inner);
 		rect cursor = {.x = (int)e->list_mouse_x - 4, .y = (int)e->list_mouse_y, .w = 16, .h = 22};
