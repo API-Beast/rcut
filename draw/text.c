@@ -208,30 +208,10 @@ static uint64_t font_hash(uint64_t base, uint64_t size, uint64_t flags)
     return h;
 }
 
-static int face_weight(hb_face_t* face)
-{
-    hb_font_t* font = hb_font_create(face);
-    int weight = (int)hb_style_get_value(font, HB_STYLE_TAG_WEIGHT);
-    hb_font_destroy(font);
-    return weight > 0 ? weight : 400;
-}
-
 bool r_draw_font_register(r_draw* c, int slot, const char* font_path, bool lazy)
 {
-    hb_blob_t* blob = NULL;
-    hb_face_t* face = NULL;
-    if(!lazy)
-    {
-        blob = hb_blob_create_from_file_or_fail(font_path);
-        face = hb_face_create(blob, 0);
-        if(!blob) return false;
-        if(!face || hb_face_get_glyph_count(face) == 0)
-        {
-            hb_face_destroy(face); // hb_face_destroy(NULL) is a no-op.
-            hb_blob_destroy(blob);
-            return false;
-        }
-    }
+    struct r_draw_face* face = NULL;
+    if(!lazy && !(face = r_draw__face_load(font_path))) return false;
 
     if(lazy)
     {
@@ -243,9 +223,8 @@ bool r_draw_font_register(r_draw* c, int slot, const char* font_path, bool lazy)
     struct r_draw_base_font* base_font = &c->base_fonts[slot];
     base_font->path = malloc(strlen(font_path) + 1);
     strcpy(base_font->path, font_path);
-    base_font->blob = blob;
     base_font->face = face;
-    base_font->weight = face ? (int16_t)face_weight(face) : 400;
+    base_font->weight = face ? (int16_t)r_draw__face_weight(face) : 400;
     base_font->italic_redirect = -1; // No dedicated italic face: synthesize a slant.
     base_font->bold_redirect   = -1; // No dedicated bold face:  synthesize weight.
     for(int i = 0; i < 16; i++)
@@ -259,9 +238,8 @@ static bool ensure_font_is_loaded(r_draw* c, int slot)
     if(c->base_fonts[slot].lazy_load && c->base_fonts[slot].face == NULL)
     {
         struct r_draw_base_font* base_font = &c->base_fonts[slot];
-        base_font->blob = hb_blob_create_from_file_or_fail(base_font->path);
-        base_font->face = hb_face_create(base_font->blob, 0);
-        base_font->weight = (int16_t)face_weight(base_font->face);
+        base_font->face = r_draw__face_load(base_font->path);
+        if(base_font->face) base_font->weight = (int16_t)r_draw__face_weight(base_font->face);
     }
     return c->base_fonts[slot].face != NULL;
 }
@@ -322,69 +300,11 @@ r_draw_font* r_draw_get_font(r_draw* c, int base_font, int size, uint32_t flags)
     }
     if(free_slot < 0) return NULL; // Cache full.
 
-    ensure_font_is_loaded(c, resolved_base);
-    hb_face_t* face = c->base_fonts[resolved_base].face;
-    hb_font_t* font = hb_font_create(face);
-    if(!font) return NULL;
-
+    if(!ensure_font_is_loaded(c, resolved_base)) return NULL;
     int px = (int)(size * c->scale + 0.5f);
-    hb_font_set_scale(font, px * 64, px * 64);
-    hb_font_set_ppem (font, px, px);
-
-    // Inspect the variation axes so we lean on the face's own weight/slant
-    // before falling back to synthesis.
-    bool  has_wght = false, has_slnt = false, has_ital = false;
-    float wght_min = 0, wght_max = 0, slnt_min = 0, slnt_max = 0;
-    if(hb_ot_var_get_axis_count(face))
-    {
-        hb_ot_var_axis_info_t axes[16];
-        unsigned int n = sizeof(axes) / sizeof(axes[0]);
-        hb_ot_var_get_axis_infos(face, 0, &n, axes);
-        for(unsigned int i = 0; i < n; i++)
-        {
-            switch(axes[i].tag)
-            {
-                case HB_TAG('w','g','h','t'):
-                    has_wght = true; wght_min = axes[i].min_value; wght_max = axes[i].max_value; break;
-                case HB_TAG('s','l','n','t'):
-                    has_slnt = true; slnt_min = axes[i].min_value; slnt_max = axes[i].max_value; break;
-                case HB_TAG('i','t','a','l'):
-                    has_ital = true; break;
-            }
-        }
-    }
-
-    bool want_italic_render = resolved_flags & R_FONT_ITALIC;
-
-    hb_variation_t vars[2];
-    int nvars = 0;
-    if(has_wght && want_weight != 0)
-    {
-        float w = (float)want_weight;
-        if(w < wght_min) w = wght_min;
-        if(w > wght_max) w = wght_max;
-        vars[nvars++] = (hb_variation_t){ HB_TAG('w','g','h','t'), w };
-    }
-    if(want_italic_render && has_ital)
-        vars[nvars++] = (hb_variation_t){ HB_TAG('i','t','a','l'), 1.0f };
-    else if(want_italic_render && has_slnt)
-    {
-        float s = -12.0f; // slnt is in degrees; negative leans forward.
-        if(s < slnt_min) s = slnt_min;
-        if(s > slnt_max) s = slnt_max;
-        vars[nvars++] = (hb_variation_t){ HB_TAG('s','l','n','t'), s };
-    }
-    if(nvars) hb_font_set_variations(font, vars, nvars);
-
-    // Synthesize only the features the face couldn't supply natively.
-    if(want_italic_render && !has_ital && !has_slnt)
-        hb_font_set_synthetic_slant(font, 0.207f); // ~12deg, the usual oblique.
-    int weight_diff = want_weight - c->base_fonts[resolved_base].weight;
-    if(want_weight != 0 && weight_diff != 0 && !bold_native && !has_wght)
-    {
-        float embolden = px * 0.03f * weight_diff / 300.0f;
-        hb_font_set_synthetic_bold(font, embolden, embolden, true);
-    }
+    int synth_weight = want_weight && !bold_native ? want_weight - c->base_fonts[resolved_base].weight : 0;
+    struct r_draw_face_inst* font = r_draw__face_inst(c->base_fonts[resolved_base].face, px, want_weight, synth_weight, resolved_flags & R_FONT_ITALIC);
+    if(!font) return NULL;
 
     r_draw_font* f = &c->fonts[free_slot];
     f->base_font_idx = resolved_base;
@@ -403,11 +323,7 @@ void r_draw__rescale_fonts(r_draw* c)
         r_draw_font* f = &c->fonts[i];
         if(!f->font) continue;
         int old_px = (int)(f->size * f->scale + 0.5f), px = (int)(f->size * c->scale + 0.5f);
-        hb_font_set_scale(f->font, px * 64, px * 64);
-        hb_font_set_ppem (f->font, px, px);
-        float x, y; hb_bool_t in_place;
-        hb_font_get_synthetic_bold(f->font, &x, &y, &in_place);
-        if((x || y) && old_px > 0) hb_font_set_synthetic_bold(f->font, x * px / old_px, y * px / old_px, in_place);
+        r_draw__face_inst_resize(f->font, old_px, px);
         f->scale = c->scale;
     }
 }
@@ -475,22 +391,20 @@ static int icon_glyph(r_draw* c, int icon, int size)
 
 static int cache_glyph(r_draw* c, int font_id, uint16_t glyph_id)
 {
-    hb_font_t* hb = c->fonts[font_id].font;
-    if(!hb) return -1;
+    struct r_draw_face_inst* f = c->fonts[font_id].font;
+    if(!f) return -1;
     int hash = glyph_slot(c, font_id, glyph_id);
     if(hash < 0) return -1;
 
-    hb_glyph_extents_t extents;
     struct r_draw_glyph* g = &c->glyphs[hash];
     *g = (struct r_draw_glyph){0};
     g->font_id    = font_id;
     g->glyph_id   = glyph_id;
-    g->x_advance  = hb_font_get_glyph_h_advance(hb, glyph_id);
-    g->is_empty   = !hb_font_get_glyph_extents(hb, glyph_id, &extents) || extents.width == 0 || extents.height == 0;
+    g->x_advance  = r_draw__face_advance(f, glyph_id, &g->is_empty);
     return hash;
 }
 
-static uint8_t* glyph_effect(const uint8_t* argb, int stride, int w, int h, int dilate, int blur, int margin)
+static uint8_t* glyph_effect(const uint8_t* src, int stride, int bpp, int w, int h, int dilate, int blur, int margin)
 {
     int ow = w + 2 * margin, oh = h + 2 * margin;
     uint8_t* out = calloc((size_t)ow * oh, 1);
@@ -503,7 +417,7 @@ static uint8_t* glyph_effect(const uint8_t* argb, int stride, int w, int h, int 
         {
             int sx = x - margin + dx, sy = y - margin + dy;
             if(sx >= 0 && sy >= 0 && sx < w && sy < h && dx * dx + dy * dy <= dilate * dilate + dilate)
-                v = MAX(v, argb[sy * stride + sx * 4 + 3]);
+                v = MAX(v, src[sy * stride + sx * bpp + bpp - 1]);
         }
         out[y * ow + x] = (uint8_t)v;
     }
@@ -531,41 +445,26 @@ static uint8_t* glyph_effect(const uint8_t* argb, int stride, int w, int h, int 
 static uint64_t cache_font_glyph(r_draw* c, struct r_draw_glyph* g)
 {
     int font_id = g->font_id % RCUT_DRAW_FONT_HASHMAP_SIZE, effect = g->font_id / RCUT_DRAW_FONT_HASHMAP_SIZE;
-    hb_font_t* hb = c->fonts[font_id].font;
-    hb_glyph_extents_t glyph_extents;
-    if(!hb || !hb_font_get_glyph_extents(hb, g->glyph_id, &glyph_extents)) { g->is_empty = true; return 0; }
+    r_draw_glyph_bitmap bm;
+    if(!r_draw__face_raster(c, c->fonts[font_id].font, g->glyph_id, &bm)) { g->is_empty = true; return 0; }
 
-    hb_raster_paint_reset(c->paint_context);
-    hb_raster_paint_set_transform(c->paint_context, 1.0, 0.0, 0.0, -1.0, 0.0, 0.0);
-    hb_raster_paint_set_scale_factor(c->paint_context, 64.0, 64.0);
-    hb_raster_paint_set_glyph_extents(c->paint_context, &glyph_extents);
-    hb_raster_paint_set_foreground(c->paint_context, 0xFFFFFFFF);
-    hb_raster_paint_glyph(c->paint_context, hb, g->glyph_id);
-    hb_raster_image_t* image = hb_raster_paint_render(c->paint_context);
-    if(!image) { g->is_empty = true; return 0; }
-
-    hb_raster_extents_t ext;
-    hb_raster_image_get_extents(image, &ext);
-    const uint8_t* buffer = hb_raster_image_get_buffer(image);
     int dilate = effect & 15, blur = effect >> 4, margin = dilate + 2 * blur;
-    g->x_origin   = ext.x_origin - margin;
-    g->y_origin   = ext.y_origin - margin;
-    g->w          = (int)ext.width + 2 * margin;
-    g->h          = (int)ext.height + 2 * margin;
-    hb_face_t* face = c->base_fonts[c->fonts[font_id].base_font_idx].face;
-    g->is_colored = !effect && (hb_ot_color_glyph_has_paint(face, g->glyph_id) || hb_ot_color_has_png(face));
-    g->is_empty   = ext.width == 0 || ext.height == 0;
+    g->x_origin   = bm.x - margin;
+    g->y_origin   = bm.y - margin;
+    g->w          = bm.w + 2 * margin;
+    g->h          = bm.h + 2 * margin;
+    g->is_colored = !effect && bm.colored;
+    g->is_empty   = bm.w == 0 || bm.h == 0;
 
     uint64_t handle = 0;
     if(g->is_empty) {}
-    else if(g->is_colored) handle = c->backend.cache_argb(c->backend.userptr, g->w, g->h, (const uint32_t*)buffer, (int)ext.stride, false);
+    else if(g->is_colored) handle = c->backend.cache_argb(c->backend.userptr, g->w, g->h, (const uint32_t*)bm.pixels, bm.stride, false);
     else
     {
-        uint8_t* coverage = glyph_effect(buffer, (int)ext.stride, (int)ext.width, (int)ext.height, dilate, blur, margin);
+        uint8_t* coverage = glyph_effect(bm.pixels, bm.stride, bm.bpp, bm.w, bm.h, dilate, blur, margin);
         handle = c->backend.cache_monochrome(c->backend.userptr, g->w, g->h, coverage, g->w, false);
         free(coverage);
     }
-    hb_raster_paint_recycle_image(c->paint_context, image);
     return handle;
 }
 
@@ -585,19 +484,6 @@ bool r_draw__glyph_pixels(r_draw* c, int glyph_idx)
     else g->handle = cache_font_glyph(c, g);
     if(!g->handle && !g->is_empty) c->cache_full = true;
     return g->handle != 0;
-}
-
-static uint32_t decode_utf8(const char** str)
-{
-    const uint8_t* s = (const uint8_t*)*str;
-
-    uint32_t codepoint;
-         if((s[0] & 0x80) == 0)   { *str += 1; return s[0]; }
-    else if((s[0] & 0xE0) == 0xC0){ *str += 2; return ((s[0] & 0x1F) << 6)  |  (s[1] & 0x3F); }
-    else if((s[0] & 0xF0) == 0xE0){ *str += 3; return ((s[0] & 0x0F) << 12) | ((s[1] & 0x3F) << 6)  |  (s[2] & 0x3F); }
-
-    *str += 4;
-    return ((s[0] & 0x07) << 18) | ((s[1] & 0x3F) << 12) | ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
 }
 
 static int glyph_idx_cached(r_draw* c, r_draw_font* font, uint16_t glyph_id)
@@ -622,9 +508,8 @@ static int get_codepoint_glyph(r_draw* c, r_draw_font* font, uint32_t codepoint)
         {
             if(c->num_glyph_mappings >= RCUT_DRAW_GLYPH_LOAD_LIMIT) { c->glyphs_full = true; return -1; }
             c->num_glyph_mappings++;
-            hb_codepoint_t gid;
-            uint32_t glyph_idx = -1;
-            if(hb_font_get_nominal_glyph(font->font, codepoint, &gid) && gid != 0)
+            uint32_t gid, glyph_idx = -1;
+            if(r_draw__face_glyph(font->font, codepoint, &gid) && gid != 0)
             {
                 int idx = glyph_idx_cached(c, font, (uint16_t)gid);
                 if(idx >= 0) glyph_idx = (uint32_t)idx;
@@ -678,26 +563,14 @@ typedef struct text_layout
 struct r_draw_text
 {
     uint32_t     generation;
-    hb_buffer_t* buffer;
     run_glyph*   run;    int cap_run;
     laid_glyph*  laid;   int cap_laid;
     int32_t*     line_w; int cap_lines;
 };
 
-static void* grow(void* p, int* cap, int need, int size)
-{
-    if(need <= *cap) return p;
-    while(*cap < need) *cap = *cap ? *cap * 2 : 256;
-    return realloc(p, (size_t)*cap * size);
-}
-
 static struct r_draw_text* scratch(r_draw* c)
 {
-    if(!c->text)
-    {
-        c->text = calloc(1, sizeof(struct r_draw_text));
-        c->text->buffer = hb_buffer_create();
-    }
+    if(!c->text) c->text = calloc(1, sizeof(struct r_draw_text));
     return c->text;
 }
 
@@ -715,7 +588,6 @@ void r_draw__clear_glyph_cache(r_draw* c)
 void r_draw__free_text(r_draw* c)
 {
     if(!c->text) return;
-    hb_buffer_destroy(c->text->buffer);
     free(c->text->run); free(c->text->laid); free(c->text->line_w);
     free(c->text);
     c->text = NULL;
@@ -734,11 +606,11 @@ static int shape_run(r_draw* c, r_draw_font* font, const char* text, int len)
     int n = 0;
     if(!(font->flags & R_FONT_SHAPED))
     {
-        t->run = grow(t->run, &t->cap_run, len, sizeof(run_glyph));
+        t->run = r_draw__grow(t->run, &t->cap_run, len, sizeof(run_glyph));
         for(const char* p = text; p < end; )
         {
             int cluster = (int)(p - text);
-            int gi = resolve_codepoint_glyph(c, font, decode_utf8(&p));
+            int gi = resolve_codepoint_glyph(c, font, r_draw__decode_utf8(&p));
             t->run[n++] = (run_glyph){ gi, cluster, gi >= 0 ? c->glyphs[gi].x_advance : 0 };
         }
         return n;
@@ -750,24 +622,19 @@ static int shape_run(r_draw* c, r_draw_font* font, const char* text, int len)
         while(p < end)
         {
             const char* q = p;
-            int gi = resolve_codepoint_glyph(c, font, decode_utf8(&q));
+            int gi = resolve_codepoint_glyph(c, font, r_draw__decode_utf8(&q));
             r_draw_font* f = gi >= 0 ? &c->fonts[c->glyphs[gi].font_id] : run_font ? run_font : font;
             if(run_font && f != run_font) break;
             run_font = f;
             p = q;
         }
-        hb_buffer_clear_contents(t->buffer);
-        hb_buffer_add_utf8(t->buffer, text, len, (unsigned)(start - text), (int)(p - start));
-        hb_buffer_guess_segment_properties(t->buffer);
-        hb_shape(run_font->font, t->buffer, NULL, 0);
-        unsigned count;
-        hb_glyph_info_t* info = hb_buffer_get_glyph_infos(t->buffer, &count);
-        hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(t->buffer, &count);
-        t->run = grow(t->run, &t->cap_run, n + (int)count, sizeof(run_glyph));
-        for(unsigned i = 0; i < count; i++)
+        r_draw_glyph_pos* pos;
+        int count = r_draw__face_shape(c, run_font->font, text, len, (int)(start - text), (int)(p - start), &pos);
+        t->run = r_draw__grow(t->run, &t->cap_run, n + count, sizeof(run_glyph));
+        for(int i = 0; i < count; i++)
         {
-            int gi = info[i].codepoint ? glyph_idx_cached(c, run_font, (uint16_t)info[i].codepoint) : -1;
-            t->run[n++] = (run_glyph){ gi, (int)info[i].cluster, pos[i].x_advance, (int16_t)pos[i].x_offset, (int16_t)pos[i].y_offset };
+            int gi = pos[i].glyph ? glyph_idx_cached(c, run_font, (uint16_t)pos[i].glyph) : -1;
+            t->run[n++] = (run_glyph){ gi, (int)pos[i].cluster, pos[i].x_advance, (int16_t)pos[i].x_offset, (int16_t)pos[i].y_offset };
         }
     }
     return n;
@@ -821,9 +688,9 @@ static const char* next_line(r_draw* c, r_draw_font* font, const char* line, con
 
 static int line_height_px(r_draw_font* font)
 {
-    hb_font_extents_t fe;
-    hb_font_get_h_extents(font->font, &fe);
-    int line_height = (fe.ascender - fe.descender + fe.line_gap + 63) / 64;
+    int asc, desc, gap;
+    r_draw__face_v_metrics(font->font, &asc, &desc, &gap);
+    int line_height = (asc - desc + gap + 63) / 64;
     return line_height > 0 ? line_height : (int)(font->size * font->scale);
 }
 
@@ -877,10 +744,10 @@ static text_layout layout_text(r_draw* c, r_draw_font* font, const char* text, i
     {
         const char* next; int w = 0;
         const char* eol = next_line(c, font, line, end, wrap_width, true, &next, &w);
-        t->line_w = grow(t->line_w, &t->cap_lines, lines + 1, sizeof(int32_t));
+        t->line_w = r_draw__grow(t->line_w, &t->cap_lines, lines + 1, sizeof(int32_t));
         t->line_w[lines] = w;
         int count = shape_run(c, font, line, (int)(eol - line)), x = 0;
-        t->laid = grow(t->laid, &t->cap_laid, n + count, sizeof(laid_glyph));
+        t->laid = r_draw__grow(t->laid, &t->cap_laid, n + count, sizeof(laid_glyph));
         for(int i = 0; i < count; i++)
         {
             run_glyph* g = &t->run[i];
@@ -948,10 +815,10 @@ static void render_layout(r_draw* c, const text_layout* t, uint32_t color, const
     bounds = r_draw__to_pixels(bounds, s);
     clip = rect_intersect(r_draw__to_pixels(clip, s), c->clip_px);
     scroll_x = (int)(scroll_x * s); scroll_y = (int)(scroll_y * s);
-    hb_font_extents_t fe;
-    hb_font_get_h_extents(t->font->font, &fe);
-    int ascender    = (fe.ascender + 32) / 64;
-    int text_height = (fe.ascender - fe.descender + 32) / 64;
+    int asc, desc, gap;
+    r_draw__face_v_metrics(t->font->font, &asc, &desc, &gap);
+    int ascender    = (asc + 32) / 64;
+    int text_height = (asc - desc + 32) / 64;
     int line_height = line_height_px(t->font);
     int block_h = (t->num_lines - 1) * line_height + text_height;
     int y = bounds.y - scroll_y;

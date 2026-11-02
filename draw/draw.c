@@ -16,7 +16,6 @@ void r_draw_init(r_draw* c, r_context* ctx, const r_draw_backend* backend, float
     c->scale = scale > 0.0f ? scale : 1.0f;
     c->clip_px = no_clip;
     c->area = no_clip;
-    c->paint_context = hb_raster_paint_create_or_fail();
     hash_init(&c->style_rules, 64, sizeof(r_draw_style_rule));
 
     ctx->userptr = c;
@@ -30,16 +29,15 @@ void r_draw_init(r_draw* c, r_context* ctx, const r_draw_backend* backend, float
 void r_draw_free(r_draw* c)
 {
     for(int i = 0; i < RCUT_DRAW_FONT_HASHMAP_SIZE; i++)
-        if(c->fonts[i].font) hb_font_destroy(c->fonts[i].font);
+        if(c->fonts[i].font) r_draw__face_inst_free(c->fonts[i].font);
 
     for(int i = 0; i < COUNTOF(c->base_fonts); i++)
     {
-        if(c->base_fonts[i].face) hb_face_destroy(c->base_fonts[i].face);
-        if(c->base_fonts[i].blob) hb_blob_destroy(c->base_fonts[i].blob);
+        if(c->base_fonts[i].face) r_draw__face_free(c->base_fonts[i].face);
         free(c->base_fonts[i].path);
     }
 
-    if(c->paint_context) hb_raster_paint_destroy(c->paint_context);
+    r_draw__face_free_state(c);
     r_draw__free_text(c);
     free(c->quads);
     free(c->theme);

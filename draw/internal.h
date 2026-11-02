@@ -52,6 +52,43 @@ void     r_theme__flush(r_draw* c);
 uint64_t r_draw__cache_icon(r_draw* c, int icon, int size, bool* colored);
 void     r_draw__rescale_fonts(r_draw* c);
 
+typedef struct r_draw_glyph_pos    { uint32_t glyph, cluster; int32_t x_advance, x_offset, y_offset; } r_draw_glyph_pos;
+typedef struct r_draw_glyph_bitmap { const uint8_t* pixels; int x, y, w, h, stride, bpp; bool colored; } r_draw_glyph_bitmap;
+
+// Font backend: font_hb.c (HarfBuzz/hb_mini) or font_stb.c (stb_truetype). Metrics in 26.6.
+struct r_draw_face*      r_draw__face_load(const char* path);
+void                     r_draw__face_free(struct r_draw_face* face);
+int                      r_draw__face_weight(struct r_draw_face* face);
+struct r_draw_face_inst* r_draw__face_inst(struct r_draw_face* face, int px, int weight, int synth_weight, bool italic);
+void                     r_draw__face_inst_free(struct r_draw_face_inst* f);
+void                     r_draw__face_inst_resize(struct r_draw_face_inst* f, int old_px, int px);
+bool                     r_draw__face_glyph(struct r_draw_face_inst* f, uint32_t codepoint, uint32_t* gid);
+int                      r_draw__face_advance(struct r_draw_face_inst* f, uint32_t gid, bool* empty);
+void                     r_draw__face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* descender, int* line_gap);
+int                      r_draw__face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, int len, int start, int n, r_draw_glyph_pos** out);
+bool                     r_draw__face_raster(r_draw* c, struct r_draw_face_inst* f, uint32_t gid, r_draw_glyph_bitmap* out);
+void                     r_draw__face_free_state(r_draw* c);
+
+static inline uint32_t r_draw__decode_utf8(const char** str)
+{
+    const uint8_t* s = (const uint8_t*)*str;
+
+    uint32_t codepoint;
+         if((s[0] & 0x80) == 0)   { *str += 1; return s[0]; }
+    else if((s[0] & 0xE0) == 0xC0){ *str += 2; return ((s[0] & 0x1F) << 6)  |  (s[1] & 0x3F); }
+    else if((s[0] & 0xF0) == 0xE0){ *str += 3; return ((s[0] & 0x0F) << 12) | ((s[1] & 0x3F) << 6)  |  (s[2] & 0x3F); }
+
+    *str += 4;
+    return ((s[0] & 0x07) << 18) | ((s[1] & 0x3F) << 12) | ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
+}
+
+static inline void* r_draw__grow(void* p, int* cap, int need, int size)
+{
+    if(need <= *cap) return p;
+    while(*cap < need) *cap = *cap ? *cap * 2 : 256;
+    return realloc(p, (size_t)*cap * size);
+}
+
 bool r_draw__glyph_pixels(r_draw* c, int glyph_idx);
 void r_draw__clear_glyph_cache(r_draw* c);
 void r_draw__free_text(r_draw* c);

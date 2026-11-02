@@ -1,8 +1,16 @@
 #pragma once
 #include "rcut_core.h"
-#include <harfbuzz/hb.h>
-#include <harfbuzz/hb-ot.h>
-#include <harfbuzz/hb-raster.h>
+
+// Text backend: RCUT_USE_HARFBUZZ, RCUT_USE_HB_MINI or RCUT_USE_STB_TRUETYPE, otherwise detected from previously included headers.
+#if !defined(RCUT_USE_HARFBUZZ) && !defined(RCUT_USE_HB_MINI) && !defined(RCUT_USE_STB_TRUETYPE)
+	#if defined(HB_MINI_H)
+		#define RCUT_USE_HB_MINI
+	#elif defined(HB_H)
+		#define RCUT_USE_HARFBUZZ
+	#else
+		#define RCUT_USE_STB_TRUETYPE
+	#endif
+#endif
 
 #define RCUT_DRAW_MAX_STYLEBOXES 512
 #define RCUT_DRAW_USER_STYLEBOXES 256 // Stylebox slots from here on are for the application, themes only use the ones below.
@@ -107,7 +115,7 @@ typedef struct r_draw_font
 	uint32_t flags;
 	uint32_t resolved_flags;
 
-	hb_font_t* font;
+	struct r_draw_face_inst* font;
 } r_draw_font;
 
 typedef struct r_draw_gradient
@@ -241,7 +249,7 @@ typedef struct r_draw
 	bool     cache_full;
 	bool     glyphs_full;
 	uint64_t white;
-	hb_raster_paint_t* paint_context; // Reused scratch rasterizer for glyph caching.
+	void*    font_state; // Font backend scratch state.
 	struct r_draw_text* text;
 
 	r_draw_quad* quads;
@@ -284,8 +292,7 @@ typedef struct r_draw
 	// List: Base font
 	struct r_draw_base_font{
 		char*      path;
-		hb_blob_t* blob;
-		hb_face_t* face;
+		struct r_draw_face* face;
 		int8_t fallbacks[16];
 		int8_t italic_redirect;
 		int8_t bold_redirect;

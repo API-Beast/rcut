@@ -258,7 +258,7 @@ static int box_slot(theme_state* t, box b)
 static inline shadow_desc drop(float y, float blur, float opacity){ return (shadow_desc){ 0, y, blur, 0, r_rgba_f(0, 0, 0, opacity) }; }
 static inline shadow_desc ring(uint32_t color, float width){ return (shadow_desc){ 0, 0, 1, width, color }; }
 
-static uint32_t over(uint32_t dst, uint32_t src)
+static uint32_t over_straight(uint32_t dst, uint32_t src)
 {
 	float sa = (src >> 24) / 255.0f, da = (dst >> 24) / 255.0f * (1 - sa), a = sa + da;
 	if(a <= 0) return 0;
@@ -355,11 +355,11 @@ static void run(theme_state* t, box* b, r_draw_style_rule* r, const theme_op* o)
 	case OP_INSET:        b->inset = drop(f[0], f[1], f[2]); break;
 	case OP_GLOW:         *(b->shadow.color ? &b->shadow2 : &b->shadow) = ring(u[0], f[0]); break;
 	case OP_TINT:
-		b->bg = over(b->bg, u[0]);
-		if(b->bg2) b->bg2 = over(b->bg2, u[0]);
-		if(b->border) b->border = over(b->border, u[0]);
-		if(b->border_top) b->border_top = over(b->border_top, u[0]);
-		if(b->border_bottom) b->border_bottom = over(b->border_bottom, u[0]);
+		b->bg = over_straight(b->bg, u[0]);
+		if(b->bg2) b->bg2 = over_straight(b->bg2, u[0]);
+		if(b->border) b->border = over_straight(b->border, u[0]);
+		if(b->border_top) b->border_top = over_straight(b->border_top, u[0]);
+		if(b->border_bottom) b->border_bottom = over_straight(b->border_bottom, u[0]);
 		break;
 	case OP_LABEL:        r->label_color = u[0]; r->label_align = (r_alignment)u[1]; break;
 	case OP_LABEL_COLOR:  r->label_color = u[0]; break;
@@ -800,7 +800,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_apply_states(c, R_STATE_HOVER);
 
 	r_theme(c, R_STYLE_SLIDEBOX | R_COMPONENT_FILL);
-	r_theme_fill(c, dlc(p, deepen(value, 0.3f), over(value, alpha(WHITE, 0.5f))), 0);
+	r_theme_fill(c, dlc(p, deepen(value, 0.3f), over_straight(value, alpha(WHITE, 0.5f))), 0);
 	r_theme_border(c, 0, 0);
 	r_theme_radius(c, 0);
 	r_theme_padding(c, 1, 1);
