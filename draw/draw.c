@@ -1,12 +1,13 @@
 #include "internal.h"
 
-static rect r_draw_calc_inner_rect(r_context* ctx, int style, rect outer);
-static rect r_draw_calc_outer_rect(r_context* ctx, int style, rect* inner);
-static rect r_draw_measure_text_cb(r_context* ctx, int style, const char* text, int len, int wrap_width);
-static int  r_draw_break_text_cb(r_context* ctx, int style, const char* text, int len, int width, bool force, int* w);
-static void r_draw_get_layout(r_context* ctx, int style, int* size, int* spacing);
+static rect __draw_calc_inner_rect(r_context* ctx, int style, rect outer);
+static rect __draw_calc_outer_rect(r_context* ctx, int style, rect* inner);
+static rect __draw_measure_text   (r_context* ctx, int style, const char* text, int len, int wrap_width);
+static rect __draw_measure_icon   (r_context* ctx, int style, int icon, int* gap);
+static int  __draw_break_text     (r_context* ctx, int style, const char* text, int len, int width, bool force, int* w);
+static void __draw_get_layout     (r_context* ctx, int style, int* size, int* spacing);
 
-static const rect no_clip = { -(1 << 24), -(1 << 24), 1 << 25, 1 << 25 };
+static const rect no_clip = { INT32_MIN / 2, INT32_MIN / 2, INT32_MAX, INT32_MAX };
 
 void r_draw_init(r_draw* c, r_context* ctx, const r_draw_backend* backend, float scale)
 {
@@ -19,26 +20,27 @@ void r_draw_init(r_draw* c, r_context* ctx, const r_draw_backend* backend, float
     hash_init(&c->style_rules, 64, sizeof(r_draw_style_rule));
 
     ctx->userptr = c;
-    ctx->interface.calc_inner_rect = r_draw_calc_inner_rect;
-    ctx->interface.calc_outer_rect = r_draw_calc_outer_rect;
-    ctx->interface.measure_text    = r_draw_measure_text_cb;
-    ctx->interface.break_text      = r_draw_break_text_cb;
-    ctx->interface.get_layout      = r_draw_get_layout;
+    ctx->interface.calc_inner_rect = __draw_calc_inner_rect;
+    ctx->interface.calc_outer_rect = __draw_calc_outer_rect;
+    ctx->interface.measure_text    = __draw_measure_text;
+    ctx->interface.measure_icon    = __draw_measure_icon;
+    ctx->interface.break_text      = __draw_break_text;
+    ctx->interface.get_layout      = __draw_get_layout;
 }
 
 void r_draw_free(r_draw* c)
 {
     for(int i = 0; i < RCUT_DRAW_FONT_HASHMAP_SIZE; i++)
-        if(c->fonts[i].font) r_draw__face_inst_free(c->fonts[i].font);
+        if(c->fonts[i].font) __draw_face_inst_free(c->fonts[i].font);
 
     for(int i = 0; i < COUNTOF(c->base_fonts); i++)
     {
-        if(c->base_fonts[i].face) r_draw__face_free(c->base_fonts[i].face);
+        if(c->base_fonts[i].face) __draw_face_free(c->base_fonts[i].face);
         free(c->base_fonts[i].path);
     }
 
-    r_draw__face_free_state(c);
-    r_draw__free_text(c);
+    __draw_face_free_state(c);
+    __draw_free_text(c);
     free(c->quads);
     free(c->theme);
     free(c->style_rules.keys); free(c->style_rules.values);
@@ -51,7 +53,7 @@ void r_draw_set_scale(r_draw* c, float scale)
     if(scale == c->scale) return;
     c->scale = scale;
 
-    r_draw__rescale_fonts(c);
+    __draw_rescale_fonts(c);
     r_draw_clear_cache(c);
     for(int i = 1; i < RCUT_DRAW_MAX_STYLEBOXES; i++)
     {
@@ -64,22 +66,22 @@ void r_draw_set_scale(r_draw* c, float scale)
         l->needs_redraw = true;
 }
 
-void r_draw__invalidate(r_draw* c, uint64_t* handle)
+void __draw_invalidate(r_draw* c, uint64_t* handle)
 {
     if(*handle && c->backend.invalidate_cache) c->backend.invalidate_cache(c->backend.userptr, *handle);
     *handle = 0;
 }
 
-bool r_draw__still_cached(r_draw* c, uint64_t* handle)
+bool __draw_still_cached(r_draw* c, uint64_t* handle)
 {
     if(*handle && c->backend.is_cached(c->backend.userptr, *handle)) return true;
     *handle = 0;
     return false;
 }
 
-uint64_t r_draw__cached(r_draw* c, uint64_t* handle, const uint32_t* pixels, int w, int h)
+uint64_t __draw_cached(r_draw* c, uint64_t* handle, const uint32_t* pixels, int w, int h)
 {
-    if(r_draw__still_cached(c, handle)) return *handle;
+    if(__draw_still_cached(c, handle)) return *handle;
     if(c->cache_full || !pixels || w <= 0 || h <= 0) return 0;
     *handle = c->backend.cache_argb(c->backend.userptr, w, h, pixels, w * 4, false);
     if(!*handle) c->cache_full = true;
@@ -90,14 +92,14 @@ void r_draw_clear_cache(r_draw* c)
 {
     for(int i = 0; i < RCUT_DRAW_MAX_STYLEBOXES; i++)
     {
-        if(!c->styleboxes[i].permanent)    r_draw__invalidate(c, &c->styleboxes[i].handle);
-        if(!c->styleboxes[i].bg_permanent) r_draw__invalidate(c, &c->styleboxes[i].bg_handle);
+        if(!c->styleboxes[i].permanent)    __draw_invalidate(c, &c->styleboxes[i].handle);
+        if(!c->styleboxes[i].bg_permanent) __draw_invalidate(c, &c->styleboxes[i].bg_handle);
     }
     for(int i = 0; i < c->num_sized_styleboxes; i++)
-        r_draw__invalidate(c, &c->sized_styleboxes[i].handle);
+        __draw_invalidate(c, &c->sized_styleboxes[i].handle);
     c->num_sized_styleboxes = 0;
-    r_draw__clear_glyph_cache(c);
-    r_draw__invalidate(c, &c->white);
+    __draw_clear_glyph_cache(c);
+    __draw_invalidate(c, &c->white);
 }
 
 uint64_t r_draw_atlas_alloc(r_draw_atlas* a, int w, int h)
@@ -166,7 +168,7 @@ r_draw_style_rule* r_draw_find_style_rule(r_draw* c, int style)
         0, R_VARIANT_MASK, R_COMPONENT_MASK, R_VARIANT_MASK | R_COMPONENT_MASK,
         R_STYLE_BASE_MASK, R_STYLE_BASE_MASK | R_COMPONENT_MASK, R_STYLE_BASE_MASK | R_COMPONENT_MASK | R_VARIANT_MASK
     };
-    if(c->theme) r_theme__flush(c);
+    if(c->theme) __draw_theme_flush(c);
     uint32_t base = (uint32_t)style;
     r_draw_style_rule* rule = NULL;
     for(int i = 0; i < COUNTOF(strip_structure) && !rule; i++)
@@ -184,31 +186,31 @@ r_draw_style_rule* r_draw_find_style_rule(r_draw* c, int style)
     return rule;
 }
 
-static rect r_draw_calc_inner_rect(r_context* ctx, int style, rect outer)
+static rect __draw_calc_inner_rect(r_context* ctx, int style, rect outer)
 {
     r_draw_style_rule* rule = r_draw_find_style_rule(ctx->userptr, style);
     return rule ? r_draw_stylebox_inner_rect(ctx->userptr, rule->bg_stylebox, outer) : outer;
 }
 
-static rect r_draw_calc_outer_rect(r_context* ctx, int style, rect* inner)
+static rect __draw_calc_outer_rect(r_context* ctx, int style, rect* inner)
 {
     r_draw_style_rule* rule = r_draw_find_style_rule(ctx->userptr, style);
     return rule ? r_draw_stylebox_outer_rect(ctx->userptr, rule->bg_stylebox, inner) : *inner;
 }
 
-static rect r_draw_measure_text_cb(r_context* ctx, int style, const char* text, int len, int wrap_width)
+static rect __draw_measure_text(r_context* ctx, int style, const char* text, int len, int wrap_width)
 {
     r_draw_style_rule* rule = r_draw_find_style_rule(ctx->userptr, style);
     return r_draw_measure_text_wrapped(ctx->userptr, rule ? rule->label_font : NULL, text, len, wrap_width);
 }
 
-static int r_draw_break_text_cb(r_context* ctx, int style, const char* text, int len, int width, bool force, int* w)
+static int __draw_break_text(r_context* ctx, int style, const char* text, int len, int width, bool force, int* w)
 {
     r_draw_style_rule* rule = r_draw_find_style_rule(ctx->userptr, style);
     return r_draw_break_text(ctx->userptr, rule ? rule->label_font : NULL, text, len, width, force, w);
 }
 
-static void r_draw__layout(r_draw* c, int style, int* size, int* spacing)
+static void layout_defaults(r_draw* c, int style, int* size, int* spacing)
 {
     r_draw_style_rule* rule = r_draw_find_style_rule(c, style);
     r_draw_style_rule* fallback = r_draw_get_style_rule(c, R_STYLE_FALLBACK);
@@ -216,9 +218,23 @@ static void r_draw__layout(r_draw* c, int style, int* size, int* spacing)
     *spacing = rule && rule->spacing ? rule->spacing : fallback ? fallback->spacing : 0;
 }
 
-static void r_draw_get_layout(r_context* ctx, int style, int* size, int* spacing)
+static void __draw_get_layout(r_context* ctx, int style, int* size, int* spacing)
 {
-    r_draw__layout(ctx->userptr, style, size, spacing);
+    layout_defaults(ctx->userptr, style, size, spacing);
+}
+
+static int icon_metrics(r_draw* c, r_draw_style_rule* rule, int* gap)
+{
+    int size, spacing;
+    layout_defaults(c, R_STYLE_ICON, &size, &spacing);
+    *gap = spacing * 3 / 4;
+    return rule && rule->icon_size ? rule->icon_size : size;
+}
+
+static rect __draw_measure_icon(r_context* ctx, int style, int icon, int* gap)
+{
+    int s = icon_metrics(ctx->userptr, r_draw_find_style_rule(ctx->userptr, style), gap);
+    return (rect){.w = s, .h = s};
 }
 
 static int text_reach(const r_draw_style_rule* rule)
@@ -229,7 +245,7 @@ static int text_reach(const r_draw_style_rule* rule)
     return (int)ceilf(reach);
 }
 
-void r_draw__emit(r_draw* c, uint64_t handle, uint32_t color, r_frect src, r_frect dst, rect clip)
+void __draw_emit(r_draw* c, uint64_t handle, uint32_t color, r_frect src, r_frect dst, rect clip)
 {
     float x0 = MAX(dst.x, (float)clip.x), y0 = MAX(dst.y, (float)clip.y);
     float x1 = MIN(dst.x + dst.w, (float)(clip.x + clip.w)), y1 = MIN(dst.y + dst.h, (float)(clip.y + clip.h));
@@ -248,8 +264,8 @@ void r_draw__emit(r_draw* c, uint64_t handle, uint32_t color, r_frect src, r_fre
 void r_draw_render_fill(r_draw* c, uint32_t color, rect bounds)
 {
     static const uint32_t white[4] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF };
-    rect px = r_draw__to_pixels(bounds, c->scale);
-    r_draw__emit(c, r_draw__cached(c, &c->white, white, 2, 2), r_draw__premult_color(color), (r_frect){ 0, 0, 2, 2 }, (r_frect){ px.x, px.y, px.w, px.h }, c->clip_px);
+    rect px = __draw_to_pixels(bounds, c->scale);
+    __draw_emit(c, __draw_cached(c, &c->white, white, 2, 2), __draw_premult_color(color), (r_frect){ 0, 0, 2, 2 }, (r_frect){ px.x, px.y, px.w, px.h }, c->clip_px);
 }
 
 static void list_matrix(r_ui_list* l, int ox, int oy, float lm[2][3])
@@ -279,7 +295,7 @@ void r_draw_render_pass_begin(r_draw* c, r_ui_list* l)
 {
     c->pass_list = l;
     r_list_get_transform(l, &c->pass_ox, &c->pass_oy, &c->pass_clip);
-    c->clip_px = r_draw__to_pixels(c->pass_clip, c->scale);
+    c->clip_px = __draw_to_pixels(c->pass_clip, c->scale);
     c->pass_transform = NULL;
     if(!l->use_transform_matrix || c->num_transforms == COUNTOF(c->transforms)) return;
 
@@ -289,8 +305,8 @@ void r_draw_render_pass_begin(r_draw* c, r_ui_list* l)
     for(int i = 0; i < 2; i++)
         t->m[i][0] = lm[i][0], t->m[i][1] = lm[i][1], t->m[i][2] = lm[i][2] * c->scale;
     t->clip = c->clip_px;
-    c->pass_clip = r_draw__invert(lm, inv) ? r_grow(map_rect(inv, c->pass_clip), 1) : (rect){0};
-    c->clip_px = r_draw__to_pixels(c->pass_clip, c->scale);
+    c->pass_clip = __draw_invert(lm, inv) ? r_grow(map_rect(inv, c->pass_clip), 1) : (rect){0};
+    c->clip_px = __draw_to_pixels(c->pass_clip, c->scale);
     c->pass_transform = t;
 }
 
@@ -305,34 +321,30 @@ static void render_content(r_draw* c, r_draw_style_rule* rule, r_drawable* d, re
 {
     uint32_t icon_color = rule->icon_color ? rule->icon_color : rule->label_color;
     r_alignment align = rule->label_align ? rule->label_align : R_LEFT_CENTER;
-    int icon_size = rule->icon_size, spacing, size;
-    r_draw__layout(c, R_STYLE_ICON, &size, &spacing);
-    if(!icon_size) icon_size = size;
+    int gap, icon_size = icon_metrics(c, rule, &gap);
     rect clip = rect_intersect(bounds, c->pass_clip);
-    area = r_offset(area, -d->scroll_x, -d->scroll_y);
+    area = r_offset(area, d->label_offset_x, d->label_offset_y);
+    if(d->wrap_label) align = (align & ~(R_V_CENTER | R_BOTTOM)) | R_TOP;
+    int wrap = d->wrap_label ? area.w : 0;
 
     if(d->icon)
     {
         rect ir = {.w = icon_size, .h = icon_size};
         if(d->text)
         {
-            int gap = spacing * 3 / 4;
-            int tw = r_draw_measure_text(c, rule->label_font, d->text, -1).w;
-            rect group = {.w = icon_size + gap + tw, .h = area.h};
-            r_align(align & ~(R_TOP | R_BOTTOM | R_V_CENTER), area, &group);
-            group.y = area.y;
-            r_align(R_LEFT_CENTER, group, &ir);
-            area = r_shrink_sides(group, icon_size + gap, 0, 0, 0);
+            if(wrap) wrap = MAX(wrap - icon_size - gap, 1);
+            rect t = r_draw_measure_text_wrapped(c, rule->label_font, d->text, -1, wrap);
+            rect group = {.w = icon_size + gap + t.w, .h = t.h};
+            r_align(align, area, &group);
+            rect line = {.x = group.x, .y = group.y, .w = icon_size, .h = r_draw_measure_text(c, rule->label_font, "", -1).h};
+            r_align(R_LEFT_CENTER, line, &ir);
+            area = r_shrink_sides((rect){group.x, area.y, group.w, area.h}, icon_size + gap, 0, 0, 0);
             align = (align & (R_TOP | R_BOTTOM | R_V_CENTER)) | R_LEFT;
         }
         else r_align(align, area, &ir);
         if(rect_intersect(ir, clip).w > 0) r_draw_render_icon(c, (uint16_t)d->icon, icon_color, ir);
     }
-    if(d->text)
-    {
-        if(d->wrap_text) align = (align & ~(R_V_CENTER | R_BOTTOM)) | R_TOP;
-        r_draw__render_text(c, d, rule, area, align, clip, d->wrap_text ? area.w : 0);
-    }
+    if(d->text) __draw_render_text(c, d, rule, area, align, clip, wrap);
 }
 
 static int interaction_state(r_draw* c, r_drawable* d)
@@ -363,7 +375,7 @@ void r_draw_render_drawable(r_draw* c, r_drawable* item)
 
     int base_style = d->style & R_STYLE_BASE_MASK;
     bool content_only = base_style == R_STYLE_TEXT || base_style == R_STYLE_ICON;
-    int style = content_only && d->outer_style ? d->outer_style : d->style;
+    int style = content_only && d->outer_style ? d->outer_style | (d->style & R_STATE_MASK) : d->style;
     int state = interaction_state(c, d);
     r_draw_style_rule* rule = r_draw_find_style_rule(c, style | state);
 
@@ -391,7 +403,7 @@ void r_draw_render_drawable(r_draw* c, r_drawable* item)
 
 void r_draw_render_area(r_draw* c, uint64_t target, rect area)
 {
-    if(c->glyphs_full) r_draw__clear_glyph_cache(c);
+    if(c->glyphs_full) __draw_clear_glyph_cache(c);
     c->cache_full = false;
     c->num_quads = 0;
     c->num_transforms = 0;
@@ -462,7 +474,7 @@ static rect drawable_bounds(r_draw* c, r_ui_list* l, list_placement* p, r_drawab
     }
     else
     {
-        r_draw_style_rule* rule = r_draw_find_style_rule(c, d->outer_style ? d->outer_style : d->style);
+        r_draw_style_rule* rule = r_draw_find_style_rule(c, d->outer_style ? d->outer_style | (d->style & R_STATE_MASK) : d->style);
         if(rule) r = r_grow(r, 1 + text_reach(rule));
     }
     if(l->use_transform_matrix) r = map_rect(p->lm, r);
@@ -573,5 +585,5 @@ rect r_draw_take_damage(r_draw* c, uint64_t target)
     for(r_ui_list* l = ctx->chain_start; l; l = l->chain_next)
         if(l->target == target && r_list_is_visible(l)) damage = union_area(damage, id_damage(l));
     if(damage.w <= 0 || damage.h <= 0) return (rect){0};
-    return r_draw__to_pixels(r_grow(damage, 1 + theme_reach(c)), c->scale);
+    return __draw_to_pixels(r_grow(damage, 1 + theme_reach(c)), c->scale);
 }

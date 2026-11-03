@@ -34,7 +34,7 @@ static struct font_state* state(r_draw* c)
     return c->font_state;
 }
 
-void r_draw__face_free_state(r_draw* c)
+void __draw_face_free_state(r_draw* c)
 {
     struct font_state* s = c->font_state;
     if(!s) return;
@@ -42,7 +42,7 @@ void r_draw__face_free_state(r_draw* c)
     c->font_state = NULL;
 }
 
-struct r_draw_face* r_draw__face_load(const char* path)
+struct r_draw_face* __draw_face_load(const char* path)
 {
     FILE* fp = fopen(path, "rb");
     if(!fp) return NULL;
@@ -56,13 +56,13 @@ struct r_draw_face* r_draw__face_load(const char* path)
     int offset = ok ? stbtt_GetFontOffsetForIndex(face->data, 0) : -1;
     if(offset < 0 || !stbtt_InitFont(&face->info, face->data, offset) || face->info.numGlyphs <= 0)
     {
-        r_draw__face_free(face);
+        __draw_face_free(face);
         return NULL;
     }
     return face;
 }
 
-void r_draw__face_free(struct r_draw_face* face)
+void __draw_face_free(struct r_draw_face* face)
 {
     if(!face) return;
     free(face->data);
@@ -72,7 +72,7 @@ void r_draw__face_free(struct r_draw_face* face)
 static uint32_t be16(const uint8_t* p) { return (uint32_t)p[0] << 8 | p[1]; }
 static uint32_t be32(const uint8_t* p) { return be16(p) << 16 | be16(p + 2); }
 
-int r_draw__face_weight(struct r_draw_face* face)
+int __draw_face_weight(struct r_draw_face* face)
 {
     const uint8_t* font = face->data + face->info.fontstart;
     for(uint32_t i = 0, n = be16(font + 4); i < n; i++)
@@ -85,7 +85,7 @@ int r_draw__face_weight(struct r_draw_face* face)
     return 400;
 }
 
-struct r_draw_face_inst* r_draw__face_inst(struct r_draw_face* face, int px, int weight, int synth_weight, bool italic)
+struct r_draw_face_inst* __draw_face_inst(struct r_draw_face* face, int px, int weight, int synth_weight, bool italic)
 {
     (void)weight;
     struct r_draw_face_inst* f = malloc(sizeof(*f));
@@ -96,24 +96,24 @@ struct r_draw_face_inst* r_draw__face_inst(struct r_draw_face* face, int px, int
     return f;
 }
 
-void r_draw__face_inst_free(struct r_draw_face_inst* f)
+void __draw_face_inst_free(struct r_draw_face_inst* f)
 {
     free(f);
 }
 
-void r_draw__face_inst_resize(struct r_draw_face_inst* f, int old_px, int px)
+void __draw_face_inst_resize(struct r_draw_face_inst* f, int old_px, int px)
 {
     f->scale = stbtt_ScaleForMappingEmToPixels(&f->face->info, (float)px);
     if(old_px > 0) f->embolden = f->embolden * px / old_px;
 }
 
-bool r_draw__face_glyph(struct r_draw_face_inst* f, uint32_t codepoint, uint32_t* gid)
+bool __draw_face_glyph(struct r_draw_face_inst* f, uint32_t codepoint, uint32_t* gid)
 {
     *gid = (uint32_t)stbtt_FindGlyphIndex(&f->face->info, (int)codepoint);
     return *gid != 0;
 }
 
-int r_draw__face_advance(struct r_draw_face_inst* f, uint32_t gid, bool* empty)
+int __draw_face_advance(struct r_draw_face_inst* f, uint32_t gid, bool* empty)
 {
     int advance, lsb;
     stbtt_GetGlyphHMetrics(&f->face->info, (int)gid, &advance, &lsb);
@@ -121,7 +121,7 @@ int r_draw__face_advance(struct r_draw_face_inst* f, uint32_t gid, bool* empty)
     return (int)((advance * f->scale + f->embolden) * 64.0f + 0.5f);
 }
 
-void r_draw__face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* descender, int* line_gap)
+void __draw_face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* descender, int* line_gap)
 {
     int asc, desc, gap;
     stbtt_GetFontVMetrics(&f->face->info, &asc, &desc, &gap);
@@ -130,25 +130,25 @@ void r_draw__face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* desc
     *line_gap  = (int)(gap  * f->scale * 64.0f + 0.5f);
 }
 
-int r_draw__face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, int len, int start, int n, r_draw_glyph_pos** out)
+int __draw_face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, int len, int start, int n, r_draw_glyph_pos** out)
 {
     (void)len;
     struct font_state* s = state(c);
-    s->pos = r_draw__grow(s->pos, &s->cap_pos, n, sizeof(r_draw_glyph_pos));
+    s->pos = __draw_grow(s->pos, &s->cap_pos, n, sizeof(r_draw_glyph_pos));
     int count = 0;
     for(const char* p = text + start, *end = p + n; p < end; )
     {
         uint32_t cluster = (uint32_t)(p - text), gid;
-        r_draw__face_glyph(f, r_draw__decode_utf8(&p), &gid);
+        __draw_face_glyph(f, __draw_decode_utf8(&p), &gid);
         if(count > 0) s->pos[count - 1].x_advance += (int)(stbtt_GetGlyphKernAdvance(&f->face->info, (int)s->pos[count - 1].glyph, (int)gid) * f->scale * 64.0f);
         bool empty;
-        s->pos[count++] = (r_draw_glyph_pos){ gid, cluster, r_draw__face_advance(f, gid, &empty) };
+        s->pos[count++] = (r_draw_glyph_pos){ gid, cluster, __draw_face_advance(f, gid, &empty) };
     }
     *out = s->pos;
     return count;
 }
 
-bool r_draw__face_raster(r_draw* c, struct r_draw_face_inst* f, uint32_t gid, r_draw_glyph_bitmap* out)
+bool __draw_face_raster(r_draw* c, struct r_draw_face_inst* f, uint32_t gid, r_draw_glyph_bitmap* out)
 {
     struct font_state* s = state(c);
     stbtt_vertex* v;
@@ -174,7 +174,7 @@ bool r_draw__face_raster(r_draw* c, struct r_draw_face_inst* f, uint32_t gid, r_
     if(w <= 0 || h <= 0) { stbtt_FreeShape(&f->face->info, v); return true; }
 
     int passes = f->embolden > 0 ? 2 : 1;
-    s->bitmap = r_draw__grow(s->bitmap, &s->cap_bitmap, w * h * passes, 1);
+    s->bitmap = __draw_grow(s->bitmap, &s->cap_bitmap, w * h * passes, 1);
     stbtt__bitmap bmp = { w, h, w, s->bitmap };
     stbtt_Rasterize(&bmp, 0.35f, v, n, f->scale, f->scale, 0.0f, 0.0f, ix0, iy0, 1, NULL);
     if(passes == 2)

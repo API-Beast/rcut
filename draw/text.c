@@ -211,7 +211,7 @@ static uint64_t font_hash(uint64_t base, uint64_t size, uint64_t flags)
 bool r_draw_font_register(r_draw* c, int slot, const char* font_path, bool lazy)
 {
     struct r_draw_face* face = NULL;
-    if(!lazy && !(face = r_draw__face_load(font_path))) return false;
+    if(!lazy && !(face = __draw_face_load(font_path))) return false;
 
     if(lazy)
     {
@@ -224,7 +224,7 @@ bool r_draw_font_register(r_draw* c, int slot, const char* font_path, bool lazy)
     base_font->path = malloc(strlen(font_path) + 1);
     strcpy(base_font->path, font_path);
     base_font->face = face;
-    base_font->weight = face ? (int16_t)r_draw__face_weight(face) : 400;
+    base_font->weight = face ? (int16_t)__draw_face_weight(face) : 400;
     base_font->italic_redirect = -1; // No dedicated italic face: synthesize a slant.
     base_font->bold_redirect   = -1; // No dedicated bold face:  synthesize weight.
     for(int i = 0; i < 16; i++)
@@ -238,8 +238,8 @@ static bool ensure_font_is_loaded(r_draw* c, int slot)
     if(c->base_fonts[slot].lazy_load && c->base_fonts[slot].face == NULL)
     {
         struct r_draw_base_font* base_font = &c->base_fonts[slot];
-        base_font->face = r_draw__face_load(base_font->path);
-        if(base_font->face) base_font->weight = (int16_t)r_draw__face_weight(base_font->face);
+        base_font->face = __draw_face_load(base_font->path);
+        if(base_font->face) base_font->weight = (int16_t)__draw_face_weight(base_font->face);
     }
     return c->base_fonts[slot].face != NULL;
 }
@@ -303,7 +303,7 @@ r_draw_font* r_draw_get_font(r_draw* c, int base_font, int size, uint32_t flags)
     if(!ensure_font_is_loaded(c, resolved_base)) return NULL;
     int px = (int)(size * c->scale + 0.5f);
     int synth_weight = want_weight && !bold_native ? want_weight - c->base_fonts[resolved_base].weight : 0;
-    struct r_draw_face_inst* font = r_draw__face_inst(c->base_fonts[resolved_base].face, px, want_weight, synth_weight, resolved_flags & R_FONT_ITALIC);
+    struct r_draw_face_inst* font = __draw_face_inst(c->base_fonts[resolved_base].face, px, want_weight, synth_weight, resolved_flags & R_FONT_ITALIC);
     if(!font) return NULL;
 
     r_draw_font* f = &c->fonts[free_slot];
@@ -316,14 +316,14 @@ r_draw_font* r_draw_get_font(r_draw* c, int base_font, int size, uint32_t flags)
     return f;
 }
 
-void r_draw__rescale_fonts(r_draw* c)
+void __draw_rescale_fonts(r_draw* c)
 {
     for(int i = 0; i < RCUT_DRAW_FONT_HASHMAP_SIZE; i++)
     {
         r_draw_font* f = &c->fonts[i];
         if(!f->font) continue;
         int old_px = (int)(f->size * f->scale + 0.5f), px = (int)(f->size * c->scale + 0.5f);
-        r_draw__face_inst_resize(f->font, old_px, px);
+        __draw_face_inst_resize(f->font, old_px, px);
         f->scale = c->scale;
     }
 }
@@ -400,7 +400,7 @@ static int cache_glyph(r_draw* c, int font_id, uint16_t glyph_id)
     *g = (struct r_draw_glyph){0};
     g->font_id    = font_id;
     g->glyph_id   = glyph_id;
-    g->x_advance  = r_draw__face_advance(f, glyph_id, &g->is_empty);
+    g->x_advance  = __draw_face_advance(f, glyph_id, &g->is_empty);
     return hash;
 }
 
@@ -446,7 +446,7 @@ static uint64_t cache_font_glyph(r_draw* c, struct r_draw_glyph* g)
 {
     int font_id = g->font_id % RCUT_DRAW_FONT_HASHMAP_SIZE, effect = g->font_id / RCUT_DRAW_FONT_HASHMAP_SIZE;
     r_draw_glyph_bitmap bm;
-    if(!r_draw__face_raster(c, c->fonts[font_id].font, g->glyph_id, &bm)) { g->is_empty = true; return 0; }
+    if(!__draw_face_raster(c, c->fonts[font_id].font, g->glyph_id, &bm)) { g->is_empty = true; return 0; }
 
     int dilate = effect & 15, blur = effect >> 4, margin = dilate + 2 * blur;
     g->x_origin   = bm.x - margin;
@@ -468,7 +468,7 @@ static uint64_t cache_font_glyph(r_draw* c, struct r_draw_glyph* g)
     return handle;
 }
 
-bool r_draw__glyph_pixels(r_draw* c, int glyph_idx)
+bool __draw_glyph_pixels(r_draw* c, int glyph_idx)
 {
     struct r_draw_glyph* g = &c->glyphs[glyph_idx];
     if(g->is_empty) return false;
@@ -478,7 +478,7 @@ bool r_draw__glyph_pixels(r_draw* c, int glyph_idx)
     if(g->font_id < 0)
     {
         int size = -g->font_id;
-        g->handle = r_draw__cache_icon(c, g->glyph_id, size, &g->is_colored);
+        g->handle = __draw_cache_icon(c, g->glyph_id, size, &g->is_colored);
         g->w = g->h = size;
     }
     else g->handle = cache_font_glyph(c, g);
@@ -509,7 +509,7 @@ static int get_codepoint_glyph(r_draw* c, r_draw_font* font, uint32_t codepoint)
             if(c->num_glyph_mappings >= RCUT_DRAW_GLYPH_LOAD_LIMIT) { c->glyphs_full = true; return -1; }
             c->num_glyph_mappings++;
             uint32_t gid, glyph_idx = -1;
-            if(r_draw__face_glyph(font->font, codepoint, &gid) && gid != 0)
+            if(__draw_face_glyph(font->font, codepoint, &gid) && gid != 0)
             {
                 int idx = glyph_idx_cached(c, font, (uint16_t)gid);
                 if(idx >= 0) glyph_idx = (uint32_t)idx;
@@ -574,10 +574,10 @@ static struct r_draw_text* scratch(r_draw* c)
     return c->text;
 }
 
-void r_draw__clear_glyph_cache(r_draw* c)
+void __draw_clear_glyph_cache(r_draw* c)
 {
     for(int i = 0; i < RCUT_DRAW_MAX_GLYPHS; i++)
-        r_draw__invalidate(c, &c->glyphs[i].handle);
+        __draw_invalidate(c, &c->glyphs[i].handle);
     c->glyphs_full = false;
     c->num_glyphs = c->num_glyph_mappings = 0;
     memset(c->glyphs, 0, sizeof(c->glyphs));
@@ -585,7 +585,7 @@ void r_draw__clear_glyph_cache(r_draw* c)
     if(c->text) c->text->generation++;
 }
 
-void r_draw__free_text(r_draw* c)
+void __draw_free_text(r_draw* c)
 {
     if(!c->text) return;
     free(c->text->run); free(c->text->laid); free(c->text->line_w);
@@ -606,11 +606,11 @@ static int shape_run(r_draw* c, r_draw_font* font, const char* text, int len)
     int n = 0;
     if(!(font->flags & R_FONT_SHAPED))
     {
-        t->run = r_draw__grow(t->run, &t->cap_run, len, sizeof(run_glyph));
+        t->run = __draw_grow(t->run, &t->cap_run, len, sizeof(run_glyph));
         for(const char* p = text; p < end; )
         {
             int cluster = (int)(p - text);
-            int gi = resolve_codepoint_glyph(c, font, r_draw__decode_utf8(&p));
+            int gi = resolve_codepoint_glyph(c, font, __draw_decode_utf8(&p));
             t->run[n++] = (run_glyph){ gi, cluster, gi >= 0 ? c->glyphs[gi].x_advance : 0 };
         }
         return n;
@@ -622,15 +622,15 @@ static int shape_run(r_draw* c, r_draw_font* font, const char* text, int len)
         while(p < end)
         {
             const char* q = p;
-            int gi = resolve_codepoint_glyph(c, font, r_draw__decode_utf8(&q));
+            int gi = resolve_codepoint_glyph(c, font, __draw_decode_utf8(&q));
             r_draw_font* f = gi >= 0 ? &c->fonts[c->glyphs[gi].font_id] : run_font ? run_font : font;
             if(run_font && f != run_font) break;
             run_font = f;
             p = q;
         }
         r_draw_glyph_pos* pos;
-        int count = r_draw__face_shape(c, run_font->font, text, len, (int)(start - text), (int)(p - start), &pos);
-        t->run = r_draw__grow(t->run, &t->cap_run, n + count, sizeof(run_glyph));
+        int count = __draw_face_shape(c, run_font->font, text, len, (int)(start - text), (int)(p - start), &pos);
+        t->run = __draw_grow(t->run, &t->cap_run, n + count, sizeof(run_glyph));
         for(int i = 0; i < count; i++)
         {
             int gi = pos[i].glyph ? glyph_idx_cached(c, run_font, (uint16_t)pos[i].glyph) : -1;
@@ -689,7 +689,7 @@ static const char* next_line(r_draw* c, r_draw_font* font, const char* line, con
 static int line_height_px(r_draw_font* font)
 {
     int asc, desc, gap;
-    r_draw__face_v_metrics(font->font, &asc, &desc, &gap);
+    __draw_face_v_metrics(font->font, &asc, &desc, &gap);
     int line_height = (asc - desc + gap + 63) / 64;
     return line_height > 0 ? line_height : (int)(font->size * font->scale);
 }
@@ -744,10 +744,10 @@ static text_layout layout_text(r_draw* c, r_draw_font* font, const char* text, i
     {
         const char* next; int w = 0;
         const char* eol = next_line(c, font, line, end, wrap_width, true, &next, &w);
-        t->line_w = r_draw__grow(t->line_w, &t->cap_lines, lines + 1, sizeof(int32_t));
+        t->line_w = __draw_grow(t->line_w, &t->cap_lines, lines + 1, sizeof(int32_t));
         t->line_w[lines] = w;
         int count = shape_run(c, font, line, (int)(eol - line)), x = 0;
-        t->laid = r_draw__grow(t->laid, &t->cap_laid, n + count, sizeof(laid_glyph));
+        t->laid = __draw_grow(t->laid, &t->cap_laid, n + count, sizeof(laid_glyph));
         for(int i = 0; i < count; i++)
         {
             run_glyph* g = &t->run[i];
@@ -770,17 +770,17 @@ static text_layout drawable_layout(r_draw* c, r_drawable* d, r_draw_font* font, 
 {
     int len = (int)strlen(d->text);
     scratch(c);
-    if(layout_matches(c, d->text_cache, font, d->text, len, wrap_width)) return *(text_layout*)d->text_cache;
+    if(layout_matches(c, d->layout_cache, font, d->text, len, wrap_width)) return *(text_layout*)d->layout_cache;
     r_ui_list* l = c->pass_list;
     int index = l ? (int)(c->pass_item - l->draw_items) : -1;
-    if(index < 0 || index >= l->count_draw_items || d->text_cache) return layout_text(c, font, d->text, len, wrap_width);
+    if(index < 0 || index >= l->count_draw_items || d->layout_cache) return layout_text(c, font, d->text, len, wrap_width);
 
     text_layout* found = NULL;
     int n = l->count_draw_items_last_frame;
     for(int k = 0; k < n && !found; k++)
     {
         r_drawable* o = &l->draw_items_last_frame[(MIN(index, n - 1) + k) % n];
-        if(o->r.id == d->r.id && layout_matches(c, o->text_cache, font, d->text, len, wrap_width)) found = o->text_cache;
+        if(o->r.id == d->r.id && layout_matches(c, o->layout_cache, font, d->text, len, wrap_width)) found = o->layout_cache;
     }
     text_layout t = found ? *found : layout_text(c, font, d->text, len, wrap_width);
 
@@ -790,7 +790,7 @@ static text_layout drawable_layout(r_draw* c, r_drawable* d, r_draw_font* font, 
     kept->glyphs = memcpy(kept + 1, t.glyphs, glyphs);
     kept->line_w = memcpy((char*)kept->glyphs + glyphs, t.line_w, lines);
     kept->text   = memcpy((char*)kept->line_w + lines, d->text, len + 1);
-    c->pass_item->text_cache = kept;
+    c->pass_item->layout_cache = kept;
     return t;
 }
 
@@ -812,11 +812,11 @@ static int effect_px(float v, float scale){ return v > 0 ? MIN(MAX((int)(v * sca
 static void render_layout(r_draw* c, const text_layout* t, uint32_t color, const r_draw_style_rule* fx, rect bounds, r_alignment align, int scroll_x, int scroll_y, rect clip)
 {
     float s = c->scale;
-    bounds = r_draw__to_pixels(bounds, s);
-    clip = rect_intersect(r_draw__to_pixels(clip, s), c->clip_px);
+    bounds = __draw_to_pixels(bounds, s);
+    clip = rect_intersect(__draw_to_pixels(clip, s), c->clip_px);
     scroll_x = (int)(scroll_x * s); scroll_y = (int)(scroll_y * s);
     int asc, desc, gap;
-    r_draw__face_v_metrics(t->font->font, &asc, &desc, &gap);
+    __draw_face_v_metrics(t->font->font, &asc, &desc, &gap);
     int ascender    = (asc + 32) / 64;
     int text_height = (asc - desc + 32) / 64;
     int line_height = line_height_px(t->font);
@@ -835,7 +835,7 @@ static void render_layout(r_draw* c, const text_layout* t, uint32_t color, const
     for(int p = 0; p < 3; p++)
     {
         if(!(passes[p].color >> 24)) continue;
-        uint32_t tint = r_draw__premult_color(passes[p].color), colored_tint = r_draw__premult_color(passes[p].color | 0x00FFFFFF);
+        uint32_t tint = __draw_premult_color(passes[p].color), colored_tint = __draw_premult_color(passes[p].color | 0x00FFFFFF);
         for(int i = 0; i < t->num_glyphs; i++)
         {
             const laid_glyph* lg = &t->glyphs[i];
@@ -846,15 +846,15 @@ static void render_layout(r_draw* c, const text_layout* t, uint32_t color, const
             else if(align & R_H_CENTER) x += (bounds.w - line_w) / 2;
             x = ((x << 6) + lg->x + 32) >> 6;
             int gi = effect_glyph(c, lg->glyph, passes[p].dilate, passes[p].blur);
-            if(gi < 0 || x > clip.x + clip.w || !r_draw__glyph_pixels(c, gi)) continue;
+            if(gi < 0 || x > clip.x + clip.w || !__draw_glyph_pixels(c, gi)) continue;
             struct r_draw_glyph* g = &c->glyphs[gi];
             r_frect dst = { (float)(x + g->x_origin), (float)(baseline - ((lg->y + 32) >> 6) + g->y_origin), g->w, g->h };
-            r_draw__emit(c, g->handle, g->is_colored ? colored_tint : tint, (r_frect){ 0, 0, g->w, g->h }, dst, clip);
+            __draw_emit(c, g->handle, g->is_colored ? colored_tint : tint, (r_frect){ 0, 0, g->w, g->h }, dst, clip);
         }
     }
 }
 
-void r_draw__render_text(r_draw* c, r_drawable* d, const r_draw_style_rule* rule, rect bounds, r_alignment align, rect clip, int wrap_width)
+void __draw_render_text(r_draw* c, r_drawable* d, const r_draw_style_rule* rule, rect bounds, r_alignment align, rect clip, int wrap_width)
 {
     r_draw_font* font = default_font(c, rule->label_font);
     if(!font || !d->text) return;
@@ -878,11 +878,11 @@ void r_draw_render_text(r_draw* c, r_draw_font* font, char* text, uint32_t color
 
 void r_draw_render_icon(r_draw* c, uint16_t icon, uint32_t color, rect bounds)
 {
-    rect px = r_draw__to_pixels(bounds, c->scale);
+    rect px = __draw_to_pixels(bounds, c->scale);
     int gi = icon_glyph(c, icon, MIN(px.w, px.h));
-    if(gi < 0 || !r_draw__glyph_pixels(c, gi)) return;
+    if(gi < 0 || !__draw_glyph_pixels(c, gi)) return;
     struct r_draw_glyph* g = &c->glyphs[gi];
     float x = floorf(px.x + (px.w - g->w) / 2), y = floorf(px.y + (px.h - g->h) / 2);
-    uint32_t tint = r_draw__premult_color(g->is_colored ? color | 0x00FFFFFF : color);
-    r_draw__emit(c, g->handle, tint, (r_frect){ 0, 0, g->w, g->h }, (r_frect){ x, y, g->w, g->h }, c->clip_px);
+    uint32_t tint = __draw_premult_color(g->is_colored ? color | 0x00FFFFFF : color);
+    __draw_emit(c, g->handle, tint, (r_frect){ 0, 0, g->w, g->h }, (r_frect){ x, y, g->w, g->h }, c->clip_px);
 }

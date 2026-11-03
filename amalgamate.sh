@@ -13,8 +13,3 @@ src() { for f in "$@"; do grep -v -F -e '#include "internal.h"' -e '#include "..
 	echo '#include "rcut_draw.h"'
 	src core/internal.h draw/internal.h draw/*.c
 } > rcut_draw.c
-
-{
-	echo '#include "rcut_sdl.h"'
-	src sdl/*.c
-} > rcut_sdl.c

@@ -231,15 +231,7 @@ static inline void hash_remove(r_hashmap* map, int64_t key)
 		map->keys[index] = -2;
 }
 
-static inline int r__layout_size(r_context* c, int style)   { int size, spacing; r_layout_defaults(c, style, &size, &spacing); return size; }
-static inline int r__layout_spacing(r_context* c, int style){ int size, spacing; r_layout_defaults(c, style, &size, &spacing); return spacing; }
-static inline void r__show_state(r_drawable* d, int state, bool on)
-{
-	int base = d->style & R_STYLE_BASE_MASK;
-	int* style = base == R_STYLE_TEXT || base == R_STYLE_ICON ? &d->outer_style : &d->style;
-	*style = on ? *style | state : *style & ~state;
-}
-static inline bool r__is_descendant(r_ui_list* l, r_ui_list* ancestor)
+static inline bool is_descendant(r_ui_list* l, r_ui_list* ancestor)
 {
 	for(r_ui_list* p = l->ephemeral_parent; p; p = p->ephemeral_parent)
 	if(p == ancestor)

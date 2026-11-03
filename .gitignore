@@ -2,5 +2,4 @@
 build*/
 /rcut_core.c
 /rcut_draw.c
-/rcut_sdl.c
 /stb_truetype.h

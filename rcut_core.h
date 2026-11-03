@@ -249,15 +249,18 @@ typedef struct r_interact
 typedef struct r_drawable
 {
 	rect r;
-	uint64_t parent_id;
-	int style; // r_style
-	int outer_style; // For labels to dynamically adjust themselves to what they are labeling.
+	uint64_t parent_id; // Inherits hovered/pressed/focus state and damage state from parent_id. Will be 0 most of the time.
+
+	int style;       // r_style
+	int outer_style; // A style hint to allow for minor style adjustments for nested drawables. Will be 0 most of the time.
 	
+	// Label = Text + Icon
 	char* text;
 	int   icon;
-	int16_t scroll_x, scroll_y;
-	bool    wrap_text;
-	void*   text_cache;
+	int16_t label_offset_x, label_offset_y;
+
+	void* layout_cache; // The actual positions of each glyph, mainly used for shaped text.
+	bool  wrap_label : 1;
 
 	struct r_dynamic_rect_data* dynamic;
 } r_drawable;
@@ -412,6 +415,7 @@ typedef struct r_interface
 	rect     (*calc_inner_rect)    (r_context* c, int style, rect outer);
 	uint64_t (*get_viewport_target)(r_ui_list* parent, rect relative_to);
 	rect     (*measure_text)       (r_context* c, int style, const char* text, int len, int wrap_width);
+	rect     (*measure_icon)       (r_context* c, int style, int icon, int* gap);
 	int      (*break_text)         (r_context* c, int style, const char* text, int len, int width, bool force, int* w);
 	void     (*get_layout)         (r_context* c, int style, int* size, int* spacing);
 	void     (*set_clipboard)      (r_context* c, const char* text);
@@ -609,12 +613,14 @@ static inline rect r_shrink_sides(rect r, int left, int top, int right, int bott
 rect r_inner(r_context* c, int style, rect outer);
 rect r_outer(r_context* c, int style, rect* inner);
 rect r_with_margins(r_context* c, int style, rect outer);
-void r_layout_defaults(r_context* c, int style, int* size, int* spacing);
+int  r_layout_default_size   (r_context* c, int style);
+int  r_layout_default_spacing(r_context* c, int style);
 rect r_remove_margins(r_context* c, int style, rect with_margins);
 
 rect r_measure(r_context* c, int style, char* label);
 rect r_measure_n(r_context* c, int style, const char* text, int len);
 rect r_measure_wrapped(r_context* c, int style, const char* text, int wrap_width);
+rect r_measure_ex(r_context* c, int style, int icon, const char* text);
 int  r_break_text(r_context* c, int style, const char* text, int len, int width, bool force, int* w);
 int  r_text_index_at(r_context* c, int style, const char* text, int x);
 
@@ -794,6 +800,7 @@ void r_button          (r_ui_list* l, rect r, char* text);
 void r_button_ex       (r_ui_list* l, rect r, int style, int icon, char* text);
 void r_label           (r_ui_list* l, rect r, char* text);
 r_drawable* r_label_ex(r_ui_list* l, rect r, int style, int icon, char* text);
+void r_label_value     (r_ui_list* l, rect r, const char* fmt, r_data_binding binding);
 void r_icon            (r_ui_list* l, rect r, int style, int icon);
 void r_header          (r_ui_list* l, rect r, char* text);
 void r_paragraph       (r_ui_list* l, rect r, int style, char* text);
@@ -884,6 +891,7 @@ static inline r_layout_iter r_layout_columns(r_ui_list* l, rect area, int style)
 rect          r_next          (r_layout_iter* s, int size);
 rect          r_next_fraction (r_layout_iter* s, float fraction);
 rect          r_next_fit      (r_layout_iter* s, int style, char* text);
+rect          r_next_fit_ex   (r_layout_iter* s, int style, int icon, char* text);
 rect          r_remaining          (r_layout_iter* s);
 rect          r_next_keyed    (r_layout_iter* s, int size, uint64_t key);
 void          r_gap           (r_layout_iter* s, int size);

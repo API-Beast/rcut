@@ -411,13 +411,13 @@ static void chain_remove(r_context* c, r_ui_list* l)
 	l->chain_prev = l->chain_next = NULL;
 }
 
-static void r_context_insert_into_chain(r_context* c, r_ui_list* new)
+static void insert_into_chain(r_context* c, r_ui_list* new)
 {
 	if(is_popup(new)) { chain_insert_after(c, c->chain_end, new); return; }
 
 	r_ui_list* parent = new->ephemeral_parent;
 	r_ui_list* prev = parent;
-	while(prev->chain_next != NULL && !is_popup(prev->chain_next) && r__is_descendant(prev->chain_next, parent))
+	while(prev->chain_next != NULL && !is_popup(prev->chain_next) && is_descendant(prev->chain_next, parent))
 		prev = prev->chain_next;
 	chain_insert_after(c, prev, new);
 }
@@ -508,7 +508,7 @@ static r_ui_list* create_ephemeral(r_ui_list* parent, rect root, uint64_t target
 	l->block_event_fallthrough = false;
 	l->needs_redraw = true;
 
-	r_context_insert_into_chain(c, l);
+	insert_into_chain(c, l);
 	*hash_insertv(&c->ephemeral_id_map, root.id) = l;
 	return l;
 }
@@ -857,7 +857,7 @@ r_drawable r_drawable_eval(r_context* c, const r_drawable* d)
 		{
 			int64_t v = r_geti(y->binding);
 			bool on = y->toggled.set_value ? v == y->toggled.value : v != 0;
-			r__show_state(&out, y->toggled.state, on);
+			if(on) out.style |= y->toggled.state;
 			if(y->toggled.icon) out.icon = on ? y->toggled.icon : R_ICON_NONE;
 			break;
 		}

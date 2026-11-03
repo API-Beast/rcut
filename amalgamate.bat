@@ -15,8 +15,3 @@ copy /y draw\stb_truetype.h . >nul
 	findstr /v /c:"#include \"internal.h\"" /c:"#include \"../" /c:"#define _DEFAULT_SOURCE" draw\internal.h
 	for %%f in (draw\*.c) do findstr /v /c:"#include \"internal.h\"" /c:"#include \"../" /c:"#define _DEFAULT_SOURCE" %%f
 )
-
-> rcut_sdl.c (
-	echo #include "rcut_sdl.h"
-	for %%f in (sdl\*.c) do findstr /v /c:"#include \"internal.h\"" /c:"#include \"../" /c:"#define _DEFAULT_SOURCE" %%f
-)

@@ -87,7 +87,7 @@ static bool tooltip_mouse_hover(const r_event* e, r_callback* self)
 		p->root_area = outer;
 		r_drawable* d = r_style(p, outer, R_STYLE_TOOLTIP);
 		d->text = text;
-		d->wrap_text = true;
+		d->wrap_label = true;
 	}
 	r_list_set_visibility(p, true);
 	return true;
@@ -201,9 +201,9 @@ static bool menu_item_key(const r_event* e, r_callback* self)
 static void menu_build(r_ui_list* p, r_ui_list* parent, rect anchor, const r_menu_item* items, r_alignment side, uint64_t context_target)
 {
 	r_context* c = p->context;
-	int icon = r__layout_size(c, R_STYLE_ICON);
-	int item_h, gap;
-	r_layout_defaults(c, R_STYLE_MENU_ITEM, &item_h, &gap);
+	int icon = r_layout_default_size(c, R_STYLE_ICON);
+	int item_h = r_layout_default_size(c, R_STYLE_MENU_ITEM);
+	int gap    = r_layout_default_spacing(c, R_STYLE_MENU_ITEM);
 	int sep_h  = gap + 1;
 
 	int label_w = 0, shortcut_w = 0, h = 0;
@@ -288,7 +288,7 @@ r_ui_list* r_menu_popup(r_ui_list* parent, rect anchor, const r_menu_item* items
 	return p;
 }
 
-void r__open_context_menu(r_interact* it, float list_x, float list_y)
+void __core_open_context_menu(r_interact* it, float list_x, float list_y)
 {
 	r_ui_list* l = it->owner;
 	r_ui_list* p = r_popup(l, it->r, R_POPUP_AUTOCLOSE, P430);
@@ -405,7 +405,7 @@ static bool menubar_hover(const r_event* e, r_callback* self)
 
 static void menubar_item_update(r_context* c, r_drawable* d)
 {
-	r__show_state(d, R_STATE_SELECTED, popup_is_open(c, d->r, P410));
+	if(popup_is_open(c, d->r, P410)) d->style |= R_STATE_SELECTED;
 }
 
 void r_menubar(r_ui_list* l, rect r, const r_menu_item* menus)
@@ -487,7 +487,7 @@ static bool dropdown_toggle(const r_event* e, r_callback* self)
 
 	r_ui_list* p = r_popup(e->ui_list, data->r, R_POPUP_AUTOCLOSE, P420);
 	r_list_clear(p);
-	int item_h = r__layout_size(c, R_STYLE_MENU_ITEM);
+	int item_h = r_layout_default_size(c, R_STYLE_MENU_ITEM);
 	int w = 0;
 	for(int i = 0; i < data->count; i++)
 		w = MAX(w, r_measure(c, R_STYLE_MENU_ITEM, data->items[i]).w);
@@ -523,7 +523,7 @@ static bool dropdown_toggle(const r_event* e, r_callback* self)
 static void dropdown_update(r_context* c, r_drawable* d)
 {
 	struct dropdown_data* data = d->dynamic->custom.data;
-	r__show_state(d, R_STATE_TOGGLED, popup_is_open(c, data->r, P420));
+	if(popup_is_open(c, data->r, P420)) d->style |= R_STATE_TOGGLED;
 	int64_t sel = r_geti(data->binding);
 	if((d->style & R_STYLE_BASE_MASK) == R_STYLE_TEXT) d->text = sel >= 0 && sel < data->count ? data->items[sel] : "";
 }
@@ -541,8 +541,8 @@ void r_dropdown(r_ui_list* l, rect r, char** items, int count, r_data_binding se
 
 	r_drawable_custom(l, r_style(l, r, R_STYLE_DROPDOWN), selected, dropdown_update, cb->data);
 	rect inner = r_inner(c, R_STYLE_DROPDOWN, r);
-	rect ir = r_cut_px(R_RIGHT, &inner, r__layout_size(c, R_STYLE_ICON), P450);
-	r_cut_px(R_RIGHT, &inner, r__layout_spacing(c, R_STYLE_DROPDOWN) / 2, P450 + 1);
+	rect ir = r_cut_px(R_RIGHT, &inner, r_layout_default_size(c, R_STYLE_ICON), P450);
+	r_cut_px(R_RIGHT, &inner, r_layout_default_spacing(c, R_STYLE_DROPDOWN) / 2, P450 + 1);
 	r_drawable* label = r_label_ex(l, inner, R_STYLE_DROPDOWN, R_ICON_NONE, "");
 	label->parent_id = r.id;
 	r_drawable_custom(l, label, selected, dropdown_update, cb->data);

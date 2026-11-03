@@ -1,9 +1,9 @@
-#include "../rcut_sdl.h"
+#include "rcut_sdl.h"
 #include <stddef.h>
 
-static void     r_sdl_set_clipboard(r_context* ctx, const char* text);
-static char*    r_sdl_get_clipboard(r_context* ctx);
-static uint64_t r_sdl_popup_target (r_ui_list* parent, rect r);
+static void     __sdl_frontend_set_clipboard      (r_context* ctx, const char* text);
+static char*    __sdl_frontend_get_clipboard      (r_context* ctx);
+static uint64_t __sdl_frontend_get_viewport_target(r_ui_list* parent, rect r);
 
 r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags)
 {
@@ -25,9 +25,9 @@ r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags)
     r_draw_software_init(&c->software, 0, 0, RCUT_SDL_CACHE_PIXELS);
     r_draw_backend backend = r_draw_software_backend(&c->software);
     r_draw_init(&c->draw, &c->context, &backend, scale);
-    c->context.interface.set_clipboard = r_sdl_set_clipboard;
-    c->context.interface.get_clipboard = r_sdl_get_clipboard;
-    c->context.interface.get_viewport_target = r_sdl_popup_target;
+    c->context.interface.set_clipboard       = __sdl_frontend_set_clipboard;
+    c->context.interface.get_clipboard       = __sdl_frontend_get_clipboard;
+    c->context.interface.get_viewport_target = __sdl_frontend_get_viewport_target;
 
     SDL_GetWindowSizeInPixels(root_window, &w, &h);
     c->root = r_create_ui_list(&c->context, 0, 0, (int)(w / scale), (int)(h / scale));
@@ -158,12 +158,12 @@ void r_sdl_set_scale(r_sdl_frontend* c, float scale)
     update_root_sizes(c);
 }
 
-static void r_sdl_set_clipboard(r_context* ctx, const char* text)
+static void __sdl_frontend_set_clipboard(r_context* ctx, const char* text)
 {
     SDL_SetClipboardText(text);
 }
 
-static char* r_sdl_get_clipboard(r_context* ctx)
+static char* __sdl_frontend_get_clipboard(r_context* ctx)
 {
     r_sdl_frontend* c = (r_sdl_frontend*)((char*)ctx->userptr - offsetof(r_sdl_frontend, draw));
     SDL_free(c->clipboard);
@@ -178,7 +178,7 @@ static SDL_Window* create_window(r_sdl_frontend* c, SDL_PropertiesID props)
     return window;
 }
 
-static uint64_t r_sdl_popup_target(r_ui_list* parent, rect r)
+static uint64_t __sdl_frontend_get_viewport_target(r_ui_list* parent, rect r)
 {
     r_sdl_frontend* c = (r_sdl_frontend*)((char*)parent->context->userptr - offsetof(r_sdl_frontend, draw));
     if(parent->target >= RCUT_SDL_MAX_WINDOWS || c->no_popup_windows) return parent->target;
@@ -506,14 +506,4 @@ bool r_sdl_screenshot(r_sdl_frontend* c, const char* path)
 #endif
     SDL_DestroySurface(s);
     return ok;
-}
-
-r_ui_list* r_sdl_make_sublist(r_sdl_frontend* c, r_ui_list* parent, rect r) { return r_viewport(parent, r); }
-r_ui_list* r_sdl_make_popup  (r_sdl_frontend* c, r_ui_list* parent, rect r) { return r_popup(parent, r, 0, 0); }
-void       r_sdl_hide_list   (r_sdl_frontend* c, r_ui_list* l) { r_list_set_visibility(l, false); }
-void       r_sdl_show_list   (r_sdl_frontend* c, r_ui_list* l) { r_list_set_visibility(l, true); }
-
-void r_sdl_delete_list(r_sdl_frontend* c, r_ui_list* l)
-{
-    if(l->ephemeral_parent) r_ephemeral_mark_to_delete(l->ephemeral_parent, l->root_area.id);
 }

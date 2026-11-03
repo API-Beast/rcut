@@ -341,7 +341,7 @@ void r_expand_group(r_alignment dir, rect* to_expand, rect** r, int num_rects)
 
 rect r_remove_margins(r_context* c, int style, rect with_margins)
 {
-	int m = r__layout_spacing(c, style) / 2;
+	int m = r_layout_default_spacing(c, style) / 2;
 	rect result = r_grow(with_margins, -m);
 	update_id(&result.id, with_margins.id, P40K, P640, style);
 	return result;
@@ -349,7 +349,7 @@ rect r_remove_margins(r_context* c, int style, rect with_margins)
 
 rect r_with_margins(r_context* c, int style, rect outer)
 {
-	int m = r__layout_spacing(c, style) / 2;
+	int m = r_layout_default_spacing(c, style) / 2;
 	rect result = r_grow(outer, m);
 	update_id(&result.id, outer.id, P80K, P680, style);
 	return result;
@@ -384,6 +384,16 @@ rect r_measure_n(r_context* c, int style, const char* text, int len)
 rect r_measure(r_context* c, int style, char* label)
 {
 	return r_measure_n(c, style, label, -1);
+}
+
+rect r_measure_ex(r_context* c, int style, int icon, const char* text)
+{
+	rect t = r_measure_n(c, style, text, -1);
+	if(!icon) return t;
+	int gap = 4;
+	rect i = c->interface.measure_icon ? c->interface.measure_icon(c, style, icon, &gap) : (rect){.w = 16, .h = 16};
+	if(!text) return i;
+	return (rect){.w = i.w + gap + t.w, .h = MAX(i.h, t.h)};
 }
 
 int r_break_text(r_context* c, int style, const char* text, int len, int width, bool force, int* w)

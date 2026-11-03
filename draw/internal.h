@@ -18,14 +18,14 @@ static inline void* arena_push(arena_t* a, int len)
     return retval;
 }
 
-static inline rect r_draw__to_pixels(rect r, float s)
+static inline rect __draw_to_pixels(rect r, float s)
 {
     int x0 = (int)floorf(r.x * s + 0.5f), y0 = (int)floorf(r.y * s + 0.5f);
     int x1 = (int)floorf((r.x + r.w) * s + 0.5f), y1 = (int)floorf((r.y + r.h) * s + 0.5f);
     return (rect){ x0, y0, x1 - x0, y1 - y0, r.id };
 }
 
-static inline bool r_draw__invert(float m[2][3], float inv[2][3])
+static inline bool __draw_invert(float m[2][3], float inv[2][3])
 {
     float det = m[0][0] * m[1][1] - m[0][1] * m[1][0];
     if(det == 0.0f) return false;
@@ -36,40 +36,40 @@ static inline bool r_draw__invert(float m[2][3], float inv[2][3])
     return true;
 }
 
-static inline uint32_t r_draw__premult_color(uint32_t color)
+static inline uint32_t __draw_premult_color(uint32_t color)
 {
     uint32_t a = color >> 24;
     return (a << 24) | ((((color >> 16) & 0xFF) * a / 255) << 16) | ((((color >> 8) & 0xFF) * a / 255) << 8) | ((color & 0xFF) * a / 255);
 }
 
-void     r_draw__emit(r_draw* c, uint64_t handle, uint32_t color, r_frect src, r_frect dst, rect clip);
-bool     r_draw__still_cached(r_draw* c, uint64_t* handle);
-uint64_t r_draw__cached(r_draw* c, uint64_t* handle, const uint32_t* pixels, int w, int h);
-void     r_draw__invalidate(r_draw* c, uint64_t* handle);
+void     __draw_emit(r_draw* c, uint64_t handle, uint32_t color, r_frect src, r_frect dst, rect clip);
+bool     __draw_still_cached(r_draw* c, uint64_t* handle);
+uint64_t __draw_cached(r_draw* c, uint64_t* handle, const uint32_t* pixels, int w, int h);
+void     __draw_invalidate(r_draw* c, uint64_t* handle);
 
-void     r_theme__flush(r_draw* c);
+void     __draw_theme_flush(r_draw* c);
 
-uint64_t r_draw__cache_icon(r_draw* c, int icon, int size, bool* colored);
-void     r_draw__rescale_fonts(r_draw* c);
+uint64_t __draw_cache_icon(r_draw* c, int icon, int size, bool* colored);
+void     __draw_rescale_fonts(r_draw* c);
 
 typedef struct r_draw_glyph_pos    { uint32_t glyph, cluster; int32_t x_advance, x_offset, y_offset; } r_draw_glyph_pos;
 typedef struct r_draw_glyph_bitmap { const uint8_t* pixels; int x, y, w, h, stride, bpp; bool colored; } r_draw_glyph_bitmap;
 
 // Font backend: font_hb.c (HarfBuzz/hb_mini) or font_stb.c (stb_truetype). Metrics in 26.6.
-struct r_draw_face*      r_draw__face_load(const char* path);
-void                     r_draw__face_free(struct r_draw_face* face);
-int                      r_draw__face_weight(struct r_draw_face* face);
-struct r_draw_face_inst* r_draw__face_inst(struct r_draw_face* face, int px, int weight, int synth_weight, bool italic);
-void                     r_draw__face_inst_free(struct r_draw_face_inst* f);
-void                     r_draw__face_inst_resize(struct r_draw_face_inst* f, int old_px, int px);
-bool                     r_draw__face_glyph(struct r_draw_face_inst* f, uint32_t codepoint, uint32_t* gid);
-int                      r_draw__face_advance(struct r_draw_face_inst* f, uint32_t gid, bool* empty);
-void                     r_draw__face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* descender, int* line_gap);
-int                      r_draw__face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, int len, int start, int n, r_draw_glyph_pos** out);
-bool                     r_draw__face_raster(r_draw* c, struct r_draw_face_inst* f, uint32_t gid, r_draw_glyph_bitmap* out);
-void                     r_draw__face_free_state(r_draw* c);
+struct r_draw_face*      __draw_face_load(const char* path);
+void                     __draw_face_free(struct r_draw_face* face);
+int                      __draw_face_weight(struct r_draw_face* face);
+struct r_draw_face_inst* __draw_face_inst(struct r_draw_face* face, int px, int weight, int synth_weight, bool italic);
+void                     __draw_face_inst_free(struct r_draw_face_inst* f);
+void                     __draw_face_inst_resize(struct r_draw_face_inst* f, int old_px, int px);
+bool                     __draw_face_glyph(struct r_draw_face_inst* f, uint32_t codepoint, uint32_t* gid);
+int                      __draw_face_advance(struct r_draw_face_inst* f, uint32_t gid, bool* empty);
+void                     __draw_face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* descender, int* line_gap);
+int                      __draw_face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, int len, int start, int n, r_draw_glyph_pos** out);
+bool                     __draw_face_raster(r_draw* c, struct r_draw_face_inst* f, uint32_t gid, r_draw_glyph_bitmap* out);
+void                     __draw_face_free_state(r_draw* c);
 
-static inline uint32_t r_draw__decode_utf8(const char** str)
+static inline uint32_t __draw_decode_utf8(const char** str)
 {
     const uint8_t* s = (const uint8_t*)*str;
 
@@ -82,16 +82,16 @@ static inline uint32_t r_draw__decode_utf8(const char** str)
     return ((s[0] & 0x07) << 18) | ((s[1] & 0x3F) << 12) | ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
 }
 
-static inline void* r_draw__grow(void* p, int* cap, int need, int size)
+static inline void* __draw_grow(void* p, int* cap, int need, int size)
 {
     if(need <= *cap) return p;
     while(*cap < need) *cap = *cap ? *cap * 2 : 256;
     return realloc(p, (size_t)*cap * size);
 }
 
-bool r_draw__glyph_pixels(r_draw* c, int glyph_idx);
-void r_draw__clear_glyph_cache(r_draw* c);
-void r_draw__free_text(r_draw* c);
-void r_draw__render_text(r_draw* c, r_drawable* d, const r_draw_style_rule* rule, rect bounds, r_alignment align, rect clip, int wrap_width);
+bool __draw_glyph_pixels(r_draw* c, int glyph_idx);
+void __draw_clear_glyph_cache(r_draw* c);
+void __draw_free_text(r_draw* c);
+void __draw_render_text(r_draw* c, r_drawable* d, const r_draw_style_rule* rule, rect bounds, r_alignment align, rect clip, int wrap_width);
 
 #endif

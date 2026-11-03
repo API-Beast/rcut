@@ -32,7 +32,7 @@ endif()
 add_library(rcut_draw STATIC draw/draw.c draw/text.c draw/raster.c draw/theme.c draw/software.c draw/font_hb.c draw/font_stb.c)
 target_link_libraries(rcut_draw PUBLIC rcut_core ${FONT_LIBS})
 target_compile_definitions(rcut_draw PUBLIC ${FONT_BACKEND})
-add_library(rcut_sdl STATIC sdl/sdl.c)
+add_library(rcut_sdl STATIC rcut_sdl.c)
 target_link_libraries(rcut_sdl PUBLIC rcut_draw SDL3::SDL3-static Threads::Threads)
 target_include_directories(rcut_sdl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

@@ -55,9 +55,3 @@ void r_sdl_update(r_sdl_frontend* c);
 void r_sdl_render_ui(r_sdl_frontend* c);
 void r_sdl_set_scale(r_sdl_frontend* c, float scale);
 bool r_sdl_screenshot(r_sdl_frontend* c, const char* path);
-
-r_ui_list* r_sdl_make_sublist(r_sdl_frontend* c, r_ui_list* parent, rect r);
-r_ui_list* r_sdl_make_popup  (r_sdl_frontend* c, r_ui_list* parent, rect r);
-void       r_sdl_delete_list (r_sdl_frontend* c, r_ui_list* to_delete);
-void       r_sdl_hide_list   (r_sdl_frontend* c, r_ui_list* to_hide);
-void       r_sdl_show_list   (r_sdl_frontend* c, r_ui_list* to_show);

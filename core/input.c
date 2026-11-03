@@ -1,6 +1,6 @@
 #include "internal.h"
 
-void r__open_context_menu(r_interact* it, float list_x, float list_y);
+void __core_open_context_menu(r_interact* it, float list_x, float list_y);
 
 static inline void xform_m23_inv(float m[2][3], float px, float py, float* ox, float* oy)
 {
@@ -168,7 +168,7 @@ bool r_dispatch(r_interact* it, r_event_type t, r_event* e)
 	return false;
 }
 
-static bool r_dispatch_ex(r_interact* it, r_event_type t, r_event e)
+static bool dispatch_ex(r_interact* it, r_event_type t, r_event e)
 {
 	return r_dispatch(it, t, &e);
 }
@@ -242,7 +242,7 @@ static r_interact* focus_for(r_context* c, uint64_t target)
 
 static inline bool in_scope(r_ui_list* l, r_ui_list* scope)
 {
-	return !scope || l == scope || r__is_descendant(l, scope);
+	return !scope || l == scope || is_descendant(l, scope);
 }
 
 static bool is_blocked(r_context* c, r_ui_list* l)
@@ -299,7 +299,7 @@ static void reconcile(r_context* c)
 	{
 		r_interact* old_dragged = find_part(c, c->dragged_id, c->pressed_part);
 		if(old_dragged)
-			r_dispatch_ex(old_dragged, R_MOUSE_DRAG_RELEASE, make_drag_event(c, old_dragged, c->mouse_x, c->mouse_y));
+			dispatch_ex(old_dragged, R_MOUSE_DRAG_RELEASE, make_drag_event(c, old_dragged, c->mouse_x, c->mouse_y));
 		if(c->dragged_id) { c->pressed_id = 0; c->pressed_group_id = 0; }
 		c->dragged_id = 0;
 	}
@@ -330,7 +330,7 @@ uint64_t r_post_mouse_move(r_context* c, uint64_t target, float x, float y)
 	{
 		r_interact* dragged = find_part(c, c->dragged_id, c->pressed_part);
 		if(dragged)
-			r_dispatch_ex(dragged, R_MOUSE_DRAG_MOVE, make_drag_event(c, dragged, x, y));
+			dispatch_ex(dragged, R_MOUSE_DRAG_MOVE, make_drag_event(c, dragged, x, y));
 		return c->dragged_id;
 	}
 
@@ -408,7 +408,7 @@ static void close_popups_outside(r_context* c, r_interact* hit)
 	for(r_ui_list* l = c->chain_start; l; l = l->chain_next)
 	{
 		if(!l->close_on_outside_click || l->is_marked_as_to_delete || !r_list_is_visible(l)) continue;
-		if(hit && (hit->owner == l || r__is_descendant(hit->owner, l) || hit->r.id == l->anchor_id)) continue;
+		if(hit && (hit->owner == l || is_descendant(hit->owner, l) || hit->r.id == l->anchor_id)) continue;
 		r_ephemeral_mark_to_delete(l->ephemeral_parent, l->root_area.id);
 	}
 }
@@ -496,7 +496,7 @@ uint64_t r_post_mouse_up(r_context* c, uint64_t target, int mouse_button, float 
 		r_interact* first = find(c, it->r.id);
 		if(!dispatched && mouse_button == R_MOUSE_RIGHT && first && widget_has_callback(first, R_CONTEXT))
 		{
-			r__open_context_menu(first, e.list_mouse_x, e.list_mouse_y);
+			__core_open_context_menu(first, e.list_mouse_x, e.list_mouse_y);
 			dispatched = true;
 		}
 		if(dispatched)
@@ -776,7 +776,7 @@ void r_damage_clear(r_context* c)
 		l->damage = (rect){0};
 }
 
-static const char* r_event_name(int e)
+static const char* event_name(int e)
 {
     switch(e)
     {
@@ -846,7 +846,7 @@ void r_list_print(r_ui_list* l)
         for(r_callback* cb = it->callbacks; cb; cb = cb->next)
         {
             printf("            -> %s%s",
-                   r_event_name(cb->event),
+                   event_name(cb->event),
                    cb->function ? "" : " (no fn)");
             if(cb->menu_label) printf("  menu=\"%s\"", cb->menu_label);
             if(cb->hotkey)     printf("  hotkey=0x%x", cb->hotkey);

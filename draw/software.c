@@ -1,5 +1,23 @@
 #include "internal.h"
 
+static bool     __sw_renderer_is_cached       (void* userptr, uint64_t handle);
+static void     __sw_renderer_invalidate_cache(void* userptr, uint64_t handle);
+static uint64_t __sw_renderer_cache_argb      (void* userptr, int w, int h, const uint32_t* pixels, int stride, bool permanent);
+static uint64_t __sw_renderer_cache_monochrome(void* userptr, int w, int h, const uint8_t* pixels, int stride, bool permanent);
+static void     __sw_renderer_submit          (void* userptr, const r_draw_quad* quads, int num_quads);
+
+r_draw_backend r_draw_software_backend(r_draw_software* sw)
+{
+    return (r_draw_backend){
+        .userptr          = sw,
+        .cache_argb       = __sw_renderer_cache_argb,
+        .cache_monochrome = __sw_renderer_cache_monochrome,
+        .submit           = __sw_renderer_submit,
+        .is_cached        = __sw_renderer_is_cached,
+        .invalidate_cache = __sw_renderer_invalidate_cache,
+    };
+}
+
 #define POS_BITS 38
 #define PERM_BIT (1ull << 38)
 #define MONO_BIT (1ull << 39)
@@ -7,7 +25,7 @@ static inline uint64_t entry_pos(uint64_t handle) { return handle & ((1ull << PO
 static inline int      entry_w  (uint64_t handle) { return (int)((handle >> 40) & 0xFFF); }
 static inline int      entry_h  (uint64_t handle) { return (int)(handle >> 52); }
 
-static bool sw_is_cached(void* userptr, uint64_t handle)
+static bool __sw_renderer_is_cached(void* userptr, uint64_t handle)
 {
     r_draw_software* sw = userptr;
     uint64_t pos = entry_pos(handle);
@@ -44,7 +62,7 @@ static void* sw_alloc_permanent(r_draw_software* sw, int w, int h, size_t bytes,
     return sw->permanent[slot];
 }
 
-static void sw_invalidate(void* userptr, uint64_t handle)
+static void __sw_renderer_invalidate_cache(void* userptr, uint64_t handle)
 {
     r_draw_software* sw = userptr;
     uint64_t pos = entry_pos(handle);
@@ -53,7 +71,7 @@ static void sw_invalidate(void* userptr, uint64_t handle)
     sw->permanent[pos] = NULL;
 }
 
-static uint64_t sw_cache_argb(void* userptr, int w, int h, const uint32_t* pixels, int stride, bool permanent)
+static uint64_t __sw_renderer_cache_argb(void* userptr, int w, int h, const uint32_t* pixels, int stride, bool permanent)
 {
     uint64_t handle = 0;
     uint32_t* dst = permanent ? sw_alloc_permanent(userptr, w, h, (size_t)w * h * 4, &handle) : sw_alloc(userptr, w, h, (uint64_t)w * h, &handle);
@@ -63,7 +81,7 @@ static uint64_t sw_cache_argb(void* userptr, int w, int h, const uint32_t* pixel
     return handle;
 }
 
-static uint64_t sw_cache_monochrome(void* userptr, int w, int h, const uint8_t* pixels, int stride, bool permanent)
+static uint64_t __sw_renderer_cache_monochrome(void* userptr, int w, int h, const uint8_t* pixels, int stride, bool permanent)
 {
     uint64_t handle = 0;
     uint8_t* dst = permanent ? sw_alloc_permanent(userptr, w, h, (size_t)w * h, &handle)
@@ -120,7 +138,7 @@ static void blit_transformed(r_draw_software* sw, const r_draw_quad* q, const ui
     const r_draw_transform* t = q->transform;
     float m[2][3], inv[2][3];
     memcpy(m, t->m, sizeof(m));
-    if(!r_draw__invert(m, inv)) return;
+    if(!__draw_invert(m, inv)) return;
     float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f;
     for(int i = 0; i < 4; i++)
     {
@@ -147,7 +165,7 @@ static void blit_transformed(r_draw_software* sw, const r_draw_quad* q, const ui
     }
 }
 
-static void sw_submit(void* userptr, const r_draw_quad* quads, int num_quads)
+static void __sw_renderer_submit(void* userptr, const r_draw_quad* quads, int num_quads)
 {
     r_draw_software* sw = userptr;
     if(sw->pixels)
@@ -228,10 +246,4 @@ void r_draw_software_free(r_draw_software* sw)
     for(int i = 0; i < sw->num_permanent; i++) free(sw->permanent[i]);
     free(sw->permanent);
     *sw = (r_draw_software){0};
-}
-
-r_draw_backend r_draw_software_backend(r_draw_software* sw)
-{
-    return (r_draw_backend){ .userptr = sw, .cache_argb = sw_cache_argb, .cache_monochrome = sw_cache_monochrome,
-                             .submit = sw_submit, .is_cached = sw_is_cached, .invalidate_cache = sw_invalidate };
 }

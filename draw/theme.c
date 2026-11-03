@@ -581,7 +581,7 @@ static void disabled_rules(theme_state* t, float a)
 	}
 }
 
-void r_theme__flush(r_draw* c)
+void __draw_theme_flush(r_draw* c)
 {
 	theme_state* t = c->theme;
 	if(!t->dirty) return;

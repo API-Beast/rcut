@@ -300,11 +300,15 @@ static int text_top(r_text_edit_state* s, int line_h)
 static void edit_text_update(r_context* c, r_drawable* d)
 {
 	r_text_edit_state* s = d->dynamic->custom.data;
-	bool placeholder = !s->buffer[0] && s->placeholder;
-	d->text = placeholder ? s->placeholder : s->buffer;
-	d->outer_style = s->style | (placeholder ? R_VARIANT_DULL : 0);
-	d->scroll_x = (int16_t)s->scroll_x;
-	d->scroll_y = (int16_t)s->scroll_y;
+	d->text = s->buffer;
+	d->label_offset_x = (int16_t)-s->scroll_x;
+	d->label_offset_y = (int16_t)-s->scroll_y;
+}
+
+static void edit_placeholder_update(r_context* c, r_drawable* d)
+{
+	r_text_edit_state* s = d->dynamic->custom.data;
+	d->text = s->buffer[0] ? NULL : s->placeholder;
 }
 
 static void edit_caret_update(r_context* c, r_drawable* d)
@@ -358,11 +362,13 @@ void r_text_edit_ex(r_ui_list* l, rect r, char* buffer, int capacity, char* plac
 	follow_caret(c, s);
 
 	r_style(l, r, style);
-	int styles[] = { style | R_COMPONENT_SELECTION, style | R_COMPONENT_SELECTION, style | R_COMPONENT_SELECTION, R_STYLE_TEXT, style | R_COMPONENT_CARET };
-	void (*update[])(r_context* c, r_drawable* d) = { edit_selection_first, edit_selection_middle, edit_selection_last, edit_text_update, edit_caret_update };
+	int styles[] = { style | R_COMPONENT_SELECTION, style | R_COMPONENT_SELECTION, style | R_COMPONENT_SELECTION, R_STYLE_TEXT, R_STYLE_TEXT, style | R_COMPONENT_CARET };
+	int outer[] = { 0, 0, 0, style, style | R_VARIANT_DULL, 0 };
+	void (*update[])(r_context* c, r_drawable* d) = { edit_selection_first, edit_selection_middle, edit_selection_last, edit_text_update, edit_placeholder_update, edit_caret_update };
 	for(int i = 0; i < COUNTOF(styles); i++)
 	{
 		r_drawable* d = r_style(l, s->inner, styles[i]);
+		d->outer_style = outer[i];
 		d->parent_id = r.id;
 		r_drawable_custom(l, d, (r_data_binding){0}, update[i], s);
 	}

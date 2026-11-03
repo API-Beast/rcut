@@ -34,7 +34,7 @@ static struct font_state* state(r_draw* c)
     return c->font_state;
 }
 
-void r_draw__face_free_state(r_draw* c)
+void __draw_face_free_state(r_draw* c)
 {
     struct font_state* s = c->font_state;
     if(!s) return;
@@ -46,7 +46,7 @@ void r_draw__face_free_state(r_draw* c)
     c->font_state = NULL;
 }
 
-struct r_draw_face* r_draw__face_load(const char* path)
+struct r_draw_face* __draw_face_load(const char* path)
 {
     hb_blob_t* blob = hb_blob_create_from_file_or_fail(path);
     if(!blob) return NULL;
@@ -60,12 +60,12 @@ struct r_draw_face* r_draw__face_load(const char* path)
     return (struct r_draw_face*)face;
 }
 
-void r_draw__face_free(struct r_draw_face* face)
+void __draw_face_free(struct r_draw_face* face)
 {
     hb_face_destroy((hb_face_t*)face);
 }
 
-int r_draw__face_weight(struct r_draw_face* face)
+int __draw_face_weight(struct r_draw_face* face)
 {
     hb_font_t* font = hb_font_create((hb_face_t*)face);
     int weight = (int)hb_style_get_value(font, HB_STYLE_TAG_WEIGHT);
@@ -73,7 +73,7 @@ int r_draw__face_weight(struct r_draw_face* face)
     return weight > 0 ? weight : 400;
 }
 
-struct r_draw_face_inst* r_draw__face_inst(struct r_draw_face* face_, int px, int weight, int synth_weight, bool italic)
+struct r_draw_face_inst* __draw_face_inst(struct r_draw_face* face_, int px, int weight, int synth_weight, bool italic)
 {
     hb_face_t* face = (hb_face_t*)face_;
     hb_font_t* font = hb_font_create(face);
@@ -137,13 +137,13 @@ struct r_draw_face_inst* r_draw__face_inst(struct r_draw_face* face_, int px, in
     return f;
 }
 
-void r_draw__face_inst_free(struct r_draw_face_inst* f)
+void __draw_face_inst_free(struct r_draw_face_inst* f)
 {
     hb_font_destroy(f->font);
     free(f);
 }
 
-void r_draw__face_inst_resize(struct r_draw_face_inst* f, int old_px, int px)
+void __draw_face_inst_resize(struct r_draw_face_inst* f, int old_px, int px)
 {
     hb_font_t* font = f->font;
     hb_font_set_scale(font, px * 64, px * 64);
@@ -153,26 +153,26 @@ void r_draw__face_inst_resize(struct r_draw_face_inst* f, int old_px, int px)
     if((x || y) && old_px > 0) hb_font_set_synthetic_bold(font, x * px / old_px, y * px / old_px, in_place);
 }
 
-bool r_draw__face_glyph(struct r_draw_face_inst* f, uint32_t codepoint, uint32_t* gid)
+bool __draw_face_glyph(struct r_draw_face_inst* f, uint32_t codepoint, uint32_t* gid)
 {
     return hb_font_get_nominal_glyph(f->font, codepoint, gid);
 }
 
-int r_draw__face_advance(struct r_draw_face_inst* f, uint32_t gid, bool* empty)
+int __draw_face_advance(struct r_draw_face_inst* f, uint32_t gid, bool* empty)
 {
     hb_glyph_extents_t extents;
     *empty = !hb_font_get_glyph_extents(f->font, gid, &extents) || extents.width == 0 || extents.height == 0;
     return hb_font_get_glyph_h_advance(f->font, gid);
 }
 
-void r_draw__face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* descender, int* line_gap)
+void __draw_face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* descender, int* line_gap)
 {
     hb_font_extents_t fe;
     hb_font_get_h_extents(f->font, &fe);
     *ascender = fe.ascender; *descender = fe.descender; *line_gap = fe.line_gap;
 }
 
-int r_draw__face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, int len, int start, int n, r_draw_glyph_pos** out)
+int __draw_face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, int len, int start, int n, r_draw_glyph_pos** out)
 {
     struct font_state* s = state(c);
     hb_buffer_clear_contents(s->buffer);
@@ -182,14 +182,14 @@ int r_draw__face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, 
     unsigned count;
     hb_glyph_info_t* info = hb_buffer_get_glyph_infos(s->buffer, &count);
     hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(s->buffer, &count);
-    s->pos = r_draw__grow(s->pos, &s->cap_pos, (int)count, sizeof(r_draw_glyph_pos));
+    s->pos = __draw_grow(s->pos, &s->cap_pos, (int)count, sizeof(r_draw_glyph_pos));
     for(unsigned i = 0; i < count; i++)
         s->pos[i] = (r_draw_glyph_pos){ info[i].codepoint, info[i].cluster, pos[i].x_advance, pos[i].x_offset, pos[i].y_offset };
     *out = s->pos;
     return (int)count;
 }
 
-bool r_draw__face_raster(r_draw* c, struct r_draw_face_inst* f, uint32_t gid, r_draw_glyph_bitmap* out)
+bool __draw_face_raster(r_draw* c, struct r_draw_face_inst* f, uint32_t gid, r_draw_glyph_bitmap* out)
 {
     struct font_state* s = state(c);
     hb_font_t* font = f->font;

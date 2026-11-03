@@ -72,6 +72,53 @@ void r_label(r_ui_list* l, rect r, char* text)
 	r_label_ex(l, r, R_STYLE_LABEL, R_ICON_NONE, text);
 }
 
+struct label_data
+{
+	r_data_binding binding;
+	const char* fmt;
+	char shown[64];
+};
+
+static void format_value(char* buf, int size, const char* fmt, r_data_binding b)
+{
+	const char* p = fmt;
+	while((p = strchr(p, '%')) && p[1] == '%') p += 2;
+	if(!p) { snprintf(buf, size, "%s", fmt); return; }
+	p += 1 + strspn(p + 1, "-+ #0123456789.");
+	char len[2] = {0};
+	for(int i = 0; i < 2 && *p && strchr("hljztL", *p); i++) len[i] = *p++;
+	if(!*p || !strchr("diouxXcfFeEgGaA", *p)) { snprintf(buf, size, "%s", fmt); return; }
+	if(strchr("fFeEgGaA", *p))
+	{
+		if(len[0] == 'L') snprintf(buf, size, fmt, (long double)r_getd(b));
+		else              snprintf(buf, size, fmt, r_getd(b));
+		return;
+	}
+	int64_t v = r_geti(b);
+	switch(len[0])
+	{
+		case 'l': if(len[1] == 'l') snprintf(buf, size, fmt, (long long)v); else snprintf(buf, size, fmt, (long)v); break;
+		case 'j': snprintf(buf, size, fmt, (intmax_t)v); break;
+		case 'z': case 't': snprintf(buf, size, fmt, (size_t)v); break;
+		default: snprintf(buf, size, fmt, (int)v); break;
+	}
+}
+
+static void label_update(r_context* c, r_drawable* d)
+{
+	struct label_data* data = d->dynamic->custom.data;
+	format_value(data->shown, sizeof(data->shown), data->fmt, data->binding);
+	d->text = data->shown;
+}
+
+void r_label_value(r_ui_list* l, rect r, const char* fmt, r_data_binding binding)
+{
+	struct label_data* data = r_storage_alloc(l, sizeof(*data));
+	*data = (struct label_data){ binding, fmt };
+	format_value(data->shown, sizeof(data->shown), fmt, binding);
+	r_drawable_custom(l, r_label_ex(l, r, R_STYLE_LABEL, R_ICON_NONE, data->shown), binding, label_update, data);
+}
+
 void r_header(r_ui_list* l, rect r, char* text)
 {
 	r_label_ex(l, r, R_STYLE_HEADER, R_ICON_NONE, text);
@@ -79,7 +126,7 @@ void r_header(r_ui_list* l, rect r, char* text)
 
 void r_paragraph(r_ui_list* l, rect r, int style, char* text)
 {
-	r_label_ex(l, r, style ? style : R_STYLE_LABEL, R_ICON_NONE, text)->wrap_text = true;
+	r_label_ex(l, r, style ? style : R_STYLE_LABEL, R_ICON_NONE, text)->wrap_label = true;
 }
 
 void r_icon(r_ui_list* l, rect r, int style, int icon)
@@ -157,8 +204,8 @@ void r_radio(r_ui_list* l, rect r, char* text, int64_t value, r_data_binding bin
 void r_toggle(r_ui_list* l, rect r, char* text, r_data_binding binding)
 {
 	r_context* c = l->context;
-	int s = r__layout_size(c, R_STYLE_TOGGLE | R_COMPONENT_TRACK);
-	int t = r__layout_size(c, R_STYLE_TOGGLE | R_COMPONENT_THUMB);
+	int s = r_layout_default_size(c, R_STYLE_TOGGLE | R_COMPONENT_TRACK);
+	int t = r_layout_default_size(c, R_STYLE_TOGGLE | R_COMPONENT_THUMB);
 	int inset = (s - t) / 2;
 	r_drawable* track = indicator_row(l, r, R_STYLE_TOGGLE | R_COMPONENT_TRACK, s * 9 / 5, text);
 	struct toggle_data data = { binding, 0, false };
@@ -201,7 +248,7 @@ static bool tab_activate(const r_event* e, r_callback* self)
 void r_tabs(r_ui_list* l, rect r, char** labels, int count, r_data_binding selected, r_ui_list** pages)
 {
 	r_context* c = l->context;
-	rect bar = r_cut_px(R_TOP, &r, r__layout_size(c, R_STYLE_TAB), P670);
+	rect bar = r_cut_px(R_TOP, &r, r_layout_default_size(c, R_STYLE_TAB), P670);
 	r_style(l, bar, R_STYLE_TAB_BAR);
 	r_style(l, r, R_STYLE_TAB_PAGE);
 	rect content = r_inner(c, R_STYLE_TAB_PAGE, r);
@@ -261,7 +308,7 @@ struct tree_data
 static void tree_chevron_update(r_context* c, r_drawable* d)
 {
 	struct tree_data* t = d->dynamic->custom.data;
-	r__show_state(d, R_STATE_SELECTED, r_geti(t->select.binding) == t->select.value);
+	if(r_geti(t->select.binding) == t->select.value) d->style |= R_STATE_SELECTED;
 	d->icon = r_geti(t->open) ? R_ICON_HIDE_DETAILS : R_ICON_SHOW_DETAILS;
 }
 
@@ -270,7 +317,7 @@ bool r_tree_node(r_ui_list* l, rect r, int depth, char* text, int icon, bool has
 	r_context* c = l->context;
 	bool is_open = has_children && r_geti(open);
 	r_drawable* row = r_style(l, r, R_STYLE_LIST_ITEM);
-	int is = r__layout_size(c, R_STYLE_ICON);
+	int is = r_layout_default_size(c, R_STYLE_ICON);
 	rect inner = r_inner(c, R_STYLE_LIST_ITEM, r);
 	r_cut_px(R_LEFT, &inner, depth * (is + 4), P680);
 	rect chevron = r_cut_px(R_LEFT, &inner, is + 4, P680);
@@ -329,7 +376,7 @@ static bool split_drag(const r_event* e, r_callback* self)
 void r_split(r_ui_list* l, rect r, r_alignment dir, r_data_binding fraction, int min_first, int min_second, rect* first, rect* second)
 {
 	bool horizontal = (dir & (R_LEFT | R_RIGHT)) != 0;
-	int gap = r__layout_spacing(l->context, R_STYLE_SEPARATOR);
+	int gap = r_layout_default_spacing(l->context, R_STYLE_SEPARATOR);
 	int total = MAX((horizontal ? r.w : r.h) - gap, 0);
 	int size = split_size((float)r_getd(fraction), total, min_first, min_second);
 	*second = r;
@@ -441,7 +488,7 @@ static void slider_parts(rect r, int ts, bool vertical, float t, rect* track, re
 void r_slider(r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding)
 {
 	bool vertical = r.h > r.w;
-	int ts = r__layout_size(l->context, R_STYLE_SLIDER | R_COMPONENT_THUMB);
+	int ts = r_layout_default_size(l->context, R_STYLE_SLIDER | R_COMPONENT_THUMB);
 	int orient = vertical ? R_VARIANT_VERT : R_VARIANT_HORZ;
 	r_callback* cb = attach_slider(l, r, (struct slider_data){ binding, min, max, step, ts, vertical, r }, false);
 	rect track, fill, thumb;
@@ -651,7 +698,7 @@ r_ui_list* r_scroll_begin_ex(r_ui_list* parent, rect r, int frame_style)
 	vr.id = r_salt(r, P650).id;
 	r_ui_list* existing = r_viewport_keep_alive(parent, vr);
 	bool bar = existing && existing->has_scrollbar;
-	if(bar) vr.w -= r__layout_size(c, R_STYLE_SCROLLBAR | R_COMPONENT_TRACK);
+	if(bar) vr.w -= r_layout_default_size(c, R_STYLE_SCROLLBAR | R_COMPONENT_TRACK);
 	r_ui_list* v = r_viewport(parent, vr);
 	v->has_scrollbar = bar;
 	return v;
@@ -672,8 +719,8 @@ void r_scroll_end(r_ui_list* parent, r_ui_list* v)
 	struct scroll_data data = { v, (float)MAX(doc_h - vr.h, 0) };
 	v->scroll_y = clampf(v->scroll_y, 0, data.max_scroll);
 
-	int sbw = r__layout_size(c, R_STYLE_SCROLLBAR | R_COMPONENT_TRACK);
-	int cap = r__layout_size(c, R_STYLE_SCROLLBAR | R_COMPONENT_ENDCAP_START);
+	int sbw = r_layout_default_size(c, R_STYLE_SCROLLBAR | R_COMPONENT_TRACK);
+	int cap = r_layout_default_size(c, R_STYLE_SCROLLBAR | R_COMPONENT_ENDCAP_START);
 	cap = cap > 0 ? MIN(cap, vr.h / 3) : 0;
 	rect track = {.x = vr.x + vr.w, .y = vr.y + cap, .w = sbw, .h = vr.h - cap * 2, .id = r_salt(vr, P660).id};
 	rect thumb = track;

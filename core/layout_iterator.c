@@ -3,16 +3,25 @@
 static inline bool stack_horizontal(r_layout_iter* s) { return (s->dir & (R_LEFT | R_RIGHT)) != 0; }
 static inline bool is_flow(r_layout_iter* s) { return s->dir == R_TOP_LEFT; }
 
-void r_layout_defaults(r_context* c, int style, int* size, int* spacing)
+int r_layout_default_size(r_context* c, int style)
 {
-	*size = 28; *spacing = 8;
-	if(c->interface.get_layout) c->interface.get_layout(c, style, size, spacing);
+	int size = 28, spacing = 8;
+	if(c->interface.get_layout) c->interface.get_layout(c, style, &size, &spacing);
+	return size;
+}
+
+int r_layout_default_spacing(r_context* c, int style)
+{
+	int size = 28, spacing = 8;
+	if(c->interface.get_layout) c->interface.get_layout(c, style, &size, &spacing);
+	return spacing;
 }
 
 r_layout_iter r_layout(r_ui_list* l, rect area, r_alignment dir, int style)
 {
 	r_layout_iter s = { .l = l, .start = area, .area = area, .dir = dir };
-	r_layout_defaults(l->context, style, &s.size, &s.spacing);
+	s.size    = r_layout_default_size(l->context, style);
+	s.spacing = r_layout_default_spacing(l->context, style);
 	return s;
 }
 
@@ -134,7 +143,12 @@ rect r_next_fraction(r_layout_iter* s, float fraction)
 
 rect r_next_fit(r_layout_iter* s, int style, char* text)
 {
-	rect inner = r_measure(s->l->context, style, text);
+	return r_next_fit_ex(s, style, R_ICON_NONE, text);
+}
+
+rect r_next_fit_ex(r_layout_iter* s, int style, int icon, char* text)
+{
+	rect inner = r_measure_ex(s->l->context, style, icon, text);
 	rect outer = r_outer(s->l->context, style, &inner);
 	if(is_flow(s)) return flow_next(s, outer.w, outer.h);
 	return r_next(s, stack_horizontal(s) ? outer.w : outer.h);

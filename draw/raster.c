@@ -56,7 +56,7 @@ static void emit_9grid(r_draw* c, uint64_t handle, uint32_t color, int w, int h,
     float dy[4] = { dst.y, dst.y + ceilf(sides[1] * scale), dst.y + dst.h - ceilf(sides[3] * scale), dst.y + dst.h };
     for(int j = 0; j < 3; j++)
     for(int i = 0; i < 3; i++)
-        r_draw__emit(c, handle, color, (r_frect){ sx[i], sy[j], sx[i+1] - sx[i], sy[j+1] - sy[j] }, (r_frect){ dx[i], dy[j], dx[i+1] - dx[i], dy[j+1] - dy[j] }, c->clip_px);
+        __draw_emit(c, handle, color, (r_frect){ sx[i], sy[j], sx[i+1] - sx[i], sy[j+1] - sy[j] }, (r_frect){ dx[i], dy[j], dx[i+1] - dx[i], dy[j+1] - dy[j] }, c->clip_px);
 }
 
 void r_draw_render_stylebox(r_draw* c, int stylebox, rect outer)
@@ -83,7 +83,7 @@ void r_draw_render_stylebox(r_draw* c, int stylebox, rect outer)
         r_frect src = { 0, 0, bg.w / fit, bg.h / fit };
         src.x = (sb->bg_w - src.w) / 2;
         src.y = (sb->bg_h - src.h) / 2;
-        r_draw__emit(c, stylebox_handle(c, sb, true), color, src, bg, c->clip_px);
+        __draw_emit(c, stylebox_handle(c, sb, true), color, src, bg, c->clip_px);
     }
     emit_9grid(c, stylebox_handle(c, sb, false), color, sb->w, sb->h, sb->side_width, corner * ps / s, dst);
 }
@@ -606,9 +606,9 @@ static uint32_t* rasterize_stylebox_bg(struct r_draw_stylebox* sb)
 static uint64_t stylebox_handle(r_draw* c, struct r_draw_stylebox* sb, bool bg)
 {
     uint64_t* handle = bg ? &sb->bg_handle : &sb->handle;
-    if(r_draw__still_cached(c, handle) || (bg ? sb->bg_permanent : sb->permanent) || c->cache_full) return *handle;
+    if(__draw_still_cached(c, handle) || (bg ? sb->bg_permanent : sb->permanent) || c->cache_full) return *handle;
     uint32_t* pixels = bg ? rasterize_stylebox_bg(sb) : rasterize_stylebox(sb);
-    r_draw__cached(c, handle, pixels, bg ? sb->bg_w : sb->w, bg ? sb->bg_h : sb->h);
+    __draw_cached(c, handle, pixels, bg ? sb->bg_w : sb->w, bg ? sb->bg_h : sb->h);
     free(pixels);
     return *handle;
 }
@@ -642,11 +642,11 @@ static bool render_stylebox_exact(r_draw* c, int slot, r_frect dst, uint32_t col
         for(int x = 0; x < w; x++)
             canvas[y * w + x] = finish_pixel(stylebox_pixel_at(background_pixel_at(x - r.x, y - r.y, r.w, r.h, d), x - r.x, y - r.y, r.w, r.h, d), d);
         e->handle = 0;
-        r_draw__cached(c, &e->handle, canvas, w, h);
+        __draw_cached(c, &e->handle, canvas, w, h);
         free(canvas);
         if(!e->handle) return false;
     }
-    r_draw__emit(c, e->handle, color, (r_frect){ 0, 0, w, h }, dst, c->clip_px);
+    __draw_emit(c, e->handle, color, (r_frect){ 0, 0, w, h }, dst, c->clip_px);
     return true;
 }
 
@@ -768,7 +768,7 @@ rect r_draw_icon_get_rect(r_draw* c, int slot, rect outer)
     return r;
 }
 
-uint64_t r_draw__cache_icon(r_draw* c, int icon, int size, bool* colored)
+uint64_t __draw_cache_icon(r_draw* c, int icon, int size, bool* colored)
 {
     const float* ops = c->icons[icon].ops;
     float px = 24.0f / size, p[4];
@@ -822,12 +822,12 @@ void r_stylebox_set_raised_borders_simple(r_draw_stylebox_def* box, float angle,
 void r_draw_free_stylebox(r_draw* c, int slot)
 {
     struct r_draw_stylebox* sb = &c->styleboxes[slot];
-    r_draw__invalidate(c, &sb->handle);
-    r_draw__invalidate(c, &sb->bg_handle);
+    __draw_invalidate(c, &sb->handle);
+    __draw_invalidate(c, &sb->bg_handle);
     for(int i = 0; i < c->num_sized_styleboxes; i++)
         if(c->sized_styleboxes[i].slot == slot)
         {
-            r_draw__invalidate(c, &c->sized_styleboxes[i].handle);
+            __draw_invalidate(c, &c->sized_styleboxes[i].handle);
             c->sized_styleboxes[i--] = c->sized_styleboxes[--c->num_sized_styleboxes];
         }
     *sb = (struct r_draw_stylebox){0};
@@ -879,7 +879,7 @@ bool r_draw_upload_stylebox_fill(r_draw* c, int slot, uint8_t* pixels, int w, in
     free(tmp);
     if(!handle) return false;
     struct r_draw_stylebox* sb = &c->styleboxes[slot];
-    r_draw__invalidate(c, &sb->bg_handle);
+    __draw_invalidate(c, &sb->bg_handle);
     sb->bg_handle = handle;
     sb->bg_permanent = true;
     sb->bg_w = w;
