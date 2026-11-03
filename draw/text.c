@@ -1,7 +1,13 @@
-#define _DEFAULT_SOURCE // d_type of readdir (DT_DIR, ...) with strict C standards, before any include.
+#define _DEFAULT_SOURCE
 #include "internal.h"
 
-#define FONT_CATEGORIES 10
+enum r_font_category
+{
+    R_FONT_CATEGORY_BASE, R_FONT_CATEGORY_BOLD, R_FONT_CATEGORY_MONO,
+    R_FONT_CATEGORY_CJK, R_FONT_CATEGORY_ARABIC, R_FONT_CATEGORY_HEBREW,
+    R_FONT_CATEGORY_THAI, R_FONT_CATEGORY_INDIC, R_FONT_CATEGORY_EMOJI,
+    R_FONT_CATEGORY_SYMBOLS, R_FONT_CATEGORY_KOREAN, R_FONT_CATEGORY_MAX
+};
 
 #if defined(_WIN32)
   typedef struct _WIN32_FIND_DATAA {
@@ -26,9 +32,9 @@
 
 struct font_search
 {
-    const char* const* names[FONT_CATEGORIES];
-    int   best_variant[FONT_CATEGORIES];
-    char  path[FONT_CATEGORIES][512];
+    const char* const* names[R_FONT_CATEGORY_MAX];
+    int   best_variant[R_FONT_CATEGORY_MAX];
+    char  path[R_FONT_CATEGORY_MAX][512];
     int   depth;
 };
 
@@ -69,7 +75,7 @@ static void visit_font_file(struct font_search* search, const char* dir, const c
         is_font |= fname_len > 4 && ascii_ieq(fname + fname_len - 4, extensions[j], 4);
     if(!is_font) return;
 
-    for(int c = 0; c < FONT_CATEGORIES; c++)
+    for(int c = 0; c < R_FONT_CATEGORY_MAX; c++)
     for(int i = 0; i < search->best_variant[c] && search->names[c][i] != NULL; i++)
     {
         int name_len = (int)strlen(search->names[c][i]);
@@ -126,8 +132,10 @@ void r_draw_find_system_fonts(r_draw* frontend, bool include_base_fonts)
     static const char* const fb_indic  [] = {"nirmala",  "kohinoordevanagari", "devanagarisangammn", "notosansdevanagari-regular", "lohit-devanagari", NULL };
     static const char* const fb_emoji  [] = {"seguiemj", "apple color emoji", "notocoloremoji", NULL };
     static const char* const fb_symbols[] = {"seguisym", "notosanssymbols-regular", "notosanssymbols2-regular", "symbola", "dejavusans", NULL };
+    // After CJK: Fallbacks are tried in order, so Hangul missing from the chosen CJK font lands here without Hanja switching fonts.
+    static const char* const fb_korean [] = {"malgun", "applesdgothicneo", "notosanskr-regular", "notosanscjkkr-regular", "nanumgothic", "unfonts-core", NULL };
 
-    static const struct { int slot; uint32_t ranges[8][2]; } categories[FONT_CATEGORIES] =
+    static const struct { int slot; uint32_t ranges[8][2]; } categories[R_FONT_CATEGORY_MAX] =
     {
         { 0 }, { 1 }, { 2 },
         { 32, { {0x3000, 0x303F}, {0x3040, 0x30FF}, {0x3100, 0x318F}, {0x3400, 0x4DBF}, {0x4E00, 0x9FFF}, {0xAC00, 0xD7AF}, {0xF900, 0xFAFF}, {0xFF00, 0xFFEF} } },
@@ -136,12 +144,13 @@ void r_draw_find_system_fonts(r_draw* frontend, bool include_base_fonts)
         { 35, { {0x0E00, 0x0E7F} } },
         { 36, { {0x0900, 0x097F}, {0x0980, 0x09FF}, {0x0A00, 0x0A7F}, {0x0A80, 0x0AFF}, {0x0B00, 0x0B7F}, {0x0B80, 0x0BFF}, {0x0C00, 0x0C7F}, {0x0C80, 0x0CFF} } },
         { 37 }, { 38 },
+        { 39, { {0x1100, 0x11FF}, {0x3130, 0x318F}, {0xA960, 0xA97F}, {0xAC00, 0xD7AF}, {0xD7B0, 0xD7FF} } },
     };
 
-    struct font_search search = { .names = { base_font, bold, mono, fb_cjk, fb_arabic, fb_hebrew, fb_thai, fb_indic, fb_emoji, fb_symbols } };
-    for(int i = 0; i < FONT_CATEGORIES; i++)
+    struct font_search search = { .names = { base_font, bold, mono, fb_cjk, fb_arabic, fb_hebrew, fb_thai, fb_indic, fb_emoji, fb_symbols, fb_korean } };
+    for(int i = 0; i < R_FONT_CATEGORY_MAX; i++)
         search.best_variant[i] = 9999;
-    if(!include_base_fonts) search.best_variant[0] = search.best_variant[1] = search.best_variant[2] = 0;
+    if(!include_base_fonts) search.best_variant[R_FONT_CATEGORY_BASE] = search.best_variant[R_FONT_CATEGORY_BOLD] = search.best_variant[R_FONT_CATEGORY_MONO] = 0;
 
     char buf[1024];
     arena_t arena = {.start=(uint8_t*)buf, .cur=(uint8_t*)buf, .end=(uint8_t*)&buf[sizeof(buf)]};
@@ -176,21 +185,21 @@ void r_draw_find_system_fonts(r_draw* frontend, bool include_base_fonts)
     for(int i = 0; i < num_folders; i++)
         scan_font_dir(&search, folders[i]);
 
-    for(int list = 0; list < FONT_CATEGORIES; list++)
+    for(int list = 0; list < R_FONT_CATEGORY_MAX; list++)
     {
         if(search.best_variant[list] == 9999) continue;
-        if(list == 1 && search.best_variant[1] != search.best_variant[0]) continue;
+        if(list == R_FONT_CATEGORY_BOLD && search.best_variant[R_FONT_CATEGORY_BOLD] != search.best_variant[R_FONT_CATEGORY_BASE]) continue;
         int index = categories[list].slot;
         #ifdef VERBOSE
         printf("Font category %d = %s\n", list, search.path[list]);
         #endif
-        if(!r_draw_font_register(frontend, index, search.path[list], list >= 3)) continue;
+        if(!r_draw_font_register(frontend, index, search.path[list], list >= R_FONT_CATEGORY_CJK)) continue;
         for(int i = 0; i < 8; i++)
         {
             frontend->base_fonts[index].codepoint_ranges[i].min = categories[list].ranges[i][0];
             frontend->base_fonts[index].codepoint_ranges[i].max = categories[list].ranges[i][1];
         }
-        if(list >= 3)
+        if(list >= R_FONT_CATEGORY_CJK)
             frontend->font_system_fallbacks[frontend->font_system_num_fallbacks++] = index;
     }
     if(!include_base_fonts) return;
@@ -651,6 +660,8 @@ static const char* next_line(r_draw* c, r_draw_font* font, const char* line, con
 {
     const char* p = line;
     int w = 0;
+    // Widths are measured to the nearest pixel, so text may overhang its measured width by up to half a pixel (+1 device pixel of truncation).
+    int limit = (wrap_width << 6) + (int)(font->scale * 32) + 64;
     if(wrap_width <= 0)
     {
         while(p < end && *p != '\n') p++;
@@ -661,14 +672,14 @@ static const char* next_line(r_draw* c, r_draw_font* font, const char* line, con
         const char* q = p;
         while(q < end && *q != ' ' && *q != '\n') q++;
         int word_w = run_width(c, font, p, (int)(q - p));
-        if(w + word_w > wrap_width << 6)
+        if(w + word_w > limit)
         {
             if(p > line || !force) { *next = p; return p; }
             int n = shape_run(c, font, p, (int)(q - p)), cut = (int)(q - p);
             for(int i = 0; i < n; i++)
             {
                 run_glyph* g = &c->text->run[i];
-                if(w + g->x_advance > wrap_width << 6 && g->cluster > 0) { cut = g->cluster; break; }
+                if(w + g->x_advance > limit && g->cluster > 0) { cut = g->cluster; break; }
                 w += g->x_advance;
             }
             *next = p + cut; *width = w;
@@ -715,7 +726,7 @@ rect r_draw_measure_text_wrapped(r_draw* c, r_draw_font* font, const char* text,
         if(eol >= end) break;
         line = next;
     }
-    return (rect){.w = (int)ceilf(((max_w + 32) >> 6) / font->scale), .h = (int)ceilf((lines + 1) * line_height_px(font) / font->scale)};
+    return (rect){.w = (int)roundf(max_w / 64.0f / font->scale), .h = (int)ceilf((lines + 1) * line_height_px(font) / font->scale)};
 }
 
 rect r_draw_measure_text(r_draw* c, r_draw_font* font, const char* text, int len)
@@ -731,7 +742,7 @@ int r_draw_break_text(r_draw* c, r_draw_font* font, const char* text, int len, i
     if(len < 0) len = (int)strlen(text);
     const char* next; int line_w = 0;
     const char* eol = next_line(c, font, text, text + len, MAX((int)(width * font->scale), 1), force, &next, &line_w);
-    *w = (int)ceilf(((line_w + 32) >> 6) / font->scale);
+    *w = (int)roundf(line_w / 64.0f / font->scale);
     return (int)(eol - text);
 }
 
@@ -823,7 +834,13 @@ static void render_layout(r_draw* c, const text_layout* t, uint32_t color, const
     int block_h = (t->num_lines - 1) * line_height + text_height;
     int y = bounds.y - scroll_y;
     if(align & R_BOTTOM)      y += bounds.h - block_h;
-    else if(!(align & R_TOP)) y += (bounds.h - block_h + 1) / 2;
+    else if(!(align & R_TOP))
+    {
+        // Centre the capitals rather than the ascender-to-descender block: tall ascenders would push the text visibly low.
+        int cap = (__draw_face_cap_height(t->font->font) + 32) / 64;
+        if(cap > 0) y += (bounds.h - (t->num_lines - 1) * line_height - cap) / 2 + cap - ascender;
+        else        y += (bounds.h - block_h + 1) / 2;
+    }
 
     typedef struct { uint32_t color; int dilate, blur, x, y; } pass;
     pass passes[3] = { { 0 }, { 0 }, { color } };

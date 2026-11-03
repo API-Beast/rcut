@@ -697,12 +697,8 @@ r_ui_list* r_scroll_begin_ex(r_ui_list* parent, rect r, int frame_style)
 		vr = r_inner(c, frame_style, r);
 	}
 	vr.id = r_salt(r, P650).id;
-	r_ui_list* existing = r_viewport_keep_alive(parent, vr);
-	bool bar = existing && existing->has_scrollbar;
-	if(bar) vr.w -= r_layout_default_size(c, R_STYLE_SCROLLBAR | R_COMPONENT_TRACK);
-	r_ui_list* v = r_viewport(parent, vr);
-	v->has_scrollbar = bar;
-	return v;
+	vr.w -= r_layout_default_size(c, R_STYLE_SCROLLBAR | R_COMPONENT_TRACK);
+	return r_viewport(parent, vr);
 }
 
 void r_scroll_end(r_ui_list* parent, r_ui_list* v)
@@ -713,9 +709,7 @@ void r_scroll_end(r_ui_list* parent, r_ui_list* v)
 	int doc_h = MAX(v->document_area.h, content.y + content.h);
 	if(v->count_draw_items == 0) doc_h = v->document_area.h;
 	v->document_area.h = doc_h;
-	bool need = doc_h > vr.h;
-	if(need != v->has_scrollbar)
-		v->has_scrollbar = need;
+	v->has_scrollbar = doc_h > vr.h;
 
 	struct scroll_data data = { v, (float)MAX(doc_h - vr.h, 0) };
 	v->scroll_y = clampf(v->scroll_y, 0, data.max_scroll);
@@ -732,11 +726,13 @@ void r_scroll_end(r_ui_list* parent, r_ui_list* v)
 	thumb.id = r_salt(track, P600).id;
 
 	rect whole = vr;
-	if(v->has_scrollbar) whole.w += sbw;
+	whole.w += sbw;
 	r_callback* wheel = r_attach_callback(parent, whole, R_MOUSE_SCROLL, scroll_wheel);
 	r_callback_set_data(parent, wheel, &data, sizeof(data));
 
-	if(v->has_scrollbar)
+	if(!v->has_scrollbar) // Empty gutter.
+		r_style(parent, (rect){ track.x, vr.y, sbw, vr.h, track.id }, R_STYLE_SCROLLBAR | R_VARIANT_VERT | R_COMPONENT_TRACK);
+	else
 	{
 		r_style(parent, track, R_STYLE_SCROLLBAR | R_VARIANT_VERT | R_COMPONENT_TRACK);
 		r_drawable* thumb_d = r_drawable_thumb(parent, r_style(parent, thumb, R_STYLE_SCROLLBAR | R_VARIANT_VERT | R_COMPONENT_THUMB), R_PTR(&v->scroll_y), 0, data.max_scroll, track, R_TOP);

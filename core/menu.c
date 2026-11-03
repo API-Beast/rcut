@@ -81,8 +81,8 @@ static bool tooltip_mouse_hover(const r_event* e, r_callback* self)
 		char* text = r_store(p, self->data, self->size);
 		rect inner = r_measure_wrapped(c, R_STYLE_TOOLTIP, text, 320);
 		rect outer = r_outer(c, R_STYLE_TOOLTIP, &inner);
-		rect cursor = {.x = (int)e->list_mouse_x - 4, .y = (int)e->list_mouse_y, .w = 16, .h = 22};
-		outer = r_popup_place(e->ui_list, cursor, outer.w, outer.h, R_BOTTOM);
+		rect cursor = {.x = (int)e->list_mouse_x, .y = (int)e->list_mouse_y, .w = 14, .h = 22}; // Roughly the size of an arrow pointer.
+		outer = r_popup_place(e->ui_list, cursor, outer.w, outer.h, R_RIGHT);
 		outer.id = p->root_area.id;
 		p->root_area = outer;
 		r_drawable* d = r_style(p, outer, R_STYLE_TOOLTIP);
@@ -288,6 +288,25 @@ r_ui_list* r_menu_popup(r_ui_list* parent, rect anchor, const r_menu_item* items
 	return p;
 }
 
+// "Ctrl+Shift+S" for display next to a context menu entry.
+static char* hotkey_name(r_ui_list* l, uint32_t key, uint32_t modifiers)
+{
+	static const struct { uint32_t key; const char* name; } names[] = {
+		{ R_KEY_BACKSPACE, "Backspace" }, { R_KEY_TAB, "Tab" }, { R_KEY_ENTER, "Enter" }, { R_KEY_ESCAPE, "Esc" }, { R_KEY_SPACE, "Space" },
+		{ R_KEY_PAGEUP, "PgUp" }, { R_KEY_PAGEDOWN, "PgDn" }, { R_KEY_END, "End" }, { R_KEY_HOME, "Home" },
+		{ R_KEY_LEFT, "Left" }, { R_KEY_UP, "Up" }, { R_KEY_RIGHT, "Right" }, { R_KEY_DOWN, "Down" }, { R_KEY_DELETE, "Del" },
+	};
+	char key_buf[2] = { (char)key, 0 };
+	const char* key_name = (key >= 'A' && key <= 'Z') || (key >= '0' && key <= '9') ? key_buf : "?";
+	for(int i = 0; i < COUNTOF(names); i++)
+		if(names[i].key == key) key_name = names[i].name;
+	char buf[64];
+	snprintf(buf, sizeof(buf), "%s%s%s%s%s",
+		modifiers & R_MOD_CTRL  ? "Ctrl+"  : "", modifiers & R_MOD_ALT ? "Alt+" : "",
+		modifiers & R_MOD_SHIFT ? "Shift+" : "", modifiers & R_MOD_WIN ? "Win+" : "", key_name);
+	return r_store_string(l, buf);
+}
+
 void __core_open_context_menu(r_interact* it, float list_x, float list_y)
 {
 	r_ui_list* l = it->owner;
@@ -303,7 +322,11 @@ void __core_open_context_menu(r_interact* it, float list_x, float list_y)
 	for(r_interact* part = it; part->r.id == it->r.id; part++)
 	for(r_callback* cb = part->callbacks; cb; cb = cb->next)
 	if(cb->event == R_CONTEXT)
-		items[n++].label = cb->menu_label ? cb->menu_label : "?";
+	{
+		items[n].label = cb->menu_label ? cb->menu_label : "?";
+		if(cb->hotkey) items[n].shortcut = hotkey_name(p, cb->hotkey, cb->hotkey_modifier);
+		n++;
+	}
 
 	rect anchor = {.x = (int)list_x, .y = (int)list_y, .w = 1, .h = 1};
 	menu_build(p, l, anchor, items, R_BOTTOM, it->r.id);

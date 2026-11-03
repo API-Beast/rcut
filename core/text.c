@@ -319,7 +319,8 @@ static void edit_caret_update(r_context* c, r_drawable* d)
 	{
 		int line_h = r_measure(c, s->style, "").h, x, y;
 		caret_pos(c, s, MIN(s->caret, (int)strlen(s->buffer)), &x, &y);
-		caret = rect_intersect((rect){ s->inner.x + x - s->scroll_x, text_top(s, line_h) + y - s->scroll_y, 2, line_h }, r_grow(s->inner, 1));
+		int inset = line_h / 6;
+		caret = rect_intersect((rect){ s->inner.x + x - s->scroll_x, text_top(s, line_h) + y - s->scroll_y + inset, 1, line_h - inset * 2 }, r_grow(s->inner, 1));
 	}
 	d->r = (rect){ caret.x, caret.y, caret.w, caret.h, d->r.id };
 }
@@ -362,9 +363,10 @@ void r_text_edit_ex(r_ui_list* l, rect r, char* buffer, int capacity, const char
 	follow_caret(c, s);
 
 	r_style(l, r, style);
-	int styles[] = { style | R_COMPONENT_SELECTION, style | R_COMPONENT_SELECTION, style | R_COMPONENT_SELECTION, R_STYLE_TEXT, R_STYLE_TEXT, style | R_COMPONENT_CARET };
-	int outer[] = { 0, 0, 0, style, style | R_VARIANT_DULL, 0 };
-	void (*update[])(r_context* c, r_drawable* d) = { edit_selection_first, edit_selection_middle, edit_selection_last, edit_text_update, edit_placeholder_update, edit_caret_update };
+	// The caret goes below the text so it never hides a glyph.
+	int styles[] = { style | R_COMPONENT_SELECTION, style | R_COMPONENT_SELECTION, style | R_COMPONENT_SELECTION, style | R_COMPONENT_CARET, R_STYLE_TEXT, R_STYLE_TEXT };
+	int outer[] = { 0, 0, 0, 0, style, style | R_VARIANT_DULL };
+	void (*update[])(r_context* c, r_drawable* d) = { edit_selection_first, edit_selection_middle, edit_selection_last, edit_caret_update, edit_text_update, edit_placeholder_update };
 	for(int i = 0; i < COUNTOF(styles); i++)
 	{
 		r_drawable* d = r_style(l, s->inner, styles[i]);

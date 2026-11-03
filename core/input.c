@@ -220,7 +220,7 @@ static r_interact* find_part(r_context* c, uint64_t id, int part)
 
 static inline bool is_focusable(r_interact* first)
 {
-	return widget_has_callback(first, R_ACTIVATION) || widget_has_callback(first, R_KEY_INPUT) || widget_has_callback(first, R_TEXT_INPUT);
+	return widget_has_callback(first, R_ACTIVATION) || widget_has_callback(first, R_KEY_INPUT) || widget_has_callback(first, R_TEXT_INPUT) || widget_has_callback(first, R_CONTEXT);
 }
 
 static r_ui_list* modal_scope(r_context* c)

@@ -172,6 +172,14 @@ void __draw_face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* desce
     *ascender = fe.ascender; *descender = fe.descender; *line_gap = fe.line_gap;
 }
 
+int __draw_face_cap_height(struct r_draw_face_inst* f)
+{
+    hb_codepoint_t gid;
+    hb_glyph_extents_t extents;
+    if(!hb_font_get_nominal_glyph(f->font, 'H', &gid) || !hb_font_get_glyph_extents(f->font, gid, &extents)) return 0;
+    return extents.y_bearing;
+}
+
 int __draw_face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, int len, int start, int n, r_draw_glyph_pos** out)
 {
     struct font_state* s = state(c);
@@ -211,7 +219,7 @@ bool __draw_face_raster(r_draw* c, struct r_draw_face_inst* f, uint32_t gid, r_d
     *out = (r_draw_glyph_bitmap){
         .pixels  = hb_raster_image_get_buffer(s->image),
         .x = ext.x_origin, .y = ext.y_origin, .w = (int)ext.width, .h = (int)ext.height, .stride = (int)ext.stride, .bpp = 4,
-        .colored = hb_ot_color_glyph_has_paint(f->face, gid) || hb_ot_color_has_png(f->face),
+        .colored = hb_ot_color_glyph_has_paint(f->face, gid) || hb_ot_color_glyph_get_layers(f->face, gid, 0, NULL, NULL) > 0 || hb_ot_color_has_png(f->face),
     };
     return true;
 }

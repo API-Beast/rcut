@@ -114,7 +114,7 @@ static void grays(r_draw_palette* p, uint32_t bg, bool light)
 	{
 		p->window = DARKER(0.5f); p->panel = p->view = bg; p->card = LIGHTER(0.0017f);
 		p->input = DARKER(0.54f); p->menu = LIGHTER(0.005f); p->tooltip = LIGHTER(0.0105f);
-		p->control = LIGHTER(0.0163f); p->control_hover = LIGHTER(0.024f); p->control_pressed = LIGHTER(0.005f); p->track = DARKER(0.54f);
+		p->control = LIGHTER(0.0163f); p->control_hover = LIGHTER(0.024f); p->control_pressed = LIGHTER(0.005f); p->track = LIGHTER(0.03f); // Lighter: a dark track vanishes on the window.
 		p->border = LIGHTER(0.024f); p->border_strong = LIGHTER(0.039f); p->border_hover = LIGHTER(0.075f);
 		p->thumb = mix(bg, WHITE, 0.9f);
 	}
@@ -508,7 +508,7 @@ static void selection_and_caret(r_draw* c, int key)
 		r_theme_fill(c, caret ? p->focus : alpha(p->selection, dl(p, 0.45f, 0.28f)), 0);
 		r_theme_border(c, 0, 0);
 		r_theme_surface(c, p->input);
-		r_theme_radius(c, caret ? 1 : 2);
+		r_theme_radius(c, caret ? 0 : 2);
 		r_theme_padding(c, 0, 0);
 		r_theme_label(c, p->text, 0);
 		r_theme_make_box(c);

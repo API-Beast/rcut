@@ -130,6 +130,13 @@ void __draw_face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* desce
     *line_gap  = (int)(gap  * f->scale * 64.0f + 0.5f);
 }
 
+int __draw_face_cap_height(struct r_draw_face_inst* f)
+{
+    int x0, y0, x1, y1;
+    if(!stbtt_GetCodepointBox(&f->face->info, 'H', &x0, &y0, &x1, &y1)) return 0;
+    return (int)(y1 * f->scale * 64.0f + 0.5f);
+}
+
 int __draw_face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, int len, int start, int n, r_draw_glyph_pos** out)
 {
     (void)len;

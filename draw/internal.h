@@ -65,6 +65,7 @@ void                     __draw_face_inst_resize(struct r_draw_face_inst* f, int
 bool                     __draw_face_glyph(struct r_draw_face_inst* f, uint32_t codepoint, uint32_t* gid);
 int                      __draw_face_advance(struct r_draw_face_inst* f, uint32_t gid, bool* empty);
 void                     __draw_face_v_metrics(struct r_draw_face_inst* f, int* ascender, int* descender, int* line_gap);
+int                      __draw_face_cap_height(struct r_draw_face_inst* f); // 26.6, 0 if unknown.
 int                      __draw_face_shape(r_draw* c, struct r_draw_face_inst* f, const char* text, int len, int start, int n, r_draw_glyph_pos** out);
 bool                     __draw_face_raster(r_draw* c, struct r_draw_face_inst* f, uint32_t gid, r_draw_glyph_bitmap* out);
 void                     __draw_face_free_state(r_draw* c);
