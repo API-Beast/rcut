@@ -35,6 +35,7 @@ typedef struct r_sdl_frontend
 	bool quit_requested;
 	SDL_Window* text_input_window;
 	bool auto_scale;
+	bool vsync;
 	char* clipboard;
 	int   cursor;
 	SDL_Cursor* cursors[8];
@@ -43,6 +44,7 @@ typedef struct r_sdl_frontend
 enum r_sdl_flags
 {
 	R_SDL_RESIZABLE = 1 << 0,
+	R_SDL_VSYNC     = 1 << 1,
 };
 
 r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags);

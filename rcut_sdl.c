@@ -18,6 +18,7 @@ r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags)
     c->windows[0].window = root_window;
 
     c->auto_scale = true;
+    c->vsync = flags & R_SDL_VSYNC;
     float scale = SDL_GetWindowDisplayScale(root_window);
     if(scale <= 0.0f) scale = 1.0f;
 
@@ -471,6 +472,7 @@ static void render_window(r_sdl_frontend* c, int i)
         }
         s = w->internal_surface;
     }
+    if(i == 0 && c->vsync && surface != w->last_window_surface) SDL_SetWindowSurfaceVSync(w->window, 1);
     rect whole = { w->x, w->y, s->w, s->h };
     damage = keeps_contents(w, surface, s->w, s->h) ? rect_intersect(damage, whole) : whole;
     if(damage.w <= 0 || damage.h <= 0) return;
