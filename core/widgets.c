@@ -45,29 +45,30 @@ void r_on_click_f64    (r_ui_list* l, rect r, void (*on_click)(double), double v
 void r_on_click_ptr    (r_ui_list* l, rect r, void (*on_click)(void*), void* value)     { on_click_generic(l, r, (struct generic_fn_pointer_wrapper_data){.fn = (void(*)())on_click, .signature = R_v_FN_ptr, .p = value}); }
 void r_on_click_ptr_i32(r_ui_list* l, rect r, void (*on_click)(void*, int32_t), void* ptr, int index) { on_click_generic(l, r, (struct generic_fn_pointer_wrapper_data){.fn = (void(*)())on_click, .signature = R_v_FN_ptr_i32, .p = ptr, .i = index}); }
 
-void r_button_ex(r_ui_list* l, rect r, int style, int icon, char* text)
+r_drawable* r_button_ex(r_ui_list* l, rect r, int style, int icon, const char* text)
 {
 	r_drawable* d = r_style(l, r, style);
-	d->text = text;
+	d->text = (char*)text;
 	d->icon = icon;
 	r_interactable(l, r);
+	return d;
 }
 
-void r_button(r_ui_list* l, rect r, char* text)
+void r_button(r_ui_list* l, rect r, const char* text)
 {
 	r_button_ex(l, r, R_STYLE_BUTTON, R_ICON_NONE, text);
 }
 
-r_drawable* r_label_ex(r_ui_list* l, rect r, int style, int icon, char* text)
+r_drawable* r_label_ex(r_ui_list* l, rect r, int style, int icon, const char* text)
 {
 	r_drawable* d = r_style(l, r, R_STYLE_TEXT);
 	d->outer_style = style;
-	d->text = text;
+	d->text = (char*)text;
 	d->icon = icon;
 	return d;
 }
 
-void r_label(r_ui_list* l, rect r, char* text)
+void r_label(r_ui_list* l, rect r, const char* text)
 {
 	r_label_ex(l, r, R_STYLE_LABEL, R_ICON_NONE, text);
 }
@@ -119,12 +120,12 @@ void r_label_value(r_ui_list* l, rect r, const char* fmt, r_data_binding binding
 	r_drawable_custom(l, r_label_ex(l, r, R_STYLE_LABEL, R_ICON_NONE, data->shown), binding, label_update, data);
 }
 
-void r_header(r_ui_list* l, rect r, char* text)
+void r_header(r_ui_list* l, rect r, const char* text)
 {
 	r_label_ex(l, r, R_STYLE_HEADER, R_ICON_NONE, text);
 }
 
-void r_paragraph(r_ui_list* l, rect r, int style, char* text)
+void r_paragraph(r_ui_list* l, rect r, int style, const char* text)
 {
 	r_label_ex(l, r, style ? style : R_STYLE_LABEL, R_ICON_NONE, text)->wrap_label = true;
 }
@@ -176,7 +177,7 @@ static r_drawable* show_toggle(r_ui_list* l, r_drawable* d, struct toggle_data t
 	return r_drawable_toggled(l, d, t.binding, t.value, t.set_value, state, icon);
 }
 
-static r_drawable* indicator_row(r_ui_list* l, rect r, int style, int indicator_w, char* text)
+static r_drawable* indicator_row(r_ui_list* l, rect r, int style, int indicator_w, const char* text)
 {
 	r_layout_iter cols = r_layout_columns(l, r, style);
 	rect box = {.w = indicator_w ? indicator_w : cols.size, .h = cols.size};
@@ -187,21 +188,21 @@ static r_drawable* indicator_row(r_ui_list* l, rect r, int style, int indicator_
 	return d;
 }
 
-void r_checkbox(r_ui_list* l, rect r, char* text, r_data_binding binding)
+void r_checkbox(r_ui_list* l, rect r, const char* text, r_data_binding binding)
 {
 	struct toggle_data t = { binding, 0, false };
 	attach_toggle(l, r, t);
 	show_toggle(l, indicator_row(l, r, R_STYLE_CHECKBOX, 0, text), t, R_STATE_TOGGLED, R_ICON_CHECKED);
 }
 
-void r_radio(r_ui_list* l, rect r, char* text, int64_t value, r_data_binding binding)
+void r_radio(r_ui_list* l, rect r, const char* text, int64_t value, r_data_binding binding)
 {
 	struct toggle_data t = { binding, value, true };
 	attach_toggle(l, r, t);
 	show_toggle(l, indicator_row(l, r, R_STYLE_RADIO, 0, text), t, R_STATE_TOGGLED, R_ICON_MARKED);
 }
 
-void r_toggle(r_ui_list* l, rect r, char* text, r_data_binding binding)
+void r_toggle(r_ui_list* l, rect r, const char* text, r_data_binding binding)
 {
 	r_context* c = l->context;
 	int s = r_layout_default_size(c, R_STYLE_TOGGLE | R_COMPONENT_TRACK);
@@ -217,10 +218,10 @@ void r_toggle(r_ui_list* l, rect r, char* text, r_data_binding binding)
 	r_drawable_thumb(l, thumb, binding, 0, 1, slide, R_LEFT);
 }
 
-void r_selectable(r_ui_list* l, rect r, char* text, int64_t value, r_data_binding binding)
+void r_selectable(r_ui_list* l, rect r, const char* text, int64_t value, r_data_binding binding)
 {
 	r_drawable* d = r_style(l, r, R_STYLE_LIST_ITEM);
-	d->text = text;
+	d->text = (char*)text;
 	struct toggle_data t = { binding, value, true };
 	attach_toggle(l, r, t);
 	show_toggle(l, d, t, R_STATE_SELECTED, 0);
@@ -312,7 +313,7 @@ static void tree_chevron_update(r_context* c, r_drawable* d)
 	d->icon = r_geti(t->open) ? R_ICON_HIDE_DETAILS : R_ICON_SHOW_DETAILS;
 }
 
-bool r_tree_node(r_ui_list* l, rect r, int depth, char* text, int icon, bool has_children, r_data_binding open, int64_t value, r_data_binding selected)
+bool r_tree_node(r_ui_list* l, rect r, int depth, const char* text, int icon, bool has_children, r_data_binding open, int64_t value, r_data_binding selected)
 {
 	r_context* c = l->context;
 	bool is_open = has_children && r_geti(open);
@@ -499,9 +500,9 @@ void r_slider(r_ui_list* l, rect r, float min, float max, float step, r_data_bin
 	r_drawable_thumb(l, r_style(l, thumb, R_STYLE_SLIDER | R_COMPONENT_THUMB | orient), binding, min, max, r, from)->parent_id = r.id;
 }
 
-void r_slider_box(r_ui_list* l, rect r, char* text, float min, float max, float step, r_data_binding binding)
+void r_slider_box(r_ui_list* l, rect r, const char* text, float min, float max, float step, r_data_binding binding)
 {
-	r_callback* cb = attach_slider(l, r, (struct slider_data){ binding, min, max, step, 0, false, r, text }, true);
+	r_callback* cb = attach_slider(l, r, (struct slider_data){ binding, min, max, step, 0, false, r, (char*)text }, true);
 	struct slider_data* data = cb->data;
 	slider_show_value(data);
 	r_style(l, r, R_STYLE_SLIDEBOX);

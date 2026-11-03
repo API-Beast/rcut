@@ -49,7 +49,7 @@ r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags);
 void r_sdl_free  (r_sdl_frontend* c);
 bool r_sdl_process_event(r_sdl_frontend* c, SDL_Event* e);
 bool r_sdl_quit_requested(r_sdl_frontend* c, bool clear);
-r_ui_list* r_sdl_dialog(r_sdl_frontend* c, uint64_t root_id, int w, int h, char* title);
+r_ui_list* r_sdl_dialog(r_sdl_frontend* c, uint64_t root_id, int w, int h, const char* title);
 bool r_sdl_close_requested(r_sdl_frontend* c, r_ui_list* dialog, bool clear);
 void r_sdl_update(r_sdl_frontend* c);
 void r_sdl_render_ui(r_sdl_frontend* c);

@@ -111,7 +111,7 @@ bool r_sdl_quit_requested(r_sdl_frontend* c, bool clear)
     return result;
 }
 
-r_ui_list* r_sdl_dialog(r_sdl_frontend* c, uint64_t root_id, int w, int h, char* title)
+r_ui_list* r_sdl_dialog(r_sdl_frontend* c, uint64_t root_id, int w, int h, const char* title)
 {
     int i = 1;
     while(i < RCUT_SDL_MAX_WINDOWS && c->windows[i].used) i++;
@@ -122,7 +122,7 @@ r_ui_list* r_sdl_dialog(r_sdl_frontend* c, uint64_t root_id, int w, int h, char*
     if(i == 0) r_align(R_CENTER, c->root->root_area, &l->root_area);
     l->root_area.id = root_id;
     l->is_modal = true;
-    l->title = title;
+    l->title = (char*)title;
     return l;
 }
 
@@ -422,9 +422,9 @@ bool r_sdl_process_event(r_sdl_frontend* c, SDL_Event* e)
         case SDL_EVENT_KEY_DOWN:
             return r_post_key_input(ctx, key_target(c, e->key.windowID), map_key(e->key.key), (int32_t)e->key.scancode, map_modifiers(e->key.mod)) != 0;
         case SDL_EVENT_TEXT_INPUT:
-            return r_post_text(ctx, key_target(c, e->text.windowID), (char*)e->text.text) != 0;
+            return r_post_text(ctx, key_target(c, e->text.windowID), e->text.text) != 0;
         case SDL_EVENT_TEXT_EDITING:
-            return r_post_text_edit(ctx, key_target(c, e->edit.windowID), (char*)e->edit.text, e->edit.start, e->edit.length) != 0;
+            return r_post_text_edit(ctx, key_target(c, e->edit.windowID), e->edit.text, e->edit.start, e->edit.length) != 0;
         case SDL_EVENT_WINDOW_RESIZED:
         case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
             if(window_index(c, e->window.windowID) == 0) update_root_sizes(c);

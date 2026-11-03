@@ -104,7 +104,7 @@ typedef enum r_draw_font_flags{
 	R_FONT_ULTRAHEAVY     = 0x0A,
 	R_FONT_WEIGHT_MASK    = 0x0F,
 	R_FONT_ITALIC         = 0x10,
-	R_FONT_SHAPED         = 0x20, // Shaped with HarfBuzz: kerning, ligatures, combining marks and complex scripts. Without it
+	R_FONT_SHAPED         = 0x20, // Shaped with HarfBuzz: kerning, ligatures, combining marks and complex scripts. Without it codepoints map 1:1 to glyphs.
 } r_draw_font_flags;
 
 typedef struct r_draw_font
@@ -178,7 +178,7 @@ typedef enum r_draw_icon_op
 	R_ICON_OP_POLYLINE, // n x0 y0 ...    : Open polyline with n points, filled as a closed polygon
 	R_ICON_OP_ARC,      // cx cy r a0 a1  : Arc from a0 to a1 (clockwise), filled as a full disc
 	R_ICON_OP_RECT,     // x y w h r      : Rounded rectangle
-	R_ICON_OP_COLOR,    // r g b a        : Color of the following shapes (0-1, default white). Icons with a color are
+	R_ICON_OP_COLOR,    // r g b a        : Color of the following shapes (0-1, default white). Icons with a color are not tinted.
 } r_draw_icon_op;
 
 typedef struct r_draw_icon_def
@@ -418,7 +418,7 @@ void r_draw_render_pass_end(r_draw* c);
 
 void r_draw_render_drawable(r_draw* c, r_drawable* d);
 void r_draw_render_icon    (r_draw* c, uint16_t icon, uint32_t color, rect bounds);
-void r_draw_render_text    (r_draw* c, r_draw_font* font, char* text, uint32_t color, rect bounds);
+void r_draw_render_text    (r_draw* c, r_draw_font* font, const char* text, uint32_t color, rect bounds);
 void r_draw_render_stylebox(r_draw* c, int stylebox, rect outer);
 void r_draw_render_fill    (r_draw* c, uint32_t color, rect bounds);
 void r_draw_render_text_ex (r_draw* c, r_draw_font* font, const char* text, uint32_t color, rect bounds, r_alignment align, int scroll_x, int scroll_y, rect clip, int wrap_width);

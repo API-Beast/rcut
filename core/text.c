@@ -348,7 +348,7 @@ static void edit_selection_first (r_context* c, r_drawable* d) { edit_selection_
 static void edit_selection_middle(r_context* c, r_drawable* d) { edit_selection_update(c, d, 1); }
 static void edit_selection_last  (r_context* c, r_drawable* d) { edit_selection_update(c, d, 2); }
 
-void r_text_edit_ex(r_ui_list* l, rect r, char* buffer, int capacity, char* placeholder, int style, bool multiline)
+void r_text_edit_ex(r_ui_list* l, rect r, char* buffer, int capacity, const char* placeholder, int style, bool multiline)
 {
 	r_context* c = l->context;
 	r_callback* input = r_attach_callback(l, r, R_TEXT_INPUT, edit_text_input);
@@ -357,7 +357,7 @@ void r_text_edit_ex(r_ui_list* l, rect r, char* buffer, int capacity, char* plac
 	r_text_edit_state* s = input->data;
 	if(is_new) { s->preferred_x = -1; s->last_caret = -1; }
 	s->buffer = buffer; s->capacity = capacity; s->style = style; s->multiline = multiline;
-	s->placeholder = placeholder;
+	s->placeholder = (char*)placeholder;
 	s->inner = r_inner(c, style, r);
 	follow_caret(c, s);
 
@@ -386,12 +386,12 @@ void r_text_edit_ex(r_ui_list* l, rect r, char* buffer, int capacity, char* plac
 	if(input->parent) { input->parent->traps_arrow_focus = true; input->parent->cursor = R_CURSOR_TEXT; }
 }
 
-void r_line_edit(r_ui_list* l, rect r, char* buffer, int capacity, char* placeholder)
+void r_line_edit(r_ui_list* l, rect r, char* buffer, int capacity, const char* placeholder)
 {
 	r_text_edit_ex(l, r, buffer, capacity, placeholder, R_STYLE_INPUT, false);
 }
 
-void r_text_area(r_ui_list* l, rect r, char* buffer, int capacity, char* placeholder)
+void r_text_area(r_ui_list* l, rect r, char* buffer, int capacity, const char* placeholder)
 {
 	r_text_edit_ex(l, r, buffer, capacity, placeholder, R_STYLE_INPUT_MULTILINE_EDIT, true);
 }

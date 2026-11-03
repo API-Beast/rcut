@@ -871,7 +871,7 @@ void r_draw_render_text_ex(r_draw* c, r_draw_font* font, const char* text, uint3
     render_layout(c, &t, color, NULL, bounds, align, scroll_x, scroll_y, clip);
 }
 
-void r_draw_render_text(r_draw* c, r_draw_font* font, char* text, uint32_t color, rect bounds)
+void r_draw_render_text(r_draw* c, r_draw_font* font, const char* text, uint32_t color, rect bounds)
 {
     r_draw_render_text_ex(c, font, text, color, bounds, R_TOP_LEFT, 0, 0, bounds, 0);
 }

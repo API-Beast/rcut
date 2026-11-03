@@ -513,7 +513,7 @@ uint64_t r_post_mouse_up(r_context* c, uint64_t target, int mouse_button, float 
 	return ret;
 }
 
-uint64_t r_post_text(r_context* c, uint64_t target, char* str)
+uint64_t r_post_text(r_context* c, uint64_t target, const char* str)
 {
 	r_interact* it = focus_for(c, target);
 	if(!it || !widget_has_callback(it, R_TEXT_INPUT))
@@ -524,14 +524,14 @@ uint64_t r_post_text(r_context* c, uint64_t target, char* str)
 	if(it)
 	{
 		r_event e = make_event(c, it);
-		e.text = str;
+		e.text = (char*)str;
 		if(widget_dispatch(it, R_TEXT_INPUT, &e))
 			return it->r.id;
 	}
 	return 0;
 }
 
-uint64_t r_post_text_edit(r_context* c, uint64_t target, char* str, int start, int length)
+uint64_t r_post_text_edit(r_context* c, uint64_t target, const char* str, int start, int length)
 {
 	r_interact* it = focus_for(c, target);
 	if(!it || !widget_has_callback(it, R_TEXT_EDIT))
@@ -542,7 +542,7 @@ uint64_t r_post_text_edit(r_context* c, uint64_t target, char* str, int start, i
 	if(it)
 	{
 		r_event e = make_event(c, it);
-		e.text = str;
+		e.text = (char*)str;
 		e.ime_highlight_start = start;
 		e.ime_highlight_length = length;
 		if(widget_dispatch(it, R_TEXT_EDIT, &e))

@@ -129,7 +129,7 @@ static void bits_store(uint8_t* p, int offset, int num_bits, uint64_t value) {
     for (int i = lo; i <= hi; i++) { p[i] = (uint8_t)raw; raw >>= 8; }
 }
 
-void r_call(r_signature signature, void (*fn)(), uint64_t i, double d, void* ptr) {
+void r_call(r_signature signature, r_fn* fn, uint64_t i, double d, void* ptr) {
     switch (signature) {
     case R_v_FN:     ((void(*)(void)) fn)(); break;
     case R_v_FN_ptr: ((void(*)(void*))fn)(ptr); break;
@@ -795,7 +795,7 @@ r_callback* r_attach_callback_to(r_ui_list* l, r_interact* it, r_event_type even
 	return cb;
 }
 
-void r_callback_set_data(r_ui_list* l, r_callback* c, void* data, int data_length)
+void r_callback_set_data(r_ui_list* l, r_callback* c, const void* data, int data_length)
 {
 	c->data = r_store(l, data, data_length); c->size = data_length;
 }

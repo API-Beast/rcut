@@ -99,7 +99,7 @@ static bool tooltip_close(const r_event* e, r_callback* self)
 	return false;
 }
 
-void r_tooltip(r_ui_list* l, rect r, char* text)
+void r_tooltip(r_ui_list* l, rect r, const char* text)
 {
 	r_popup_keep_alive(l, r, P400);
 	r_callback* hover = r_attach_callback(l, r, R_MOUSE_HOVER,   tooltip_mouse_hover);
@@ -317,12 +317,12 @@ static bool context_fn_wrapper(const r_event* e, r_callback* self)
 	return true;
 }
 
-r_callback* r_on_context(r_ui_list* l, rect r, char* label, void (*on_select)(void))
+r_callback* r_on_context(r_ui_list* l, rect r, const char* label, void (*on_select)(void))
 {
 	r_popup_keep_alive(l, r, P430);
 	r_callback* cb = r_attach_callback(l, r, R_CONTEXT, context_fn_wrapper);
 	r_callback_set_data(l, cb, &on_select, sizeof(on_select));
-	cb->menu_label = label;
+	cb->menu_label = (char*)label;
 	return cb;
 }
 

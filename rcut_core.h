@@ -55,7 +55,7 @@ typedef struct rect {
 #define R_MOUSE_MIDDLE 2
 #define R_MOUSE_RIGHT  3
 
-#define BIT(x) (1u << x)
+#define R_BIT(x) (1u << (x))
 enum r_style
 {
     R_STYLE_FALLBACK = 0, // If the style doesn't know how to draw something, it should fallback to drawing this instead.
@@ -96,13 +96,13 @@ enum r_style
     R_STYLE_SEGMENTED,    // Joined choices, one is selected.
     R_STYLE_BASE_MASK = 0xFF,
     
-    R_STATE_SELECTED  = BIT(0) << 8, // Selection in a menu.
-    R_STATE_PRESSED   = BIT(1) << 8,
-    R_STATE_HOVER     = BIT(2) << 8,
-    R_STATE_DISABLED  = BIT(3) << 8,
-    R_STATE_TOGGLED   = BIT(4) << 8,
-	R_STATE_FOCUS     = BIT(5) << 8,
-	// Up to BIT(15) << 8
+    R_STATE_SELECTED  = R_BIT(0) << 8, // Selection in a menu.
+    R_STATE_PRESSED   = R_BIT(1) << 8,
+    R_STATE_HOVER     = R_BIT(2) << 8,
+    R_STATE_DISABLED  = R_BIT(3) << 8,
+    R_STATE_TOGGLED   = R_BIT(4) << 8,
+	R_STATE_FOCUS     = R_BIT(5) << 8,
+	// Up to R_BIT(15) << 8
     R_STATE_MASK = 0xFFFF << 8,
 
     R_VARIANT_FLAT            = 0 << 24, // Usually means without border and the element is just implied through icon + label
@@ -225,10 +225,12 @@ typedef struct r_interact
 
 	rect r;
 	r_cursor cursor;
-	bool traps_tab_focus   : 1;
-	bool traps_alt_key     : 1;
-	bool traps_arrow_focus : 1;
-	int accelerator_key;
+
+	bool traps_tab_focus   : 1; // If true, you can't use tab to change focus while this element has keyboard focus.
+	bool traps_alt_key     : 1; // If true, you can't activate acclerator hotkeys while this element has keyboard focus.
+	bool traps_arrow_focus : 1; // If true, you can't use arrow keys to change the focus after pressing tab while this element has keyboard focus.
+	
+	int accelerator_key; // Alt + this key will send a ACTIVATION event to this interactable if not blocked.
 
 	// Mouse-capture group. While captured, only interactables whose press_group
 	// matches the captured group (or whose id == pressed_id) receive mouse events.
@@ -237,7 +239,7 @@ typedef struct r_interact
 
 	r_callback* callbacks; // Linked list
 
-	// Tab focusing.
+	// Tab focusing. These are overrides, if NULL a default value will be computed.
 	struct r_interact* next_focus;     // Switch to this element on pressing Tab.
 	struct r_interact* previous_focus; // Switch to this element on pressing Shift-Tab.
 	// Arrow key focus.
@@ -253,7 +255,6 @@ typedef struct r_drawable
 
 	int style;       // r_style
 	int outer_style; // A style hint to allow for minor style adjustments for nested drawables. Will be 0 most of the time.
-	
 	// Label = Text + Icon
 	char* text;
 	int   icon;
@@ -356,11 +357,11 @@ struct r_ui_list
 
 	uint64_t target; // Usually it refers to a window, but can also be a render target or similar. Can be a simple index, or a pointer, or a handle depending on frontend.
 
-	bool is_ephemeral:1;
+	bool is_ephemeral:1; // Ephemeral lists are deleted if they weren't recreated/kept alive during a rebuild.
 	bool is_masked:1; // Wheter to apply the root_area as scissor during rendering.
 	bool is_hidden:1; // Can be used by tabs and popups.
 	bool block_event_fallthrough:1; // If false, events get "bubbled up" to other r_ui_lists with the same target.
-	bool block_accelerator_mode:1;
+	bool block_accelerator_mode:1; // If true, Alt will not enter accelerator mode while focus is inside this UI list.
 	bool needs_redraw:1;
 	bool needs_ephemeral_sweep:1; // Is set to true when a ephemeral was marked to be deleted. This allows cleaning up ephemeral lists without regular list rebuilds.
 	bool is_marked_as_unused:1;
@@ -370,9 +371,8 @@ struct r_ui_list
 	bool is_tooltip:1;
 	bool has_scrollbar:1;
 	bool close_on_outside_click:1;
-	bool  use_transform_matrix:1;
+	bool use_transform_matrix:1;
 	float content_transform[2][3];
-	//
 	float scroll_x, scroll_y;
 
 	// Area that is representitive of what space this UI list visually fills. Viewports get masked to this area. The X/Y coordinate is 0, 0 for windows as it's relative to their own coordinate system.
@@ -432,7 +432,7 @@ struct r_context
 
 	// State
 	bool is_in_navigation_mode : 1; // Activated when pressing Tab if the focused interactable has traps_tab_focus disabled.
-	bool is_in_accelerator_mode : 1; // Activated when pressing Alt if either the focused interactable has traps_alt_key disabled and
+	bool is_in_accelerator_mode : 1; // Activated when pressing Alt unless the focused interactable has traps_alt_key or its UI list has block_accelerator_mode.
 
 	// IDs
 	uint64_t hover_id;
@@ -550,7 +550,6 @@ void r_list_clear(r_ui_list* list); // Swap last_frame and current frame lists
 void r_list_reconcile(r_ui_list* list); // Reconcile interaction state with the previous frame.
 void r_list_set_visibility(r_ui_list* list, bool visible);
 void r_damage_id(r_context* c, uint64_t id);
-void r_damage_collect(r_context* c);
 void r_damage_clear(r_context* c);
 void r_advance_time(r_context* r, float dt);
 
@@ -573,8 +572,8 @@ void r_list_print(r_ui_list* l);
 uint64_t r_post_mouse_move (r_context* r, uint64_t target, float x, float y);
 uint64_t r_post_mouse_down (r_context* r, uint64_t target, int mouse_button, float x, float y);
 uint64_t r_post_mouse_up   (r_context* r, uint64_t target, int mouse_button, float x, float y);
-uint64_t r_post_text       (r_context* r, uint64_t target, char* str);
-uint64_t r_post_text_edit  (r_context* r, uint64_t target, char* str, int start, int length);
+uint64_t r_post_text       (r_context* r, uint64_t target, const char* str);
+uint64_t r_post_text_edit  (r_context* r, uint64_t target, const char* str, int start, int length);
 uint64_t r_post_key_input  (r_context* r, uint64_t target, int32_t keycode, int32_t scancode, uint32_t modifier_flags);
 uint64_t r_post_mouse_wheel(r_context* r, uint64_t target, float x, float y, float scroll_x, float scroll_y);
 
@@ -617,14 +616,14 @@ int  r_layout_default_size   (r_context* c, int style);
 int  r_layout_default_spacing(r_context* c, int style);
 rect r_remove_margins(r_context* c, int style, rect with_margins);
 
-rect r_measure(r_context* c, int style, char* label);
+rect r_measure(r_context* c, int style, const char* label);
 rect r_measure_n(r_context* c, int style, const char* text, int len);
 rect r_measure_wrapped(r_context* c, int style, const char* text, int wrap_width);
 rect r_measure_ex(r_context* c, int style, int icon, const char* text);
 int  r_break_text(r_context* c, int style, const char* text, int len, int width, bool force, int* w);
 int  r_text_index_at(r_context* c, int style, const char* text, int x);
 
-static inline void r_style_measure_all(r_context* c, int style, char* label, rect* outer_with_margins, rect* outer, rect* inner)
+static inline void r_style_measure_all(r_context* c, int style, const char* label, rect* outer_with_margins, rect* outer, rect* inner)
 {
 	*inner = r_measure(c, style, label);
 	*outer = r_outer(c, style, inner);
@@ -636,7 +635,7 @@ static inline void r_style_measure_all(r_context* c, int style, char* label, rec
 r_drawable* r_style               (r_ui_list* l, rect r, int style);
 r_drawable* r_labeled             (r_ui_list* l, rect r, int style, const char* text);
 r_callback* r_attach_callback     (r_ui_list* l, rect r, r_event_type event, r_callback_fn* function);
-void        r_callback_set_data   (r_ui_list* l, r_callback* c, void* data, int data_length);
+void        r_callback_set_data   (r_ui_list* l, r_callback* c, const void* data, int data_length);
 void        r_callback_share_data (r_ui_list* l, r_callback* dst, r_callback* src);
 void*       r_storage_alloc       (r_ui_list* l, int size); // Returns a pointer to a block of memory with lifetime scoped to this rebuild.
 void*       r_store               (r_ui_list* l, const void* data, int size); // r_storage_alloc + copy, zeroed if data is NULL.
@@ -711,7 +710,7 @@ typedef struct {
 	};
 } r_data_binding;
 
-void    r_call(r_signature signature, void (*fn)(), uint64_t i, double d, void* ptr);
+void    r_call(r_signature signature, r_fn* fn, uint64_t i, double d, void* ptr);
 
 void    r_seti(r_data_binding binding, int64_t value);
 int64_t r_geti(r_data_binding binding);
@@ -796,14 +795,14 @@ static inline r_data_binding r_data_compact(r_data_desc d) {
 }
 
 // High level UI building
-void r_button          (r_ui_list* l, rect r, char* text);
-void r_button_ex       (r_ui_list* l, rect r, int style, int icon, char* text);
-void r_label           (r_ui_list* l, rect r, char* text);
-r_drawable* r_label_ex(r_ui_list* l, rect r, int style, int icon, char* text);
+void r_button          (r_ui_list* l, rect r, const char* text);
+r_drawable* r_button_ex(r_ui_list* l, rect r, int style, int icon, const char* text);
+void r_label           (r_ui_list* l, rect r, const char* text);
+r_drawable* r_label_ex(r_ui_list* l, rect r, int style, int icon, const char* text);
 void r_label_value     (r_ui_list* l, rect r, const char* fmt, r_data_binding binding);
 void r_icon            (r_ui_list* l, rect r, int style, int icon);
-void r_header          (r_ui_list* l, rect r, char* text);
-void r_paragraph       (r_ui_list* l, rect r, int style, char* text);
+void r_header          (r_ui_list* l, rect r, const char* text);
+void r_paragraph       (r_ui_list* l, rect r, int style, const char* text);
 void r_panel           (r_ui_list* l, rect r, int style);
 void r_separator       (r_ui_list* l, rect r);
 
@@ -816,18 +815,18 @@ void r_on_click_ptr    (r_ui_list* l, rect r, void (*on_click)(void*), void* val
 void r_on_click_ptr_i32(r_ui_list* l, rect r, void (*on_click)(void*, int32_t), void* ptr, int index);
 
 void r_slider    (r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding);
-void r_slider_box(r_ui_list* l, rect r, char* text, float min, float max, float step, r_data_binding binding);
+void r_slider_box(r_ui_list* l, rect r, const char* text, float min, float max, float step, r_data_binding binding);
 void r_spinbox   (r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding);
 void r_progress  (r_ui_list* l, rect r, float fraction);
 
-void r_checkbox  (r_ui_list* l, rect r, char* text, r_data_binding binding);
-void r_toggle    (r_ui_list* l, rect r, char* text, r_data_binding binding);
-void r_radio     (r_ui_list* l, rect r, char* text, int64_t value, r_data_binding binding);
-void r_selectable(r_ui_list* l, rect r, char* text, int64_t value, r_data_binding binding);
+void r_checkbox  (r_ui_list* l, rect r, const char* text, r_data_binding binding);
+void r_toggle    (r_ui_list* l, rect r, const char* text, r_data_binding binding);
+void r_radio     (r_ui_list* l, rect r, const char* text, int64_t value, r_data_binding binding);
+void r_selectable(r_ui_list* l, rect r, const char* text, int64_t value, r_data_binding binding);
 void r_tabs      (r_ui_list* l, rect r, char** labels, int count, r_data_binding selected, r_ui_list** pages);
 void r_dropdown  (r_ui_list* l, rect r, char** items, int count, r_data_binding selected);
 void r_segmented (r_ui_list* l, rect r, char** labels, int count, r_data_binding selected);
-bool r_tree_node (r_ui_list* l, rect r, int depth, char* text, int icon, bool has_children, r_data_binding open, int64_t value, r_data_binding selected);
+bool r_tree_node (r_ui_list* l, rect r, int depth, const char* text, int icon, bool has_children, r_data_binding open, int64_t value, r_data_binding selected);
 void r_split     (r_ui_list* l, rect r, r_alignment dir, r_data_binding fraction, int min_first, int min_second, rect* first, rect* second);
 
 typedef struct r_text_edit_state
@@ -845,9 +844,9 @@ typedef struct r_text_edit_state
 	rect   inner;
 	void (*on_submit)(char* buffer);
 } r_text_edit_state;
-void r_line_edit (r_ui_list* l, rect r, char* buffer, int capacity, char* placeholder);
-void r_text_area (r_ui_list* l, rect r, char* buffer, int capacity, char* placeholder);
-void r_text_edit_ex(r_ui_list* l, rect r, char* buffer, int capacity, char* placeholder, int style, bool multiline);
+void r_line_edit (r_ui_list* l, rect r, char* buffer, int capacity, const char* placeholder);
+void r_text_area (r_ui_list* l, rect r, char* buffer, int capacity, const char* placeholder);
+void r_text_edit_ex(r_ui_list* l, rect r, char* buffer, int capacity, const char* placeholder, int style, bool multiline);
 void r_line_edit_on_submit(r_ui_list* l, rect r, void (*on_submit)(char* buffer));
 
 typedef struct r_menu_item
@@ -862,12 +861,12 @@ typedef struct r_menu_item
 } r_menu_item;
 void       r_menubar      (r_ui_list* l, rect r, const r_menu_item* menus);
 r_ui_list* r_menu_popup   (r_ui_list* parent, rect anchor, const r_menu_item* items, r_alignment side);
-r_callback* r_on_context  (r_ui_list* l, rect r, char* label, void (*on_select)(void));
+r_callback* r_on_context  (r_ui_list* l, rect r, const char* label, void (*on_select)(void));
 rect       r_popup_place  (r_ui_list* parent, rect anchor, int w, int h, r_alignment side);
 
 rect r_dialog_begin(r_ui_list* dialog);
 
-void r_tooltip(r_ui_list* l, rect r, char* text);
+void r_tooltip(r_ui_list* l, rect r, const char* text);
 
 typedef struct r_layout_iter
 {
@@ -890,8 +889,8 @@ static inline r_layout_iter r_layout_rows   (r_ui_list* l, rect area, int style)
 static inline r_layout_iter r_layout_columns(r_ui_list* l, rect area, int style){ return r_layout(l, area, R_LEFT, style); }
 rect          r_next          (r_layout_iter* s, int size);
 rect          r_next_fraction (r_layout_iter* s, float fraction);
-rect          r_next_fit      (r_layout_iter* s, int style, char* text);
-rect          r_next_fit_ex   (r_layout_iter* s, int style, int icon, char* text);
+rect          r_next_fit      (r_layout_iter* s, int style, const char* text);
+rect          r_next_fit_ex   (r_layout_iter* s, int style, int icon, const char* text);
 rect          r_remaining          (r_layout_iter* s);
 rect          r_next_keyed    (r_layout_iter* s, int size, uint64_t key);
 void          r_gap           (r_layout_iter* s, int size);
@@ -900,5 +899,5 @@ r_layout_iter r_group_begin   (r_layout_iter* parent, int style);
 rect          r_group_end     (r_layout_iter* group, r_layout_iter* parent);
 //
 r_layout_iter r_flow_begin    (r_layout_iter* parent, int style);
-void          r_text          (r_layout_iter* flow, int style, char* text);
+void          r_text          (r_layout_iter* flow, int style, const char* text);
 rect          r_flow_end      (r_layout_iter* flow, r_layout_iter* parent);

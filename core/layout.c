@@ -381,7 +381,7 @@ rect r_measure_n(r_context* c, int style, const char* text, int len)
 	return (rect){.w = max_w, .h = lines * 16};
 }
 
-rect r_measure(r_context* c, int style, char* label)
+rect r_measure(r_context* c, int style, const char* label)
 {
 	return r_measure_n(c, style, label, -1);
 }

@@ -87,7 +87,7 @@ r_layout_iter r_flow_begin(r_layout_iter* parent, int style)
 	return s;
 }
 
-void r_text(r_layout_iter* s, int style, char* text)
+void r_text(r_layout_iter* s, int style, const char* text)
 {
 	r_ui_list* l = s->l;
 	if(!style) style = s->style;
@@ -141,12 +141,12 @@ rect r_next_fraction(r_layout_iter* s, float fraction)
 	return r_next(s, (int)((len - s->spacing) * fraction));
 }
 
-rect r_next_fit(r_layout_iter* s, int style, char* text)
+rect r_next_fit(r_layout_iter* s, int style, const char* text)
 {
 	return r_next_fit_ex(s, style, R_ICON_NONE, text);
 }
 
-rect r_next_fit_ex(r_layout_iter* s, int style, int icon, char* text)
+rect r_next_fit_ex(r_layout_iter* s, int style, int icon, const char* text)
 {
 	rect inner = r_measure_ex(s->l->context, style, icon, text);
 	rect outer = r_outer(s->l->context, style, &inner);
