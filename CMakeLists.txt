@@ -44,6 +44,8 @@ foreach(step tutorial_1_0_hello tutorial_1_1_binding tutorial_1_2_layout tutoria
 	add_executable(${step} example/${step}.c)
 	target_link_libraries(${step} rcut_sdl)
 endforeach()
+add_executable(api_documentation docs/api_documentation.c)
+target_link_libraries(api_documentation rcut_sdl)
 
 # A misaligned hot loop in the rasterization can lead to up to 40% performance loss.
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")

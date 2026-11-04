@@ -1,0 +1,55 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD></HEAD><BODY>
+<UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="rcut API"><param name="Local" value="index.html"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="core"><param name="Local" value="core.html"></OBJECT>
+<UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="UI Lists"><param name="Local" value="core.html#s-UI-Lists"></OBJECT>
+<UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_create_ui_list"><param name="Local" value="core.html#r_create_ui_list"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_destroy_ui_list"><param name="Local" value="core.html#r_destroy_ui_list"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_list_clear"><param name="Local" value="core.html#r_list_clear"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_list_set_visibility"><param name="Local" value="core.html#r_list_set_visibility"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_ui_list"><param name="Local" value="core.html#r_ui_list"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_LIST_MAX_ELEMENTS"><param name="Local" value="core.html#RCUT_LIST_MAX_ELEMENTS"></OBJECT>
+</UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="Rects and IDs"><param name="Local" value="core.html#s-Rects-and-IDs"></OBJECT>
+<UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="rect"><param name="Local" value="core.html#rect"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_salt"><param name="Local" value="core.html#r_salt"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_cut_px"><param name="Local" value="core.html#r_cut_px"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_alignment"><param name="Local" value="core.html#r_alignment"></OBJECT>
+</UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="Layout"><param name="Local" value="core.html#s-Layout"></OBJECT>
+<UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_layout_iter"><param name="Local" value="core.html#r_layout_iter"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_stack"><param name="Local" value="core.html#r_stack"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_next"><param name="Local" value="core.html#r_next"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_remaining"><param name="Local" value="core.html#r_remaining"></OBJECT>
+</UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="Widgets"><param name="Local" value="core.html#s-Widgets"></OBJECT>
+<UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_button"><param name="Local" value="core.html#r_button"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_label"><param name="Local" value="core.html#r_label"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_on_click"><param name="Local" value="core.html#r_on_click"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_checkbox"><param name="Local" value="core.html#r_checkbox"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_slider_h"><param name="Local" value="core.html#r_slider_h"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_style"><param name="Local" value="core.html#r_style"></OBJECT>
+</UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="Data binding"><param name="Local" value="core.html#s-Data-binding"></OBJECT>
+<UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_data_binding"><param name="Local" value="core.html#r_data_binding"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="R_PTR"><param name="Local" value="core.html#R_PTR"></OBJECT>
+</UL>
+</UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="sdl"><param name="Local" value="sdl.html"></OBJECT>
+<UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_sdl_init"><param name="Local" value="sdl.html#r_sdl_init"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_sdl_flags"><param name="Local" value="sdl.html#r_sdl_flags"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_sdl_frontend"><param name="Local" value="sdl.html#r_sdl_frontend"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_sdl_update"><param name="Local" value="sdl.html#r_sdl_update"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_sdl_render_ui"><param name="Local" value="sdl.html#r_sdl_render_ui"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_sdl_screenshot"><param name="Local" value="sdl.html#r_sdl_screenshot"></OBJECT>
+</UL>
+</UL>
+</BODY></HTML>

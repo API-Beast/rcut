@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html><head>
+<title>core</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta charset="utf-8">
+<link rel="stylesheet" href="style.css">
+</head><body>
+<h1>core</h1>
+<h2><a name="s-UI-Lists"></a>UI Lists</h2>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_create_ui_list"></a>r_create_ui_list</h3>
+<pre class="sig"><a class="t" href="#r_ui_list">r_ui_list</a>* r_create_ui_list(r_context* c, <span class="t">uint64_t</span> target, <span class="t">uint64_t</span> root_id, <span class="k">int</span> width, <span class="k">int</span> height);
+<a class="t" href="#r_ui_list">r_ui_list</a>* r_create_ui_list_ex(r_context* c, <span class="t">uint64_t</span> target, <span class="t">uint64_t</span> root_id, <span class="k">int</span> width, <span class="k">int</span> height, <span class="k">int</span> max_drawables, <span class="k">int</span> max_interactables);</pre>
+<p>Creates a new UI list, it continues to exist until deleted by <code>r_delete_ui_list</code>.</p>
+<p>UI lists store everything in rcut, in particular <code>r_interactables</code> and <code>r_drawables</code>.
+Each UI list can be cleared and regenerated independently of each other.</p>
+<p><code>target</code> is a opaque target ID, usually referring to a window or render target. All coordinates are within that targets space.
+See <span class="todo">&lt;TODO: rcut_SDL targets&gt;</span>.</p>
+<p><code>r_create_ui_list_ex</code> takes explicit capacities instead of <code>RCUT_LIST_MAX_ELEMENTS</code>.</p>
+<div class="note"><strong>Note:</strong> Memory is only reserved, not commited, as such there is no reason to use the _ex variant unless you are working on systems with small address spaces or processors without a MMU.</div>
+<div class="example"><pre><a class="t" href="#r_ui_list">r_ui_list</a>* l = <a class="f" href="#r_create_ui_list">r_create_ui_list_ex</a>(&amp;f-&gt;context, <span class="n">0</span>, <span class="n">100</span>, <span class="n">320</span>, <span class="n">80</span>, <span class="n">16</span>, <span class="n">4</span>);
+<a class="f" href="#r_label">r_label</a>(l, l-&gt;root_area, <span class="s">"Hello from a second list"</span>);</pre><img class="shot" src="img/doc_r_create_ui_list.png"></div>
+<p class="see">See also: <code>r_delete_ui_list</code>, <code>r_popup</code>, <code>r_viewport</code>, <code>r_scroll_begin</code></p>
+
+<h3><a name="r_destroy_ui_list"></a>r_destroy_ui_list</h3>
+<pre class="sig"><span class="k">void</span> r_destroy_ui_list(<a class="t" href="#r_ui_list">r_ui_list</a>* list);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<table class="params"><tr><th>Parameter</th><th></th></tr>
+<tr><td><code>list</code></td><td><span class="todo">&lt;TODO: &gt;</span></td></tr>
+</table>
+<div class="example"><pre><a class="t" href="#r_ui_list">r_ui_list</a>* dialog = r_sdl_dialog(f, <span class="n">200</span>, <span class="n">320</span>, <span class="n">160</span>, <span class="s">"Settings"</span>);
+<span class="k">if</span>(r_sdl_close_requested(f, dialog, <span class="k">true</span>))
+	<a class="f" href="#r_destroy_ui_list">r_destroy_ui_list</a>(dialog);</pre></div>
+<p class="see">See also: <a href="#r_create_ui_list"><code>r_create_ui_list</code></a>, <a href="#r_list_set_visibility"><code>r_list_set_visibility</code></a></p>
+
+<h3><a name="r_list_clear"></a>r_list_clear</h3>
+<pre class="sig"><span class="k">void</span> r_list_clear(<a class="t" href="#r_ui_list">r_ui_list</a>* list);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<div class="example"><pre><span class="k">if</span>(ui-&gt;resized)
+{
+	<a class="f" href="#r_list_clear">r_list_clear</a>(ui);
+	<a class="f" href="#r_button">r_button</a>(ui, r_shrink(ui-&gt;root_area, <span class="n">16</span>), <span class="s">"Rebuilt"</span>);
+}</pre></div>
+
+<h3><a name="r_list_set_visibility"></a>r_list_set_visibility</h3>
+<pre class="sig"><span class="k">void</span> r_list_set_visibility(<a class="t" href="#r_ui_list">r_ui_list</a>* list, <span class="k">bool</span> visible);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_ui_list"></a>r_ui_list</h3>
+<pre class="sig"><span class="k">struct</span> r_ui_list
+{
+	r_context* context; <span class="c">// context = NULL indicates a free slot.</span>
+	<span class="k">void</span>*      userptr;
+
+	 <span class="c">// If non-zero this list is treated like a popup: it uses the coordinate system and event loop of the parent, but is rendered to it's own target.</span>
+	<span class="k">struct</span> r_ui_list* ephemeral_parent;
+	<span class="c">// Single linked list for iteration.</span>
+	<span class="c">// [List Idx 0][Child of List Idx 0][Child of Child of List Idx 0][List Idx 1][List Idx 2]</span>
+	<span class="k">struct</span> r_ui_list* chain_prev;
+	<span class="k">struct</span> r_ui_list* chain_next;
+
+	<span class="k">int</span> generation;
+	<span class="k">int</span> parent_generation; <span class="c">// Compared to ephemeral_parent-&gt;generation to recognize when the parent is deleted.</span>
+
+	<span class="k">char</span>* title;
+
+	<span class="t">uint64_t</span> target; <span class="c">// Usually it refers to a window, but can also be a render target or similar. Can be a simple index, or a pointer, or a handle depending on frontend.</span>
+
+	<span class="k">bool</span> is_ephemeral:<span class="n">1</span>; <span class="c">// Ephemeral lists are deleted if they weren't recreated/kept alive during a rebuild.</span>
+	<span class="k">bool</span> is_masked:<span class="n">1</span>; <span class="c">// Wheter to apply the root_area as scissor during rendering.</span>
+	<span class="k">bool</span> is_hidden:<span class="n">1</span>; <span class="c">// Can be used by tabs and popups.</span>
+	<span class="k">bool</span> block_event_fallthrough:<span class="n">1</span>; <span class="c">// If false, events get "bubbled up" to other r_ui_lists with the same target.</span>
+	<span class="k">bool</span> block_accelerator_mode:<span class="n">1</span>; <span class="c">// If true, Alt will not enter accelerator mode while focus is inside this UI list.</span>
+	<span class="k">bool</span> needs_redraw:<span class="n">1</span>;
+	<span class="k">bool</span> resized:<span class="n">1</span>; <span class="c">// Set when the root_area of a root list changed size, cleared by r_list_clear.</span>
+	<span class="k">bool</span> needs_ephemeral_sweep:<span class="n">1</span>; <span class="c">// Is set to true when a ephemeral was marked to be deleted. This allows cleaning up ephemeral lists without regular list rebuilds.</span>
+	<span class="k">bool</span> is_marked_as_unused:<span class="n">1</span>;
+	<span class="k">bool</span> is_marked_as_to_delete:<span class="n">1</span>;
+	<span class="k">bool</span> is_modal:<span class="n">1</span>;
+	<span class="k">bool</span> is_viewport:<span class="n">1</span>;
+	<span class="k">bool</span> is_tooltip:<span class="n">1</span>;
+	<span class="k">bool</span> has_scrollbar:<span class="n">1</span>;
+	<span class="k">bool</span> close_on_outside_click:<span class="n">1</span>;
+	<span class="k">bool</span> use_transform_matrix:<span class="n">1</span>;
+	<span class="k">float</span> content_transform[<span class="n">2</span>][<span class="n">3</span>];
+	<span class="k">float</span> scroll_x, scroll_y;
+
+	<span class="c">// Area that is representitive of what space this UI list visually fills. Viewports get masked to this area. The X/Y coordinate is 0, 0 for windows as it's relative to their own coordinate system.</span>
+	<a class="t" href="#rect">rect</a> root_area;
+	<span class="c">// Determines min/max for scrollable viewports.</span>
+	<a class="t" href="#rect">rect</a> document_area;
+	<span class="t">uint64_t</span> anchor_id;
+	<span class="c">//rect  global_mapping; // Where the ui_list is being displayed in global screen coordinates.</span>
+
+	<span class="k">int</span> frame_parity;
+	<span class="t">uint32_t</span> build_count;
+	r_paged_buffer draw_buffers[<span class="n">2</span>];
+	r_drawable*    draw_items;
+	r_drawable*    draw_items_last_frame;
+	<span class="k">int</span>            count_draw_items;
+	<span class="k">int</span>            count_draw_items_last_frame;
+
+	r_paged_buffer interact_buffers[<span class="n">2</span>];
+	r_interact*    interact_items;
+	r_interact*    interact_items_last_frame;
+	<span class="k">int</span>            count_interact_items;
+	<span class="k">int</span>            count_interact_last_frame;
+
+	r_paged_buffer storage_buffers[<span class="n">2</span>];
+	<span class="t">uint8_t</span>*       storage_buffer;
+	<span class="t">uint8_t</span>*       storage_buffer_last_frame;
+	<span class="k">int</span>            storage_buffer_cur_tail;
+	<span class="k">int</span>            storage_buffer_last_tail;
+
+	r_hashmap id_hash[<span class="n">2</span>];
+
+	<a class="t" href="#rect">rect</a>     drawn_area;
+	<span class="t">uint64_t</span> drawn_target;
+	<a class="t" href="#rect">rect</a>     damage;
+};</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<p class="see">See also: <a href="#r_create_ui_list"><code>r_create_ui_list</code></a>, <a href="#r_list_clear"><code>r_list_clear</code></a></p>
+
+<h3><a name="RCUT_LIST_MAX_ELEMENTS"></a>RCUT_LIST_MAX_ELEMENTS</h3>
+<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_LIST_MAX_ELEMENTS</span> <span class="n">4096</span>  <span class="c">// ~4 millionths of address space per r_ui_list</span>
+<span class="p">#define</span> <span class="e">RCUT_LIST_MAX_ELEMENTS</span> <span class="n">65535</span> <span class="c">// ~1 billionths of address space per r_ui_list</span></pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h2><a name="s-Rects-and-IDs"></a>Rects and IDs</h2>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="rect"></a>rect</h3>
+<pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> rect {
+	<span class="k">int</span> x, y, w, h; <span class="t">uint64_t</span> id;
+} rect;</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_salt"></a>r_salt</h3>
+<pre class="sig"><a class="t" href="#rect">rect</a> r_salt(<a class="t" href="#rect">rect</a> r, <span class="t">uint64_t</span> salt);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<div class="example"><pre><a class="t" href="#rect">rect</a> area = r_shrink(ui-&gt;root_area, <span class="n">12</span>);
+<a class="t" href="#rect">rect</a> size = { .w = <span class="n">90</span>, .h = <span class="n">32</span> };
+<a class="t" href="#rect">rect</a> yes  = r_aligned(<a class="e" href="#r_alignment">R_LEFT_CENTER</a>,  area, <a class="f" href="#r_salt">r_salt</a>(size, <span class="e">R_SALT00</span>));
+<a class="t" href="#rect">rect</a> no   = r_aligned(<a class="e" href="#r_alignment">R_RIGHT_CENTER</a>, area, <a class="f" href="#r_salt">r_salt</a>(size, <span class="e">R_SALT01</span>));
+<a class="f" href="#r_button">r_button</a>(ui, yes, <span class="s">"Yes"</span>);
+<a class="f" href="#r_button">r_button</a>(ui, no,  <span class="s">"No"</span>);</pre><img class="shot" src="img/doc_r_salt.png"></div>
+<p class="see">See also: <a href="#r_cut_px"><code>r_cut_px</code></a></p>
+
+<h3><a name="r_cut_px"></a>r_cut_px</h3>
+<pre class="sig"><a class="t" href="#rect">rect</a> r_cut_px(<a class="t" href="#r_alignment">r_alignment</a> dir, <a class="t" href="#rect">rect</a>* to_cut, <span class="k">int</span> pixels, <span class="t">uint64_t</span> salt);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<table class="params"><tr><th>Parameter</th><th></th></tr>
+<tr><td><code>dir</code></td><td><span class="todo">&lt;TODO: &gt;</span></td></tr>
+<tr><td><code>to_cut</code></td><td><span class="todo">&lt;TODO: &gt;</span></td></tr>
+<tr><td><code>salt</code></td><td><span class="todo">&lt;TODO: &gt;</span></td></tr>
+</table>
+<div class="example"><pre><a class="t" href="#rect">rect</a> main   = ui-&gt;root_area;
+<a class="t" href="#rect">rect</a> menu   = <a class="f" href="#r_cut_px">r_cut_px</a>(<a class="e" href="#r_alignment">R_TOP</a>,    &amp;main, <span class="n">32</span>,  <span class="e">R_SALT00</span>);
+<a class="t" href="#rect">rect</a> status = <a class="f" href="#r_cut_px">r_cut_px</a>(<a class="e" href="#r_alignment">R_BOTTOM</a>, &amp;main, <span class="n">24</span>,  <span class="e">R_SALT01</span>);
+<a class="t" href="#rect">rect</a> side   = <a class="f" href="#r_cut_px">r_cut_px</a>(<a class="e" href="#r_alignment">R_LEFT</a>,   &amp;main, <span class="n">100</span>, <span class="e">R_SALT02</span>);
+r_panel(ui, menu,   <a class="e" href="#r_style">R_STYLE_PANEL</a>);
+r_panel(ui, status, <a class="e" href="#r_style">R_STYLE_PANEL</a>);
+r_panel(ui, side,   <a class="e" href="#r_style">R_STYLE_PANEL</a>);
+<a class="f" href="#r_label">r_label</a>(ui, r_shrink(menu, <span class="n">8</span>),   <span class="s">"Menu"</span>);
+<a class="f" href="#r_label">r_label</a>(ui, r_shrink(status, <span class="n">4</span>), <span class="s">"Status"</span>);
+<a class="f" href="#r_label">r_label</a>(ui, r_shrink(side, <span class="n">8</span>),   <span class="s">"Side"</span>);
+<a class="f" href="#r_label">r_label</a>(ui, r_shrink(main, <span class="n">8</span>),   <span class="s">"Main"</span>);</pre><img class="shot" src="img/doc_r_cut_px.png"></div>
+<div class="caption"><p><span class="todo">&lt;TODO: &gt;</span></p>
+</div>
+<p class="see">See also: <a href="#r_salt"><code>r_salt</code></a>, <a href="#r_stack"><code>r_stack</code></a></p>
+
+<h3><a name="r_alignment"></a>r_alignment</h3>
+<pre class="sig"><span class="k">typedef</span> <span class="k">enum</span>
+{
+	<span class="e">R_BOTTOM</span>     = (<span class="n">1</span> &lt;&lt; <span class="n">0</span>),
+	<span class="e">R_V_CENTER</span>   = (<span class="n">1</span> &lt;&lt; <span class="n">1</span>),
+	<span class="e">R_TOP</span>        = (<span class="n">1</span> &lt;&lt; <span class="n">2</span>),
+	<span class="e">R_LEFT</span>       = (<span class="n">1</span> &lt;&lt; <span class="n">3</span>),
+	<span class="e">R_H_CENTER</span>   = (<span class="n">1</span> &lt;&lt; <span class="n">4</span>),
+	<span class="e">R_RIGHT</span>      = (<span class="n">1</span> &lt;&lt; <span class="n">5</span>),
+	<span class="c">// </span>
+	<span class="e">R_TOP_LEFT</span>      = <span class="e">R_TOP</span>    | <span class="e">R_LEFT</span>,
+	<span class="e">R_BOTTOM_LEFT</span>   = <span class="e">R_BOTTOM</span> | <span class="e">R_LEFT</span>,
+	<span class="e">R_TOP_RIGHT</span>     = <span class="e">R_TOP</span>    | <span class="e">R_RIGHT</span>,
+	<span class="e">R_BOTTOM_RIGHT</span>  = <span class="e">R_BOTTOM</span> | <span class="e">R_RIGHT</span>,
+	<span class="e">R_TOP_CENTER</span>    = <span class="e">R_TOP</span>    | <span class="e">R_H_CENTER</span>,
+	<span class="e">R_BOTTOM_CENTER</span> = <span class="e">R_BOTTOM</span> | <span class="e">R_H_CENTER</span>,
+	<span class="e">R_LEFT_CENTER</span>   = <span class="e">R_LEFT</span>   | <span class="e">R_V_CENTER</span>,
+	<span class="e">R_RIGHT_CENTER</span>  = <span class="e">R_RIGHT</span>  | <span class="e">R_V_CENTER</span>,
+	<span class="e">R_CENTER</span>        = <span class="e">R_H_CENTER</span> | <span class="e">R_V_CENTER</span>,
+} r_alignment;</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h2><a name="s-Layout"></a>Layout</h2>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_layout_iter"></a>r_layout_iter</h3>
+<pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_layout_iter
+{
+	<a class="t" href="#r_ui_list">r_ui_list</a>*  l;
+	<a class="t" href="#rect">rect</a>        start;
+	<a class="t" href="#rect">rect</a>        area;
+	<a class="t" href="#r_alignment">r_alignment</a> dir;
+	<span class="k">int</span>         size;
+	<span class="k">int</span>         spacing;
+	<span class="k">int</span>         count;
+	r_drawable* bg;
+	<span class="k">int</span>         style;
+	<span class="k">int</span>         line_h;
+	<span class="k">int</span>         line_first;
+} r_layout_iter;</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_stack"></a>r_stack</h3>
+<pre class="sig"><a class="t" href="#r_layout_iter">r_layout_iter</a> r_stack(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> area, <a class="t" href="#r_alignment">r_alignment</a> dir);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, r_shrink(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
+<a class="f" href="#r_button">r_button</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), <span class="s">"New"</span>);
+<a class="f" href="#r_button">r_button</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), <span class="s">"Open"</span>);
+<a class="f" href="#r_button">r_button</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), <span class="s">"Save"</span>);</pre><img class="shot" src="img/doc_r_stack.png"></div>
+<p class="see">See also: <a href="#r_next"><code>r_next</code></a>, <a href="#r_remaining"><code>r_remaining</code></a></p>
+
+<h3><a name="r_next"></a>r_next</h3>
+<pre class="sig"><a class="t" href="#rect">rect</a> r_next(<a class="t" href="#r_layout_iter">r_layout_iter</a>* s, <span class="k">int</span> size);
+<a class="t" href="#rect">rect</a> r_next_fraction(<a class="t" href="#r_layout_iter">r_layout_iter</a>* s, <span class="k">float</span> fraction);
+<a class="t" href="#rect">rect</a> r_next_fit(<a class="t" href="#r_layout_iter">r_layout_iter</a>* s, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* text);
+<a class="t" href="#rect">rect</a> r_next_fit_ex(<a class="t" href="#r_layout_iter">r_layout_iter</a>* s, <span class="k">int</span> style, <span class="k">int</span> icon, <span class="k">const</span> <span class="k">char</span>* text);
+<a class="t" href="#rect">rect</a> r_next_keyed(<a class="t" href="#r_layout_iter">r_layout_iter</a>* s, <span class="k">int</span> size, <span class="t">uint64_t</span> key);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> cols = <a class="f" href="#r_stack">r_stack</a>(ui, r_shrink(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_LEFT</a>);
+<span class="k">for</span>(<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">3</span>; i++)
+	<a class="f" href="#r_button">r_button</a>(ui, <a class="f" href="#r_next">r_next_fraction</a>(&amp;cols, <span class="n">1.0f</span> / (<span class="n">3</span> - i)), (<span class="k">char</span>*[]){ <span class="s">"Low"</span>, <span class="s">"Medium"</span>, <span class="s">"High"</span> }[i]);</pre><img class="shot" src="img/doc_r_next.png"></div>
+<div class="caption"><p><span class="todo">&lt;TODO: &gt;</span></p>
+</div>
+
+<h3><a name="r_remaining"></a>r_remaining</h3>
+<pre class="sig"><a class="t" href="#rect">rect</a> r_remaining(<a class="t" href="#r_layout_iter">r_layout_iter</a>* s);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h2><a name="s-Widgets"></a>Widgets</h2>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_button"></a>r_button</h3>
+<pre class="sig"><span class="k">void</span> r_button(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">const</span> <span class="k">char</span>* text);
+r_drawable* r_button_ex(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">int</span> style, <span class="k">int</span> icon, <span class="k">const</span> <span class="k">char</span>* text);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<div class="example"><pre><a class="t" href="#rect">rect</a> ok = r_aligned(<a class="e" href="#r_alignment">R_CENTER</a>, ui-&gt;root_area, (<a class="t" href="#rect">rect</a>){ .w = <span class="n">100</span>, .h = <span class="n">32</span> });
+<a class="f" href="#r_button">r_button</a>(ui, ok, <span class="s">"OK"</span>);
+<a class="f" href="#r_on_click">r_on_click</a>(ui, ok, on_ok);</pre><img class="shot" src="img/doc_r_button.png"></div>
+
+<h3><a name="r_label"></a>r_label</h3>
+<pre class="sig"><span class="k">void</span> r_label(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">const</span> <span class="k">char</span>* text);
+r_drawable* r_label_ex(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">int</span> style, <span class="k">int</span> icon, <span class="k">const</span> <span class="k">char</span>* text);
+<span class="k">void</span> r_label_value(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">const</span> <span class="k">char</span>* fmt, <a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, r_shrink(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
+<a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">24</span>), <span class="s">"Plain label"</span>);
+<a class="f" href="#r_label">r_label_value</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">24</span>), <span class="s">"Volume: %.2f"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;volume));</pre><img class="shot" src="img/doc_r_label.png"></div>
+<p class="see">See also: <code>r_paragraph</code>, <code>r_header</code></p>
+
+<h3><a name="r_on_click"></a>r_on_click</h3>
+<pre class="sig"><span class="k">void</span> r_on_click(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">void</span> (*on_click)(<span class="k">void</span>));
+<span class="k">void</span> r_on_click_i32(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">void</span> (*on_click)(<span class="t">int32_t</span>), <span class="t">int32_t</span> value);
+<span class="k">void</span> r_on_click_u64(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">void</span> (*on_click)(<span class="t">uint64_t</span>), <span class="t">uint64_t</span> value);
+<span class="k">void</span> r_on_click_f32(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">void</span> (*on_click)(<span class="k">float</span>), <span class="k">float</span> value);
+<span class="k">void</span> r_on_click_f64(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">void</span> (*on_click)(<span class="k">double</span>), <span class="k">double</span> value);
+<span class="k">void</span> r_on_click_ptr(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">void</span> (*on_click)(<span class="k">void</span>*), <span class="k">void</span>* value);
+<span class="k">void</span> r_on_click_ptr_i32(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">void</span> (*on_click)(<span class="k">void</span>*, <span class="t">int32_t</span>), <span class="k">void</span>* ptr, <span class="k">int</span> index);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, ui-&gt;root_area, <a class="e" href="#r_alignment">R_TOP</a>);
+<span class="k">for</span>(<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">4</span>; i++)
+{
+	<a class="t" href="#rect">rect</a> r = <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>);
+	<a class="f" href="#r_button">r_button</a>(ui, r, <span class="s">"Item"</span>);
+	<a class="f" href="#r_on_click">r_on_click_i32</a>(ui, r, on_select, i);
+}</pre></div>
+
+<h3><a name="r_checkbox"></a>r_checkbox</h3>
+<pre class="sig"><span class="k">void</span> r_checkbox(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">const</span> <span class="k">char</span>* text, <a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<table class="params"><tr><th>Parameter</th><th></th></tr>
+<tr><td><code>binding</code></td><td><span class="todo">&lt;TODO: &gt;</span></td></tr>
+</table>
+<div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, r_shrink(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
+<a class="f" href="#r_checkbox">r_checkbox</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), <span class="s">"Mute"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;mute));
+<a class="f" href="#r_checkbox">r_checkbox</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), <span class="s">"Fullscreen"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;fullscreen));</pre><img class="shot" src="img/doc_r_checkbox.png"></div>
+
+<h3><a name="r_slider_h"></a>r_slider_h</h3>
+<pre class="sig"><span class="k">void</span> r_slider_h(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">float</span> min, <span class="k">float</span> max, <span class="k">float</span> step, <a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, r_shrink(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
+<a class="f" href="#r_label">r_label_value</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">24</span>), <span class="s">"Volume %.2f"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;volume));
+<a class="f" href="#r_slider_h">r_slider_h</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">24</span>), <span class="n">0</span>, <span class="n">1</span>, <span class="n">0.05f</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;volume));</pre><img class="shot" src="img/doc_r_slider_h.png"></div>
+<p class="see">See also: <code>r_slider_box</code>, <code>r_spinbox</code></p>
+
+<h3><a name="r_style"></a>r_style</h3>
+<pre class="sig"><span class="k">enum</span> r_style
+{
+    <span class="e">R_STYLE_FALLBACK</span> = <span class="n">0</span>, <span class="c">// If the style doesn't know how to draw something, it should fallback to drawing this instead.</span>
+    <span class="e">R_STYLE_WINDOW</span>,
+    <span class="e">R_STYLE_TOOLTIP</span>,
+    <span class="e">R_STYLE_BUTTON</span>,
+    <span class="e">R_STYLE_HEADER</span>,
+    <span class="e">R_STYLE_LABEL</span>,
+    <span class="e">R_STYLE_ICON</span>,
+    <span class="e">R_STYLE_TEXT</span>,
+    <span class="e">R_STYLE_INPUT</span>, <span class="c">// Text areas with various misc functionalities</span>
+	<span class="e">R_STYLE_MENU_BG</span>,
+    <span class="e">R_STYLE_MENU_ITEM</span>,
+    <span class="e">R_STYLE_CONTEXT_MENU_BG</span>,
+    <span class="e">R_STYLE_CONTEXT_MENU_ITEM</span>,
+    <span class="e">R_STYLE_PANEL</span>,
+    <span class="e">R_STYLE_CHECKBOX</span>,
+    <span class="e">R_STYLE_RADIO</span>,
+    <span class="e">R_STYLE_TOGGLE</span>,
+    <span class="e">R_STYLE_SLIDEBOX</span>, <span class="c">// Mix between slider and input box, with both numerical and drag input.</span>
+    <span class="e">R_STYLE_SLIDER</span>,
+    <span class="e">R_STYLE_SCROLLBAR</span>,
+    <span class="e">R_STYLE_MENUBAR_BG</span>,
+    <span class="e">R_STYLE_MENUBAR_ITEM</span>,
+    <span class="e">R_STYLE_INPUT_LINE_EDIT</span>,
+    <span class="e">R_STYLE_INPUT_MULTILINE_EDIT</span>,
+    <span class="e">R_STYLE_PROGRESS</span>,
+    <span class="e">R_STYLE_TAB</span>,
+    <span class="e">R_STYLE_TAB_BAR</span>,
+    <span class="e">R_STYLE_SEPARATOR</span>,
+    <span class="e">R_STYLE_COLLAPSIBLE</span>,  <span class="c">// Header of a collapsible section.</span>
+    <span class="e">R_STYLE_LIST_ITEM</span>,    <span class="c">// Selectable item in a list.</span>
+    <span class="e">R_STYLE_DROPDOWN</span>,     <span class="c">// Button that opens a selection popup.</span>
+    <span class="e">R_STYLE_SPINBOX</span>,
+    <span class="e">R_STYLE_BACKDROP</span>,     <span class="c">// Fills a window behind something modal. Unused since dialogs are root lists of their own.</span>
+    <span class="e">R_STYLE_DIALOG</span>,
+    <span class="e">R_STYLE_TAB_PAGE</span>,     <span class="c">// Background of the content below tabs.</span>
+    <span class="e">R_STYLE_SEGMENTED</span>,    <span class="c">// Joined choices, one is selected.</span>
+    <span class="e">R_STYLE_BASE_MASK</span> = <span class="n">0xFF</span>,
+    
+    <span class="e">R_STATE_SELECTED</span>  = <span class="e">R_BIT</span>(<span class="n">0</span>) &lt;&lt; <span class="n">8</span>, <span class="c">// Selection in a menu.</span>
+    <span class="e">R_STATE_PRESSED</span>   = <span class="e">R_BIT</span>(<span class="n">1</span>) &lt;&lt; <span class="n">8</span>,
+    <span class="e">R_STATE_HOVER</span>     = <span class="e">R_BIT</span>(<span class="n">2</span>) &lt;&lt; <span class="n">8</span>,
+    <span class="e">R_STATE_DISABLED</span>  = <span class="e">R_BIT</span>(<span class="n">3</span>) &lt;&lt; <span class="n">8</span>,
+    <span class="e">R_STATE_TOGGLED</span>   = <span class="e">R_BIT</span>(<span class="n">4</span>) &lt;&lt; <span class="n">8</span>,
+	<span class="e">R_STATE_FOCUS</span>     = <span class="e">R_BIT</span>(<span class="n">5</span>) &lt;&lt; <span class="n">8</span>,
+	<span class="c">// Up to R_BIT(15) &lt;&lt; 8</span>
+    <span class="e">R_STATE_MASK</span> = <span class="n">0xFFFF</span> &lt;&lt; <span class="n">8</span>,
+
+    <span class="e">R_VARIANT_FLAT</span>            = <span class="n">0</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Usually means without border and the element is just implied through icon + label</span>
+    <span class="e">R_VARIANT_RAISED</span>          = <span class="n">1</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Raised panel, by default panels are inset.</span>
+    <span class="e">R_VARIANT_HORZ</span>            = <span class="n">2</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Horizontal scrollbar/slider</span>
+	<span class="e">R_VARIANT_VERT</span>            = <span class="n">3</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Vertical scrollbar/slider</span>
+    <span class="e">R_VARIANT_BOLD</span>            = <span class="n">4</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Primary button - More colorful</span>
+    <span class="e">R_VARIANT_DULL</span>            = <span class="n">5</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Tertiary button - Less color, flatter</span>
+	<span class="e">R_VARIANT_LISTITEM</span>        = <span class="n">6</span> &lt;&lt; <span class="n">24</span>, <span class="c">// UI element is part of a list, that usually implies having the same background as the list and a flat appearance.</span>
+    <span class="e">R_VARIANT_MASK</span>            = <span class="n">0xF</span> &lt;&lt; <span class="n">24</span>,
+
+	<span class="e">R_COMPONENT_JOINED</span>        = <span class="n">1</span> &lt;&lt; <span class="n">28</span>, <span class="c">// Part of an complex input, wedged inbetween endcaps.</span>
+    <span class="e">R_COMPONENT_ENDCAP_START</span>  = <span class="n">2</span> &lt;&lt; <span class="n">28</span>, <span class="c">// For example to create a text input with a popup selection then we have:</span>
+    <span class="e">R_COMPONENT_ENDCAP_END</span>    = <span class="n">3</span> &lt;&lt; <span class="n">28</span>, <span class="c">// [R_STYLE_INPUT | R_COMPONENT_ENDCAP_START][R_STYLE_BUTTON | R_COMPONENT_ENDCAP_END]</span>
+
+	<span class="e">R_COMPONENT_TRACK</span>         = <span class="n">4</span> &lt;&lt; <span class="n">28</span>, <span class="c">// Primary background for progress bars/sliders/scroll bar, behind joined components (with the style of the joined parts).</span>
+    <span class="e">R_COMPONENT_FILL</span>          = <span class="n">5</span> &lt;&lt; <span class="n">28</span>, <span class="c">// Alternative background for progress bars that indicate the progress.</span>
+    <span class="e">R_COMPONENT_THUMB</span>         = <span class="n">6</span> &lt;&lt; <span class="n">28</span>, <span class="c">// Draggable portion of slider/scroll bar.</span>
+    <span class="e">R_COMPONENT_CARET</span>         = <span class="n">7</span> &lt;&lt; <span class="n">28</span>, <span class="c">// Text cursor, blinks while focused.</span>
+    <span class="e">R_COMPONENT_SELECTION</span>     = <span class="n">8</span> &lt;&lt; <span class="n">28</span>, <span class="c">// Text selection highlight.</span>
+
+    <span class="e">R_COMPONENT_MASK</span>          = <span class="n">0xF</span> &lt;&lt; <span class="n">28</span>,
+};</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h2><a name="s-Data-binding"></a>Data binding</h2>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_data_binding"></a>r_data_binding</h3>
+<pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> {
+    <span class="k">bool</span> use_function_indirection;
+	<span class="k">union</span>{
+		<span class="k">struct</span>{
+            r_data_type ptr_type;
+			<span class="k">void</span>*       ptr;
+			<span class="k">int</span>     num_bits;
+			<span class="k">int</span>   bit_offset;
+		};
+		<span class="k">struct</span>{
+            r_fn* getter;
+            r_fn* setter;
+            r_signature setter_sig;
+            r_signature getter_sig;
+            <span class="t">uint64_t</span> index;
+            <span class="k">void</span>* pointer;
+		};
+	};
+} r_data_binding;</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="R_PTR"></a>R_PTR</h3>
+<pre class="sig"><span class="p">#define</span> <span class="e">R_PTR</span>(P) ((<a class="t" href="#r_data_binding">r_data_binding</a>){                              \
+    .ptr      = (<span class="k">void</span>*)(P),                                      \
+    .num_bits = (<span class="k">int</span>)(<span class="k">sizeof</span>(*(P)) * <span class="n">8</span>),                         \
+    .ptr_type = <span class="e">R_TYPEOF</span>(*(P)) })</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<div class="example"><pre><a class="f" href="#r_checkbox">r_checkbox</a>(ui, ui-&gt;root_area, <span class="s">"Mute"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;mute));</pre></div>
+</body></html>

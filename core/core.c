@@ -352,14 +352,16 @@ void r_free_context(r_context* c)
 	*c = (r_context){0};
 }
 
-static void init_ui_list(r_ui_list* l, int capacity)
+static void init_ui_list(r_ui_list* l, int max_draw, int max_interact)
 {
 	l->content_transform[0][0] = 1.0f;
 	l->content_transform[1][1] = 1.0f;
 
 	for(int i = 0; i < 2; i++)
 	{
-		if(l->draw_buffers[i].base != NULL && l->draw_buffers[i].reserved < (int64_t)(sizeof(r_drawable) * capacity))
+		if(l->draw_buffers[i].base != NULL &&
+		   (l->draw_buffers[i].reserved     < (int64_t)(sizeof(r_drawable) * max_draw) ||
+		    l->interact_buffers[i].reserved < (int64_t)(sizeof(r_interact) * (max_interact + 1))))
 		{
 			pbuffer_free(&l->draw_buffers[i]);
 			pbuffer_free(&l->interact_buffers[i]);
@@ -368,9 +370,9 @@ static void init_ui_list(r_ui_list* l, int capacity)
 		}
 		if(l->draw_buffers[i].base == NULL)
 		{
-			pbuffer_init(&l->draw_buffers[i],     sizeof(r_drawable) * capacity, sizeof(r_drawable) * 16);
-			pbuffer_init(&l->interact_buffers[i], sizeof(r_interact) * capacity, sizeof(r_interact) * 16);
-			pbuffer_init(&l->storage_buffers[i],  capacity * 32 * 4, 64);
+			pbuffer_init(&l->draw_buffers[i],     sizeof(r_drawable) * max_draw,           sizeof(r_drawable) * 16);
+			pbuffer_init(&l->interact_buffers[i], sizeof(r_interact) * (max_interact + 1), sizeof(r_interact) * 16);
+			pbuffer_init(&l->storage_buffers[i],  max_draw * 32 * 4, 64);
 			hash_init(&l->id_hash[i], 256, sizeof(int));
 		}
 		else hash_clear(&l->id_hash[i]);
@@ -424,6 +426,11 @@ static void insert_into_chain(r_context* c, r_ui_list* new)
 
 r_ui_list* r_create_ui_list(r_context* c, uint64_t target, uint64_t root_id, int width, int height)
 {
+	return r_create_ui_list_ex(c, target, root_id, width, height, RCUT_LIST_MAX_ELEMENTS, RCUT_LIST_MAX_ELEMENTS);
+}
+
+r_ui_list* r_create_ui_list_ex(r_context* c, uint64_t target, uint64_t root_id, int width, int height, int max_drawables, int max_interactables)
+{
 	r_ui_list* l = NULL;
 
 	for(int i = 0; i < c->count_ui_lists && !l; i++)
@@ -437,7 +444,7 @@ r_ui_list* r_create_ui_list(r_context* c, uint64_t target, uint64_t root_id, int
 	l->drawn_area   = keep.drawn_area;
 	l->drawn_target = keep.drawn_target;
 
-	init_ui_list(l, RCUT_LIST_MAX_ELEMENTS);
+	init_ui_list(l, max_drawables, max_interactables);
 	l->target = target;
 	l->context = c;
 	l->root_area = (rect){0, 0, width, height, root_id};
@@ -498,7 +505,7 @@ static r_ui_list* create_ephemeral(r_ui_list* parent, rect root, uint64_t target
 	l->drawn_area   = keep.drawn_area;
 	l->drawn_target = keep.drawn_target;
 
-	init_ui_list(l, capacity);
+	init_ui_list(l, capacity, capacity);
 	l->ephemeral_parent  = parent;
 	l->parent_generation = parent->generation;
 	l->is_ephemeral = true;

@@ -3,3 +3,4 @@ build*/
 /rcut_core.c
 /rcut_draw.c
 /stb_truetype.h
+docs/api/rcut.chm

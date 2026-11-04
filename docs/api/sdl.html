@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html><head>
+<title>sdl</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta charset="utf-8">
+<link rel="stylesheet" href="style.css">
+</head><body>
+<h1>sdl</h1>
+<h3><a name="r_sdl_init"></a>r_sdl_init</h3>
+<pre class="sig"><a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* r_sdl_init(<span class="k">const</span> <span class="k">char</span>* title, <span class="k">int</span> w, <span class="k">int</span> h, <span class="k">int</span> flags);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+<table class="params"><tr><th>Parameter</th><th></th></tr>
+<tr><td><code>flags</code></td><td><span class="todo">&lt;TODO: &gt;</span></td></tr>
+</table>
+<div class="example"><pre><a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* app = <a class="f" href="#r_sdl_init">r_sdl_init</a>(<span class="s">"Hello"</span>, <span class="n">320</span>, <span class="n">200</span>, <a class="e" href="#r_sdl_flags">R_SDL_RESIZABLE</a>);
+<span class="k">while</span>(!r_sdl_quit_requested(app, <span class="k">true</span>))
+{
+	SDL_Event e;
+	<span class="k">if</span>(SDL_WaitEventTimeout(&amp;e, <span class="n">50</span>))
+		<span class="k">do</span> r_sdl_process_event(app, &amp;e); <span class="k">while</span>(SDL_PollEvent(&amp;e));
+	<span class="k">if</span>(app-&gt;root-&gt;resized)
+	{
+		<a class="f" href="core.html#r_list_clear">r_list_clear</a>(app-&gt;root);
+		<a class="f" href="core.html#r_label">r_label</a>(app-&gt;root, app-&gt;root-&gt;root_area, <span class="s">"Hello"</span>);
+	}
+	<a class="f" href="#r_sdl_update">r_sdl_update</a>(app);
+	<a class="f" href="#r_sdl_render_ui">r_sdl_render_ui</a>(app);
+}
+r_sdl_free(app);</pre></div>
+<div class="caption"><p><span class="todo">&lt;TODO: &gt;</span></p>
+</div>
+<p class="see">See also: <code>r_sdl_free</code>, <a href="#r_sdl_update"><code>r_sdl_update</code></a></p>
+
+<h3><a name="r_sdl_flags"></a>r_sdl_flags</h3>
+<pre class="sig"><span class="k">enum</span> r_sdl_flags
+{
+	<span class="e">R_SDL_RESIZABLE</span> = <span class="n">1</span> &lt;&lt; <span class="n">0</span>,
+	<span class="e">R_SDL_VSYNC</span>     = <span class="n">1</span> &lt;&lt; <span class="n">1</span>,
+};</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_sdl_frontend"></a>r_sdl_frontend</h3>
+<pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_sdl_frontend
+{
+	r_draw    draw;
+	r_context context;
+	r_draw_software software;
+
+	r_sdl_window windows[<span class="e">RCUT_SDL_MAX_WINDOWS</span>];
+	<a class="t" href="core.html#r_ui_list">r_ui_list</a>* root;
+	<span class="t">uint64_t</span> last_tick_time;
+	<span class="k">bool</span> no_popup_windows;
+	<span class="k">bool</span> quit_requested;
+	SDL_Window* text_input_window;
+	<span class="k">bool</span> auto_scale;
+	<span class="k">bool</span> vsync;
+	<span class="k">char</span>* clipboard;
+	<span class="k">int</span>   cursor;
+	SDL_Cursor* cursors[<span class="n">8</span>];
+} r_sdl_frontend;</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_sdl_update"></a>r_sdl_update</h3>
+<pre class="sig"><span class="k">void</span> r_sdl_update(<a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* c);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_sdl_render_ui"></a>r_sdl_render_ui</h3>
+<pre class="sig"><span class="k">void</span> r_sdl_render_ui(<a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* c);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+
+<h3><a name="r_sdl_screenshot"></a>r_sdl_screenshot</h3>
+<pre class="sig"><span class="k">bool</span> r_sdl_screenshot(<a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* c, <span class="k">const</span> <span class="k">char</span>* path);</pre>
+<p><span class="todo">&lt;TODO: &gt;</span></p>
+</body></html>

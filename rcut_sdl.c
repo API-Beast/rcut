@@ -432,6 +432,10 @@ bool r_sdl_process_event(r_sdl_frontend* c, SDL_Event* e)
         case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
             if(window_index(c, e->window.windowID) == 0) update_root_sizes(c);
             return false;
+        case SDL_EVENT_WINDOW_EXPOSED:
+            i = window_index(c, e->window.windowID);
+            if(i >= 0) c->windows[i].last_window_surface = NULL;
+            return true;
         case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
             if(c->auto_scale && window_index(c, e->window.windowID) == 0) r_sdl_set_scale(c, 0);
             return false;

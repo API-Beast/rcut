@@ -1,0 +1,86 @@
+body {
+	margin: 0;
+	padding: 24px 32px 48px;
+	max-width: 960px;
+	font: 14px/1.55 "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif;
+	color: #1f2328;
+	background: #ffffff;
+}
+
+h1 {
+	font-size: 26px;
+	font-weight: 600;
+	margin: 0 0 24px;
+	padding-bottom: 8px;
+	border-bottom: 2px solid #1f2328;
+}
+
+h2 {
+	font-size: 20px;
+	font-weight: 600;
+	margin: 48px 0 12px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid #d8dee4;
+}
+
+h3 {
+	font: 600 16px Consolas, "Cascadia Mono", Menlo, monospace;
+	margin: 32px 0 12px;
+	padding: 6px 10px;
+	background: #eef2f7;
+	border-left: 4px solid #3d6fb4;
+}
+
+p { margin: 8px 0; }
+ul { margin: 8px 0; padding-left: 24px; }
+
+a { color: #0b5cad; text-decoration: none; }
+a:hover { text-decoration: underline; }
+a code { color: inherit; }
+
+code, pre { font-family: Consolas, "Cascadia Mono", Menlo, monospace; font-size: 13px; }
+code { background: #eef2f7; padding: 1px 4px; border-radius: 3px; }
+
+pre {
+	margin: 8px 0;
+	padding: 10px 12px;
+	background: #f6f8fa;
+	border: 1px solid #d8dee4;
+	border-radius: 4px;
+	line-height: 1.45;
+	overflow: auto;
+	tab-size: 4;
+	-moz-tab-size: 4;
+}
+pre.sig { white-space: pre-wrap; word-wrap: break-word; }
+pre code { background: none; padding: 0; }
+pre a { color: inherit; }
+
+table { border-collapse: collapse; margin: 12px 0; }
+
+table.params th, table.params td { border: 1px solid #d8dee4; padding: 5px 10px; text-align: left; vertical-align: top; }
+table.params th { background: #eef2f7; font-weight: 600; }
+table.params td:first-child { white-space: nowrap; }
+
+div.example { margin: 12px 0 4px; padding: 10px 12px; background: #f6f8fa; border: 1px solid #d8dee4; border-radius: 4px; display: flex; }
+div.example pre { margin: 0; padding: 0; border: 0; background: none; border-radius: 0; flex: 1 1 auto; min-width: 0; align-self: center; }
+div.example img.shot { flex: none; align-self: flex-start; margin-left: 16px; border: 1px solid #d8dee4; border-radius: 4px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15); }
+div.caption { margin: 0 0 12px; color: #57606a; }
+div.caption p { margin: 4px 0; }
+
+p.see { margin-top: 14px; padding-top: 8px; border-top: 1px solid #eaeef2; color: #57606a; }
+
+ul.index { list-style: none; padding: 0; }
+ul.index li { margin: 4px 0; font: 15px Consolas, "Cascadia Mono", Menlo, monospace; }
+
+.k { color: #0000c8; }
+.c { color: #6a737d; font-style: italic; }
+.s { color: #a31515; }
+.n { color: #098658; }
+.p { color: #9b2393; }
+.t { color: #267f99; }
+.f { color: #795e26; }
+.e { color: #0070c1; }
+
+div.note { margin: 12px 0; padding: 8px 12px; background: #eef5ff; border-left: 4px solid #3d6fb4; border-radius: 0 4px 4px 0; }
+span.todo { background: #fff3a0; color: #8a5300; padding: 0 3px; font-style: italic; }

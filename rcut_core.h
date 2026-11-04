@@ -519,6 +519,7 @@ rect rect_intersect(rect a, rect b);
 void r_init_context(r_context* r);
 void r_free_context(r_context* r);
 r_ui_list* r_create_ui_list(r_context* c, uint64_t target, uint64_t root_id, int width, int height);
+r_ui_list* r_create_ui_list_ex(r_context* c, uint64_t target, uint64_t root_id, int width, int height, int max_drawables, int max_interactables);
 void       r_destroy_ui_list(r_ui_list* list);
 // Ephemerals are UI list attached to a rectangle with automatic lifetime managment.
 // Note here: Salt the r parameter here with r_salt to allow for multiple popups on a single item.
