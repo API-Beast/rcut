@@ -349,9 +349,9 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* options);
 enum r_theme_focus { R_FOCUS_NONE, R_FOCUS_RING };
 void r_theme             (r_draw* c, int key);
 void r_theme_tweak       (r_draw* c, int key);
-void r_theme_make_box    (r_draw* c);
-void r_theme_apply_states(r_draw* c, int states);
-void r_theme_apply_joined(r_draw* c, int states);
+void r_theme_build       (r_draw* c);
+void r_theme_build_states(r_draw* c, int states);
+void r_theme_build_joined(r_draw* c, int states);
 void r_theme_fill        (r_draw* c, uint32_t top, uint32_t bottom);
 void r_theme_surface     (r_draw* c, uint32_t color);
 void r_theme_tint        (r_draw* c, uint32_t color);
@@ -368,7 +368,8 @@ void r_theme_no_shadow   (r_draw* c);
 void r_theme_inset       (r_draw* c, float y, float blur, float opacity);
 void r_theme_glow        (r_draw* c, uint32_t color, float width);
 void r_theme_label       (r_draw* c, uint32_t color, r_alignment align);
-void r_theme_label_color (r_draw* c, uint32_t color);
+void r_theme_label_color (r_draw* c, uint32_t color);     // Used exactly as given.
+void r_theme_label_color_auto(r_draw* c, uint32_t color); // Adapted to stay readable on the element's background.
 void r_theme_font        (r_draw* c, r_draw_font* font);
 void r_theme_icon        (r_draw* c, uint32_t color, int size);
 void r_theme_layout      (r_draw* c, int size, int spacing);

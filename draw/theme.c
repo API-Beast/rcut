@@ -177,7 +177,7 @@ typedef struct box
 	shadow_desc shadow, shadow2, inset;
 } box;
 
-typedef struct theme_op { int type; float f[4]; uint32_t u[2]; r_draw_font* font; } theme_op;
+typedef struct theme_op { int type; float f[4]; uint32_t u[2]; r_draw_font* font; bool fixed; } theme_op; // fixed: color is used as given, not adapted to the background.
 typedef struct theme_decl { int key, num_ops; theme_op ops[12]; } theme_decl;
 
 typedef struct r_theme
@@ -324,7 +324,8 @@ void r_theme_inset(r_draw* c, float y, float blur, float opacity){ push(c, (them
 void r_theme_glow(r_draw* c, uint32_t color, float width){ push(c, (theme_op){ OP_GLOW, .f = {width}, .u = {color} }); }
 void r_theme_tint(r_draw* c, uint32_t color){ push(c, (theme_op){ OP_TINT, .u = {color} }); }
 void r_theme_label(r_draw* c, uint32_t color, r_alignment align){ push(c, (theme_op){ OP_LABEL, .u = {color, align} }); }
-void r_theme_label_color(r_draw* c, uint32_t color){ push(c, (theme_op){ OP_LABEL_COLOR, .u = {color} }); }
+void r_theme_label_color(r_draw* c, uint32_t color){ push(c, (theme_op){ OP_LABEL_COLOR, .u = {color}, .fixed = true }); }
+void r_theme_label_color_auto(r_draw* c, uint32_t color){ push(c, (theme_op){ OP_LABEL_COLOR, .u = {color} }); }
 void r_theme_font(r_draw* c, r_draw_font* font){ push(c, (theme_op){ OP_FONT, .font = font }); }
 void r_theme_icon(r_draw* c, uint32_t color, int size){ push(c, (theme_op){ OP_ICON, .u = {color, size} }); }
 void r_theme_layout(r_draw* c, int size, int spacing){ push(c, (theme_op){ OP_LAYOUT, .u = {size, spacing} }); }
@@ -405,10 +406,15 @@ static void make(theme_state* t, int key)
 	}
 	box b = {0};
 	r_draw_style_rule r = {0};
+	bool fixed_label = false;
 
 	for(int i = 0; i < n; i++)
 	for(int k = 0; k < list[i]->num_ops; k++)
-		run(t, &b, &r, &list[i]->ops[k]);
+	{
+		const theme_op* o = &list[i]->ops[k];
+		run(t, &b, &r, o);
+		if(o->type == OP_LABEL || o->type == OP_LABEL_COLOR) fixed_label = o->fixed;
+	}
 
 	int comp = key & R_COMPONENT_MASK;
 	if(comp == R_COMPONENT_ENDCAP_START || comp == R_COMPONENT_JOINED || comp == R_COMPONENT_ENDCAP_END)
@@ -424,14 +430,16 @@ static void make(theme_state* t, int key)
 	const r_draw_palette* p = &t->c->palette;
 	uint32_t surface = (b.bg >> 24) >= 0x80 ? b.bg : b.surface ? b.surface : p->panel;
 	uint32_t* colors[] = { &r.label_color, &r.icon_color };
+	bool fixed[] = { fixed_label, false };
 	for(int i = 0; i < 2 && !t->custom_text; i++)
+	if(!fixed[i])
 	{
 		uint32_t roles[] = { p->text_dim, p->text, p->text_strong };
 		for(int k = 0; k < 3; k++) if(*colors[i] == roles[k]) { *colors[i] = text_on(surface, k); break; }
 	}
 
 	for(int i = 0; i < 2; i++)
-	if(*colors[i] && (*colors[i] & 0xFFFFFF) == (p->accent_text & 0xFFFFFF))
+	if(!fixed[i] && *colors[i] && (*colors[i] & 0xFFFFFF) == (p->accent_text & 0xFFFFFF))
 		*colors[i] = (text_on_accent(surface) & 0xFFFFFF) | (*colors[i] & 0xFF000000);
 
 	if(r.focus_overlay)
@@ -471,16 +479,16 @@ static void make_states(theme_state* t, int key, int states)
 
 static int cur_key(r_draw* c){ theme_state* t = theme(c); assert(t->cur); return t->cur ? t->cur->key : 0; }
 
-void r_theme_make_box(r_draw* c)
+void r_theme_build(r_draw* c)
 {
 	int key = cur_key(c);
 	if(key & R_STATE_MASK) make(c->theme, key);
 	else make_base(c->theme, key);
 }
 
-void r_theme_apply_states(r_draw* c, int states){ make_states(c->theme, cur_key(c) & ~R_STATE_MASK, states); }
+void r_theme_build_states(r_draw* c, int states){ make_states(c->theme, cur_key(c) & ~R_STATE_MASK, states); }
 
-void r_theme_apply_joined(r_draw* c, int states)
+void r_theme_build_joined(r_draw* c, int states)
 {
 	static const int comps[] = { R_COMPONENT_ENDCAP_START, R_COMPONENT_JOINED, R_COMPONENT_ENDCAP_END };
 	int key = cur_key(c) & ~R_STATE_MASK & ~R_COMPONENT_MASK;
@@ -511,7 +519,7 @@ static void selection_and_caret(r_draw* c, int key)
 		r_theme_radius(c, caret ? 0 : 2);
 		r_theme_padding(c, 0, 0);
 		r_theme_label(c, p->text, 0);
-		r_theme_make_box(c);
+		r_theme_build(c);
 	}
 }
 
@@ -534,12 +542,12 @@ static void field(r_draw* c, int key, r_alignment align)
 static void text_field(r_draw* c, int key, r_alignment align)
 {
 	field(c, key, align);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, R_STATE_HOVER | R_STATE_FOCUS);
+	r_theme_build(c);
+	r_theme_build_states(c, R_STATE_HOVER | R_STATE_FOCUS);
 
 	r_theme(c, key | R_VARIANT_DULL);
-	r_theme_label_color(c, c->palette.text_dim);
-	r_theme_make_box(c);
+	r_theme_label_color_auto(c, c->palette.text_dim);
+	r_theme_build(c);
 
 	selection_and_caret(c, key);
 }
@@ -638,7 +646,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_font(c, t->font);
 	r_theme_label(c, p->text, R_LEFT_CENTER);
 	r_theme_layout(c, t->control_h, 8);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_FALLBACK | R_STATE_HOVER);
 	r_theme_tint(c, p->hover_overlay);
@@ -650,59 +658,59 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme(c, R_STYLE_FALLBACK | R_STATE_TOGGLED);
 	r_theme_fill(c, checked, 0);
 	r_theme_border_color(c, checked);
-	r_theme_label_color(c, p->accent_text);
+	r_theme_label_color_auto(c, p->accent_text);
 
 	// Text
 	r_theme(c, R_STYLE_TEXT);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_LABEL);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_LABEL | R_VARIANT_DULL);
-	r_theme_label_color(c, p->text_dim);
-	r_theme_make_box(c);
+	r_theme_label_color_auto(c, p->text_dim);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_LABEL | R_VARIANT_BOLD);
 	r_theme_font(c, t->bold);
-	r_theme_label_color(c, p->text_strong);
-	r_theme_make_box(c);
+	r_theme_label_color_auto(c, p->text_strong);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_HEADER);
 	r_theme_font(c, t->header);
-	r_theme_label_color(c, p->text_strong);
-	r_theme_make_box(c);
+	r_theme_label_color_auto(c, p->text_strong);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_ICON);
 	r_theme_label(c, p->text, R_CENTER);
 	r_theme_layout(c, 16, 0);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_PANEL);
 	r_theme_fill(c, p->view, 0);
 	r_theme_border(c, 1, p->border);
 	r_theme_radius(c, 4);
 	r_theme_padding(c, 4, 4);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_PANEL | R_VARIANT_RAISED);
 	r_theme_fill(c, p->card, 0);
 	r_theme_radius(c, 4);
 	r_theme_padding(c, 14, 12);
 	r_theme_shadow(c, 1, 3, dl(p, 0.35f, 0.1f));
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_WINDOW);
 	r_theme_fill(c, p->window, 0);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_SEPARATOR | R_STATE_HOVER);
 	r_theme_fill(c, p->focus, 0);
 
 	r_theme(c, R_STYLE_SEPARATOR);
 	r_theme_fill(c, p->border, 0);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, R_STATE_HOVER);
+	r_theme_build(c);
+	r_theme_build_states(c, R_STATE_HOVER);
 
 	int button_states = R_STATE_HOVER | R_STATE_PRESSED;
 	int joined[] = { R_COMPONENT_ENDCAP_START, R_COMPONENT_JOINED, R_COMPONENT_ENDCAP_END };
@@ -726,9 +734,9 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 		r_theme(c, style | R_COMPONENT_TRACK);
 		r_theme_fill(c, 0, 0);
 		r_theme_border(c, 0, 0);
-		r_theme_label_color(c, 0);
+		r_theme_label_color_auto(c, 0);
 		r_theme_focus(c, R_FOCUS_NONE);
-		r_theme_make_box(c);
+		r_theme_build(c);
 	}
 
 	r_theme(c, R_STYLE_BUTTON);
@@ -737,39 +745,39 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_padding(c, 14, 4);
 	r_theme_label(c, p->text_strong, R_CENTER);
 	r_theme_focus(c, R_FOCUS_RING);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, button_states);
-	r_theme_apply_joined(c, button_states | R_STATE_TOGGLED | R_STATE_FOCUS);
+	r_theme_build(c);
+	r_theme_build_states(c, button_states);
+	r_theme_build_joined(c, button_states | R_STATE_TOGGLED | R_STATE_FOCUS);
 
 	r_theme(c, R_STYLE_SEGMENTED);
 	raised(c);
 	r_theme_radius(c, 3);
 	r_theme_label(c, p->text, R_CENTER);
 	r_theme_focus(c, R_FOCUS_RING);
-	r_theme_make_box(c);
-	r_theme_apply_joined(c, button_states | R_STATE_TOGGLED | R_STATE_FOCUS);
+	r_theme_build(c);
+	r_theme_build_joined(c, button_states | R_STATE_TOGGLED | R_STATE_FOCUS);
 
 	r_theme(c, R_STYLE_BUTTON | R_VARIANT_BOLD);
 	r_theme_fill(c, p->primary, deepen(p->primary, 0.12f));
 	r_theme_border_color(c, deepen(p->primary, 0.06f));
-	r_theme_label_color(c, p->accent_text);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, button_states);
+	r_theme_label_color_auto(c, p->accent_text);
+	r_theme_build(c);
+	r_theme_build_states(c, button_states);
 
 	r_theme(c, R_STYLE_BUTTON | R_VARIANT_DULL);
 	r_theme_fill(c, 0, 0);
 	r_theme_border(c, 0, 0);
 	r_theme_no_shadow(c);
 	r_theme_padding(c, 8, 4);
-	r_theme_label_color(c, p->text);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, button_states);
+	r_theme_label_color_auto(c, p->text);
+	r_theme_build(c);
+	r_theme_build_states(c, button_states);
 
 	r_theme(c, R_STYLE_DROPDOWN | R_STATE_TOGGLED);
 	r_theme_fill(c, p->control_pressed, 0);
 	r_theme_border_color(c, p->border);
 	r_theme_no_shadow(c);
-	r_theme_label_color(c, p->text_strong);
+	r_theme_label_color_auto(c, p->text_strong);
 	r_theme_icon(c, p->text, 0);
 	r_theme_focus(c, R_FOCUS_NONE);
 
@@ -780,25 +788,25 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_label(c, p->text_strong, R_LEFT_CENTER);
 	r_theme_icon(c, p->text_dim, 0);
 	r_theme_focus(c, R_FOCUS_RING);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, button_states | R_STATE_TOGGLED);
+	r_theme_build(c);
+	r_theme_build_states(c, button_states | R_STATE_TOGGLED);
 
 	text_field(c, R_STYLE_INPUT, R_LEFT_CENTER);
 	text_field(c, R_STYLE_INPUT_MULTILINE_EDIT, R_TOP_LEFT);
 
 	field(c, R_STYLE_SPINBOX, R_LEFT_CENTER);
 	r_theme_corners(c, 3, 0, 3, 0);
-	r_theme_make_box(c);
+	r_theme_build(c);
 	r_theme(c, R_STYLE_SPINBOX | R_STATE_FOCUS);
 	r_theme_border_color(c, c->palette.focus);
-	r_theme_apply_states(c, R_STATE_HOVER | R_STATE_FOCUS);
+	r_theme_build_states(c, R_STATE_HOVER | R_STATE_FOCUS);
 
 	selection_and_caret(c, R_STYLE_SPINBOX);
 
 	field(c, R_STYLE_SLIDEBOX, R_CENTER);
 	r_theme_focus(c, R_FOCUS_RING);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, R_STATE_HOVER);
+	r_theme_build(c);
+	r_theme_build_states(c, R_STATE_HOVER);
 
 	r_theme(c, R_STYLE_SLIDEBOX | R_COMPONENT_FILL);
 	r_theme_fill(c, dlc(p, deepen(value, 0.3f), over_straight(value, alpha(WHITE, 0.5f))), 0);
@@ -807,7 +815,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_padding(c, 1, 1);
 	r_theme_label(c, p->text, 0);
 	r_theme_focus(c, R_FOCUS_NONE);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	for(int round = 0; round < 2; round++)
 	{
@@ -819,8 +827,8 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 		r_theme_icon(c, p->accent_text, round ? 8 : 14);
 		r_theme_focus(c, R_FOCUS_RING);
 		r_theme_layout(c, 18, 0);
-		r_theme_make_box(c);
-		r_theme_apply_states(c, R_STATE_HOVER | R_STATE_TOGGLED);
+		r_theme_build(c);
+		r_theme_build_states(c, R_STATE_HOVER | R_STATE_TOGGLED);
 	}
 
 	r_theme(c, R_STYLE_TOGGLE | R_COMPONENT_TRACK);
@@ -829,25 +837,25 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_radius(c, 9);
 	r_theme_focus(c, R_FOCUS_RING);
 	r_theme_layout(c, 18, 0);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, R_STATE_HOVER | R_STATE_TOGGLED);
+	r_theme_build(c);
+	r_theme_build_states(c, R_STATE_HOVER | R_STATE_TOGGLED);
 
 	r_theme(c, R_STYLE_TOGGLE | R_COMPONENT_THUMB);
 	r_theme_fill(c, p->thumb, 0);
 	r_theme_radius(c, 7);
 	r_theme_shadow(c, 1, 2, dl(p, 0.5f, 0.25f));
 	r_theme_layout(c, 16, 0);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_SLIDER | R_COMPONENT_TRACK);
 	r_theme_fill(c, p->track, 0);
 	r_theme_radius(c, 3);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_SLIDER | R_COMPONENT_FILL);
 	r_theme_fill(c, value, 0);
 	r_theme_radius(c, 3);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_SLIDER | R_COMPONENT_THUMB | R_STATE_HOVER);
 	r_theme_glow(c, alpha(p->value, 0.35f), 3);
@@ -858,22 +866,22 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_shadow(c, 1, 3, dl(p, 0.55f, 0.2f));
 	r_theme_focus(c, R_FOCUS_RING);
 	r_theme_layout(c, 16, 0);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, R_STATE_HOVER);
+	r_theme_build(c);
+	r_theme_build_states(c, R_STATE_HOVER);
 
 	r_theme(c, R_STYLE_PROGRESS | R_COMPONENT_TRACK);
 	r_theme_fill(c, p->track, 0);
 	r_theme_radius(c, 3);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_PROGRESS | R_COMPONENT_FILL);
 	r_theme_fill(c, value, 0);
 	r_theme_radius(c, 3);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_SCROLLBAR | R_COMPONENT_TRACK);
 	r_theme_layout(c, 10, 0);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_SCROLLBAR | R_COMPONENT_THUMB | R_STATE_HOVER);
 	r_theme_fill(c, p->border_hover, 0);
@@ -885,8 +893,8 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme(c, R_STYLE_SCROLLBAR | R_COMPONENT_THUMB);
 	r_theme_fill(c, p->border_strong, 0);
 	r_theme_radius(c, 2);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, button_states);
+	r_theme_build(c);
+	r_theme_build_states(c, button_states);
 
 	for(int end = 0; end < 2; end++)
 	{
@@ -895,8 +903,8 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 		r_theme_radius(c, 2);
 		r_theme_label(c, p->text_dim, R_CENTER);
 		r_theme_icon(c, 0, 10);
-		r_theme_make_box(c);
-		r_theme_apply_states(c, button_states);
+		r_theme_build(c);
+		r_theme_build_states(c, button_states);
 	}
 
 	for(int context = 0; context < 2; context++)
@@ -904,7 +912,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 		r_theme(c, context ? R_STYLE_CONTEXT_MENU_BG : R_STYLE_MENU_BG);
 		r_theme_fill(c, p->menu, 0);
 		r_theme_border(c, 1, dlc(p, p->border_strong, p->border));
-		r_theme_make_box(c);
+		r_theme_build(c);
 	}
 
 	int menu_states = R_STATE_HOVER | R_STATE_FOCUS | R_STATE_SELECTED;
@@ -922,11 +930,11 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 
 		r_theme(c, R_STYLE_MENU_ITEM | state);
 		r_theme_fill(c, p->highlight, 0);
-		r_theme_label_color(c, p->accent_text);
+		r_theme_label_color_auto(c, p->accent_text);
 		r_theme_icon(c, 0, 0);
 
 		r_theme(c, R_STYLE_MENU_ITEM | R_VARIANT_DULL | state);
-		r_theme_label_color(c, alpha(p->accent_text, 0.8f));
+		r_theme_label_color_auto(c, alpha(p->accent_text, 0.8f));
 	}
 
 	r_theme(c, R_STYLE_MENU_ITEM);
@@ -934,58 +942,58 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_padding(c, 8, 3);
 	r_theme_label(c, p->text_strong, R_LEFT_CENTER);
 	r_theme_icon(c, p->text_dim, 0);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, menu_states);
+	r_theme_build(c);
+	r_theme_build_states(c, menu_states);
 
 	r_theme(c, R_STYLE_MENU_ITEM | R_VARIANT_DULL);
 	r_theme_font(c, t->small);
 	r_theme_label(c, p->text_dim, R_RIGHT_CENTER);
 	r_theme_icon(c, 0, 0);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, menu_states);
+	r_theme_build(c);
+	r_theme_build_states(c, menu_states);
 
 	r_theme(c, R_STYLE_MENUBAR_BG);
 	r_theme_fill(c, p->panel, 0);
 	r_theme_underline(c, 1, p->border);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_MENUBAR_ITEM | R_STATE_HOVER);
-	r_theme_label_color(c, p->text_strong);
+	r_theme_label_color_auto(c, p->text_strong);
 
 	r_theme(c, R_STYLE_MENUBAR_ITEM | R_STATE_SELECTED);
 	r_theme_fill(c, p->control_hover, 0);
-	r_theme_label_color(c, p->text_strong);
+	r_theme_label_color_auto(c, p->text_strong);
 
 	r_theme(c, R_STYLE_MENUBAR_ITEM | R_STATE_FOCUS);
 	r_theme_fill(c, p->control_hover, 0);
-	r_theme_label_color(c, p->text_strong);
+	r_theme_label_color_auto(c, p->text_strong);
 	r_theme_focus(c, R_FOCUS_RING);
 
 	r_theme(c, R_STYLE_MENUBAR_ITEM);
 	r_theme_padding(c, 10, 2);
 	r_theme_label(c, p->text, R_CENTER);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, menu_states);
+	r_theme_build(c);
+	r_theme_build_states(c, menu_states);
 
 	r_theme(c, R_STYLE_TOOLTIP);
 	r_theme_fill(c, p->tooltip, 0);
 	r_theme_border(c, 1, dlc(p, p->border_strong, p->tooltip));
 	r_theme_padding(c, 9, 5);
 	r_theme_font(c, t->small);
-	r_theme_label_color(c, p->text_strong);
-	r_theme_make_box(c);
+	r_theme_label_color_auto(c, p->text_strong);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_TAB_BAR);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_TAB | R_STATE_HOVER);
-	r_theme_label_color(c, p->text);
+	r_theme_label_color_auto(c, p->text);
 
 	r_theme(c, R_STYLE_TAB | R_STATE_SELECTED);
 	r_theme_fill(c, p->view, 0);
 	r_theme_bevel(c, 0, p->view);
 	r_theme_font(c, t->bold);
-	r_theme_label_color(c, p->text_strong);
+	r_theme_label_color_auto(c, p->text_strong);
 
 	r_theme(c, R_STYLE_TAB);
 	r_theme_fill(c, p->control, 0);
@@ -993,32 +1001,32 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_padding(c, 12, 0);
 	r_theme_label(c, p->text_dim, R_CENTER);
 	r_theme_focus(c, R_FOCUS_RING);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, R_STATE_HOVER | R_STATE_SELECTED);
+	r_theme_build(c);
+	r_theme_build_states(c, R_STATE_HOVER | R_STATE_SELECTED);
 
 	r_theme(c, R_STYLE_TAB_PAGE);
 	r_theme_fill(c, p->view, 0);
 	r_theme_border(c, 1, p->border);
 	r_theme_corners(c, 0, 0, 4, 4);
 	r_theme_padding(c, 4, 4);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_LIST_ITEM | R_STATE_HOVER);
-	r_theme_label_color(c, p->text_strong);
+	r_theme_label_color_auto(c, p->text_strong);
 
 	r_theme(c, R_STYLE_LIST_ITEM | R_STATE_SELECTED);
 	r_theme_fill(c, p->selection, 0);
-	r_theme_label_color(c, p->accent_text);
+	r_theme_label_color_auto(c, p->accent_text);
 
 	r_theme(c, R_STYLE_LIST_ITEM | R_STATE_SELECTED | R_STATE_HOVER);
-	r_theme_label_color(c, p->accent_text);
+	r_theme_label_color_auto(c, p->accent_text);
 
 	r_theme(c, R_STYLE_LIST_ITEM);
 	r_theme_surface(c, p->view);
 	r_theme_padding(c, 10, 0);
 	r_theme_focus(c, R_FOCUS_RING);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, R_STATE_HOVER | R_STATE_SELECTED);
+	r_theme_build(c);
+	r_theme_build_states(c, R_STATE_HOVER | R_STATE_SELECTED);
 
 	r_theme(c, R_STYLE_COLLAPSIBLE | R_STATE_HOVER);
 	r_theme_icon(c, p->text, 0);
@@ -1026,15 +1034,15 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme(c, R_STYLE_COLLAPSIBLE);
 	r_theme_padding(c, 6, 0);
 	r_theme_font(c, t->bold);
-	r_theme_label_color(c, p->text_strong);
+	r_theme_label_color_auto(c, p->text_strong);
 	r_theme_icon(c, p->text_dim, 0);
 	r_theme_focus(c, R_FOCUS_RING);
-	r_theme_make_box(c);
-	r_theme_apply_states(c, R_STATE_HOVER);
+	r_theme_build(c);
+	r_theme_build_states(c, R_STATE_HOVER);
 
 	r_theme(c, R_STYLE_BACKDROP);
 	r_theme_fill(c, dlc(p, alpha(BLACK, 0.55f), alpha(p->text_strong, 0.3f)), 0);
-	r_theme_make_box(c);
+	r_theme_build(c);
 
 	r_theme(c, R_STYLE_DIALOG);
 	r_theme_fill(c, dlc(p, p->menu, p->card), 0);
@@ -1042,5 +1050,5 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_radius(c, 4);
 	r_theme_padding(c, 20, 16);
 	r_theme_shadow(c, 1, 3, dl(p, 0.6f, 0.25f));
-	r_theme_make_box(c);
+	r_theme_build(c);
 }

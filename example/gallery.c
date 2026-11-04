@@ -166,11 +166,11 @@ static void column_end(r_ui_list* l, r_ui_list* page, r_layout_iter* column)
 static void pill_tabs(r_draw* c)
 {
 	const r_draw_palette* p = &c->palette;
-	r_theme(c, R_STYLE_TAB_BAR); r_theme_make_box(c);
-	r_theme(c, R_STYLE_TAB | R_STATE_HOVER);    r_theme_label_color(c, p->text);
-	r_theme(c, R_STYLE_TAB | R_STATE_SELECTED); r_theme_fill(c, p->selection_subtle, 0); r_theme_label_color(c, p->text_strong);
+	r_theme(c, R_STYLE_TAB_BAR); r_theme_build(c);
+	r_theme(c, R_STYLE_TAB | R_STATE_HOVER);    r_theme_label_color_auto(c, p->text);
+	r_theme(c, R_STYLE_TAB | R_STATE_SELECTED); r_theme_fill(c, p->selection_subtle, 0); r_theme_label_color_auto(c, p->text_strong);
 	r_theme(c, R_STYLE_TAB); r_theme_radius(c, 13); r_theme_padding(c, 12, 0); r_theme_label(c, p->text_dim, R_CENTER); r_theme_focus(c, R_FOCUS_RING);
-	r_theme_make_box(c); r_theme_apply_states(c, R_STATE_HOVER | R_STATE_SELECTED);
+	r_theme_build(c); r_theme_build_states(c, R_STATE_HOVER | R_STATE_SELECTED);
 }
 
 static void rich_text_styles(r_draw* c)
@@ -182,12 +182,12 @@ static void rich_text_styles(r_draw* c)
 	r_theme_label_color(c, 0xFFFFFFFF);
 	r_theme_text_outline(c, 2, p->primary);
 	r_theme_text_shadow(c, 0, 2, 2, r_rgba_f(0, 0, 0, 0.5f));
-	r_theme_make_box(c);
+	r_theme_build(c);
 	r_theme(c, RICH_SHADOWED);
 	r_theme_font(c, r_draw_get_font(c, 0, size, R_FONT_SEMIBOLD | R_FONT_SHAPED));
 	r_theme_label_color(c, p->primary);
 	r_theme_text_shadow(c, 1, 1, 1, r_rgba_f(0, 0, 0, p->dark ? 0.8f : 0.3f));
-	r_theme_make_box(c);
+	r_theme_build(c);
 }
 
 static void update_theme(r_sdl_frontend* f)
