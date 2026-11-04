@@ -137,8 +137,9 @@ rect r_next_keyed(r_layout_iter* s, int size, uint64_t key)
 
 rect r_next_fraction(r_layout_iter* s, float fraction)
 {
-	int len = stack_horizontal(s) ? s->start.w : s->start.h;
-	return r_next(s, (int)((len - s->spacing) * fraction));
+	int len = stack_horizontal(s) ? s->area.w : s->area.h;
+	if(s->count > 0) len -= s->spacing;
+	return r_next(s, MAX((int)((len + s->spacing) * fraction) - s->spacing, 0));
 }
 
 rect r_next_fit(r_layout_iter* s, int style, const char* text)

@@ -143,8 +143,10 @@ static void update_root_sizes(r_sdl_frontend* c)
     for(r_ui_list* l = c->context.chain_start; l != NULL; l = l->chain_next)
     if(l->ephemeral_parent == NULL && l->target == 0)
     {
-        l->root_area.w = (int)(w / c->draw.scale);
-        l->root_area.h = (int)(h / c->draw.scale);
+        int lw = (int)(w / c->draw.scale), lh = (int)(h / c->draw.scale);
+        if(lw != l->root_area.w || lh != l->root_area.h) l->resized = true;
+        l->root_area.w = lw;
+        l->root_area.h = lh;
         l->document_area = l->root_area;
     }
 }

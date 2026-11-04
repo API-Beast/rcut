@@ -441,6 +441,7 @@ r_ui_list* r_create_ui_list(r_context* c, uint64_t target, uint64_t root_id, int
 	l->target = target;
 	l->context = c;
 	l->root_area = (rect){0, 0, width, height, root_id};
+	l->resized = true;
 	l->document_area = l->root_area;
 	l->block_event_fallthrough = true;
 	l->needs_redraw = true;
@@ -639,6 +640,7 @@ void r_list_clear(r_ui_list* l)
 {
 	int np = l->frame_parity ^ 1;
 	l->frame_parity = np;
+	l->resized = false;
 
 	l->draw_items_last_frame       = l->draw_buffers[np ^ 1].base;
 	l->count_draw_items_last_frame = l->count_draw_items;

@@ -629,7 +629,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	t->bold   = r_draw_get_font(c, 0, fs, R_FONT_BOLD | R_FONT_SHAPED);
 	t->small  = r_draw_get_font(c, 0, fs - 1, R_FONT_SHAPED);
 	t->header = r_draw_get_font(c, 0, (fs * 9 + 3) / 7, R_FONT_BOLD | R_FONT_SHAPED);
-	c->clear_color = p->window;
+	c->clear_color = p->panel;
 	uint32_t checked = deepen(p->checked, 0.15f), value = deepen(p->value, 0.15f);
 
 	t->focus_ring = alpha(p->focus, dl(p, 0.75f, 0.55f));
@@ -693,6 +693,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_make_box(c);
 
 	r_theme(c, R_STYLE_WINDOW);
+	r_theme_fill(c, p->window, 0);
 	r_theme_make_box(c);
 
 	r_theme(c, R_STYLE_SEPARATOR | R_STATE_HOVER);

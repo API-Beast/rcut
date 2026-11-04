@@ -55,7 +55,6 @@ static char* files[] = { "notes.md", "budget-2026.xlsx", "holiday.jpg", "present
 static r_sdl_frontend* frontend;
 static uint64_t status_id;
 static bool dirty = true;
-static int built_w, built_h;
 
 static void set_status(const char* s) { snprintf(app.status, sizeof(app.status), "%s", s); r_damage_id(&frontend->context, status_id); }
 static void on_new(void)   { set_status("New file"); }
@@ -216,6 +215,7 @@ static void build(r_sdl_frontend* f)
 	r_ui_list* l = f->root;
 	r_context* c = &f->context;
 	r_list_clear(l);
+	r_panel(l, l->root_area, R_STYLE_WINDOW);
 
 	r_layout_iter window = r_stack(l, l->root_area, R_TOP);
 	window.spacing = 0;
@@ -228,7 +228,7 @@ static void build(r_sdl_frontend* f)
 	r_label_ex(l, r_shrink_sides(status, 12, 0, 12, 0), CAPTION, R_ICON_INFO, app.status);
 	r_layout_iter columns = r_stack(l, r_shrink_sides(r_remaining(&footer), 16, 12, 16, 12), R_LEFT);
 	columns.spacing = 16;
-	rect col_rects[3] = { r_next_fraction(&columns, 0.32f), r_next_fraction(&columns, 0.34f), r_remaining(&columns) };
+	rect col_rects[3] = { r_next_fraction(&columns, 0.32f), r_next_fraction(&columns, 0.5f), r_remaining(&columns) };
 	r_ui_list* page[3];
 
 	r_layout_iter col = column_begin(l, col_rects[0], &page[0]);
@@ -267,7 +267,7 @@ static void build(r_sdl_frontend* f)
 	row = r_row(&card, 22, R_LEFT);
 	char* qualities[] = { "Low", "Medium", "High" };
 	for(int i = 0; i < 3; i++)
-		r_radio(p, i < 2 ? r_next_fraction(&row, 0.33f) : r_remaining(&row), qualities[i], i, R_PTR(&app.quality));
+		r_radio(p, i < 2 ? r_next_fraction(&row, 1.0f / (3 - i)) : r_remaining(&row), qualities[i], i, R_PTR(&app.quality));
 	r_group_end(&card, &col);
 
 	card = card_begin(&col, "Advanced");
@@ -330,10 +330,10 @@ static void build(r_sdl_frontend* f)
 	card = card_begin(&col, "Display");
 	row = r_row(&card, 22, R_LEFT);
 	r_label_ex(p, r_next(&row, 88), CAPTION, R_ICON_NONE, "Volume");
-	r_slider(p, r_remaining(&row), 0, 100, 1, R_PTR(&app.volume));
+	r_slider_h(p, r_remaining(&row), 0, 100, 1, R_PTR(&app.volume));
 	row = r_row(&card, 22, R_LEFT);
 	r_label_ex(p, r_next(&row, 88), CAPTION, R_ICON_NONE, "Brightness");
-	r_slider(p, r_remaining(&row), 0, 1, 0, R_PTR(&app.brightness));
+	r_slider_h(p, r_remaining(&row), 0, 1, 0, R_PTR(&app.brightness));
 	r_slider_box(p, r_next(&card, 26), "Opacity", 0, 100, 1, R_PTR(&app.opacity));
 	r_slider_box(p, r_next(&card, 26), "Spacing", 0, 32, 0.5f, R_PTR(&app.spacing));
 	r_group_end(&card, &col);
@@ -446,8 +446,8 @@ static void build_dialog(r_sdl_frontend* f)
 
 static void rebuild(r_sdl_frontend* f)
 {
-	if(!dirty && f->root->root_area.w == built_w && f->root->root_area.h == built_h) return;
-	dirty = false; built_w = f->root->root_area.w; built_h = f->root->root_area.h;
+	if(!dirty && !f->root->resized) return;
+	dirty = false;
 	build(f);
 	if(dialog) build_dialog(f);
 }

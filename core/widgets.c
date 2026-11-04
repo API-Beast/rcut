@@ -486,9 +486,8 @@ static void slider_parts(rect r, int ts, bool vertical, float t, rect* track, re
 	}
 }
 
-void r_slider(r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding)
+static void slider(r_ui_list* l, rect r, bool vertical, float min, float max, float step, r_data_binding binding)
 {
-	bool vertical = r.h > r.w;
 	int ts = r_layout_default_size(l->context, R_STYLE_SLIDER | R_COMPONENT_THUMB);
 	int orient = vertical ? R_VARIANT_VERT : R_VARIANT_HORZ;
 	r_callback* cb = attach_slider(l, r, (struct slider_data){ binding, min, max, step, ts, vertical, r }, false);
@@ -498,6 +497,16 @@ void r_slider(r_ui_list* l, rect r, float min, float max, float step, r_data_bin
 	r_alignment from = vertical ? R_BOTTOM : R_LEFT;
 	r_drawable_fill (l, r_style(l, fill,  R_STYLE_SLIDER | R_COMPONENT_FILL  | orient), binding, min, max, track, from)->parent_id = r.id;
 	r_drawable_thumb(l, r_style(l, thumb, R_STYLE_SLIDER | R_COMPONENT_THUMB | orient), binding, min, max, r, from)->parent_id = r.id;
+}
+
+void r_slider_h(r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding)
+{
+	slider(l, r, false, min, max, step, binding);
+}
+
+void r_slider_v(r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding)
+{
+	slider(l, r, true, min, max, step, binding);
 }
 
 void r_slider_box(r_ui_list* l, rect r, const char* text, float min, float max, float step, r_data_binding binding)

@@ -75,7 +75,11 @@ Explanation:
 - r_remaining
 - r_aligned
 
-## 1.3 - Rectangle Cutting
+## 1.3 - Resizable UIs
+
+<-- Explain to move UI building into a seperate function and rebuild when the UI list is marked. -->
+
+## 1.4 - Rectangle Cutting
 
 <-- code example: panel with menu bar, status bar, main area, side bar
     rect main = ui->root_area;
@@ -90,10 +94,6 @@ Explanation:
 
 -->
 <-- screenshot -->
-
-## 1.4 - Resizable UIs
-
-<-- Explain to move UI building into a seperate function and rebuild when the UI list is marked. -->
 
 ## 1.5 - Scrollables & Tabs
 

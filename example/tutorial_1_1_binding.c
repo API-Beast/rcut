@@ -25,7 +25,7 @@ int main(void)
 	r_ui_list* ui = f->root;
 
 	r_label_value(ui, (rect){ 16, 16, 288, 24, .id = 1 }, "Volume: %.1f dB", R_PTR(&db));
-	r_slider(ui, (rect){ 16, 44, 288, 24, .id = 2 }, 0, 1, 0.01f, R_GETSET(.getter_f32 = get_gain, .setter_f32 = set_gain));
+	r_slider_h(ui, (rect){ 16, 44, 288, 24, .id = 2 }, 0, 1, 0.01f, R_GETSET(.getter_f32 = get_gain, .setter_f32 = set_gain));
 	r_slider_box(ui, (rect){ 16, 84, 288, 28, .id = 3 }, "Brightness", 0, 1, 0.01f, R_PTR(&brightness));
 	r_label_value(ui, (rect){ 16, 124, 288, 24, .id = 4 }, "Mode: %04o", R_PTR(&mode));
 	r_checkbox(ui, (rect){  16, 152,  90, 24, .id = 5 }, "Read",  R_BITFIELD(&mode, 5, 1));

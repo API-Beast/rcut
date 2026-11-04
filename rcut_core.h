@@ -363,6 +363,7 @@ struct r_ui_list
 	bool block_event_fallthrough:1; // If false, events get "bubbled up" to other r_ui_lists with the same target.
 	bool block_accelerator_mode:1; // If true, Alt will not enter accelerator mode while focus is inside this UI list.
 	bool needs_redraw:1;
+	bool resized:1; // Set when the root_area of a root list changed size, cleared by r_list_clear.
 	bool needs_ephemeral_sweep:1; // Is set to true when a ephemeral was marked to be deleted. This allows cleaning up ephemeral lists without regular list rebuilds.
 	bool is_marked_as_unused:1;
 	bool is_marked_as_to_delete:1;
@@ -576,6 +577,15 @@ uint64_t r_post_text       (r_context* r, uint64_t target, const char* str);
 uint64_t r_post_text_edit  (r_context* r, uint64_t target, const char* str, int start, int length);
 uint64_t r_post_key_input  (r_context* r, uint64_t target, int32_t keycode, int32_t scancode, uint32_t modifier_flags);
 uint64_t r_post_mouse_wheel(r_context* r, uint64_t target, float x, float y, float scroll_x, float scroll_y);
+
+// Some salts you can use freely. Don't worry any salt will do, you can also just write down a random number.
+enum r_salts {
+	R_SALT00 = 1009, R_SALT01 = 1013, R_SALT02 = 1019, R_SALT03 = 1021, R_SALT04 = 1031,
+	R_SALT05 = 1033, R_SALT06 = 1039, R_SALT07 = 1049, R_SALT08 = 1051, R_SALT09 = 1061,
+	R_SALT10 = 1063, R_SALT11 = 1069, R_SALT12 = 1087, R_SALT13 = 1091, R_SALT14 = 1093,
+	R_SALT15 = 1097, R_SALT16 = 1103, R_SALT17 = 1109, R_SALT18 = 1117, R_SALT19 = 1123,
+	R_SALT20 = 1129,
+};
 
 rect r_salt(rect r, uint64_t salt);
 void r_fill(r_alignment dir, rect target, rect** r, int num_rects); // The rectangles should be initialized with their minimum sizes before calling.
@@ -814,7 +824,8 @@ void r_on_click_f64    (r_ui_list* l, rect r, void (*on_click)(double), double v
 void r_on_click_ptr    (r_ui_list* l, rect r, void (*on_click)(void*), void* value);
 void r_on_click_ptr_i32(r_ui_list* l, rect r, void (*on_click)(void*, int32_t), void* ptr, int index);
 
-void r_slider    (r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding);
+void r_slider_h  (r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding);
+void r_slider_v  (r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding);
 void r_slider_box(r_ui_list* l, rect r, const char* text, float min, float max, float step, r_data_binding binding);
 void r_spinbox   (r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding);
 void r_progress  (r_ui_list* l, rect r, float fraction);
