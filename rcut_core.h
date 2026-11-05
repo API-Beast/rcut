@@ -94,6 +94,7 @@ enum r_style
     R_STYLE_DIALOG,
     R_STYLE_TAB_PAGE,     // Background of the content below tabs.
     R_STYLE_SEGMENTED,    // Joined choices, one is selected.
+    R_STYLE_IMAGE,        // Draws the r_image_buffer in r_drawable.data.
     R_STYLE_BASE_MASK = 0xFF,
     
     R_FLAG_VERTICAL   = R_BIT(0) << 8,  // Vertical scrollbar/slider/separator, horizontal by default.
@@ -259,6 +260,24 @@ typedef struct r_interact
 	struct r_dynamic_rect_data* dynamic;
 } r_interact;
 
+typedef enum r_image_upload
+{
+	R_IMAGE_UPLOAD_ONCE, // Upload to the cache once, then set to R_IMAGE_UPLOAD_FINISHED.
+	R_IMAGE_UPLOAD_ALWAYS, // Upload to the cache every frame, also causes it to be redrawn every frame.
+	R_IMAGE_UPLOAD_FINISHED,
+} r_image_upload;
+
+typedef struct r_image_buffer
+{
+	uint32_t* pixels; // Premultiplied ARGB
+	int w, h;
+	int stride; // stride in pixels
+	int upload; // Either R_IMAGE_UPLOAD_ONCE or R_IMAGE_UPLOAD_ALWAYS.
+	// Note that the software renderer references the pixel data without copying.
+
+	uint64_t handle; // Internal handle assigned by the render backend. Usually a cache handle.
+} r_image_buffer;
+
 typedef struct r_drawable
 {
 	rect r;
@@ -274,6 +293,7 @@ typedef struct r_drawable
 	void* layout_cache; // The actual positions of each glyph, mainly used for shaped text.
 	bool  wrap_label : 1;
 
+	void* data;
 	struct r_dynamic_rect_data* dynamic;
 } r_drawable;
 
@@ -503,7 +523,7 @@ struct r_context
 	void* userptr;
 };
 
-typedef enum
+typedef enum r_alignment
 {
 	R_BOTTOM     = (1 << 0),
 	R_V_CENTER   = (1 << 1),
@@ -656,6 +676,7 @@ static inline void r_style_measure_all(r_context* c, int style, const char* labe
 // Low level UI building
 r_drawable* r_style               (r_ui_list* l, rect r, int style);
 r_drawable* r_labeled             (r_ui_list* l, rect r, int style, const char* text);
+r_drawable* r_image               (r_ui_list* l, rect r, r_image_buffer* img);
 r_callback* r_attach_callback     (r_ui_list* l, rect r, r_event_type event, r_callback_fn* function);
 void        r_callback_set_data   (r_ui_list* l, r_callback* c, const void* data, int data_length);
 void        r_callback_share_data (r_ui_list* l, r_callback* dst, r_callback* src);

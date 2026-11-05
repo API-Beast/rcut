@@ -88,6 +88,25 @@ uint64_t __draw_cached(r_draw* c, uint64_t* handle, const uint32_t* pixels, int 
     return *handle;
 }
 
+void r_image_invalidate(r_draw* c, r_image_buffer* img)
+{
+    __draw_invalidate(c, &img->handle);
+    if(img->upload == R_IMAGE_UPLOAD_FINISHED) img->upload = R_IMAGE_UPLOAD_ONCE;
+}
+
+static void render_image(r_draw* c, r_image_buffer* img, rect r)
+{
+    if(!img || !img->pixels || img->w <= 0 || img->h <= 0 || !c->backend.cache_image_buffer) return;
+    if(img->upload != R_IMAGE_UPLOAD_FINISHED || !__draw_still_cached(c, &img->handle))
+    {
+        img->handle = c->backend.cache_image_buffer(c->backend.userptr, img);
+        if(!img->handle) return;
+        if(img->upload == R_IMAGE_UPLOAD_ONCE) img->upload = R_IMAGE_UPLOAD_FINISHED;
+    }
+    rect px = __draw_to_pixels(r, c->scale);
+    __draw_emit(c, img->handle, 0xFFFFFFFF, (r_frect){ 0, 0, img->w, img->h }, (r_frect){ px.x, px.y, px.w, px.h }, c->clip_px);
+}
+
 void r_draw_clear_cache(r_draw* c)
 {
     for(int i = 0; i < RCUT_DRAW_MAX_STYLEBOXES; i++)
@@ -385,6 +404,7 @@ void r_draw_render_drawable(r_draw* c, r_drawable* item)
     }
 
     int base_style = d->style & R_STYLE_BASE_MASK;
+    if(base_style == R_STYLE_IMAGE) { render_image(c, d->data, r); return; }
     bool content_only = base_style == R_STYLE_TEXT || base_style == R_STYLE_ICON;
     int style = content_only && d->outer_style ? (d->outer_style & ~R_FLAG_EMBEDDED) | (d->style & R_STATE_MASK) : d->style;
     int state = interaction_state(c, d) | (style & R_STATE_MASK);

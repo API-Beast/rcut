@@ -46,11 +46,12 @@ typedef struct r_draw_quad
 typedef struct r_draw_backend
 {
 	void* userptr;
-	uint64_t (*cache_argb)      (void* userptr, int w, int h, const uint32_t* pixels, int stride, bool permanent);
-	uint64_t (*cache_monochrome)(void* userptr, int w, int h, const uint8_t* pixels, int stride, bool permanent);
-	void     (*submit)          (void* userptr, const r_draw_quad* quads, int num_quads);
-	bool     (*is_cached)       (void* userptr, uint64_t handle);
-	void     (*invalidate_cache)(void* userptr, uint64_t handle);
+	uint64_t (*cache_argb)        (void* userptr, int w, int h, const uint32_t* pixels, int stride, bool permanent);
+	uint64_t (*cache_monochrome)  (void* userptr, int w, int h, const uint8_t* pixels, int stride, bool permanent);
+	uint64_t (*cache_image_buffer)(void* userptr, r_image_buffer* img);
+	void     (*submit)            (void* userptr, const r_draw_quad* quads, int num_quads);
+	bool     (*is_cached)         (void* userptr, uint64_t handle);
+	void     (*invalidate_cache)  (void* userptr, uint64_t handle);
 } r_draw_backend;
 
 typedef struct r_draw_atlas
@@ -382,6 +383,7 @@ void r_theme_text_shadow (r_draw* c, float x, float y, float blur, uint32_t colo
 void r_draw_set_scale(r_draw* c, float scale);
 
 void r_draw_clear_cache(r_draw* c);
+void r_image_invalidate(r_draw* c, r_image_buffer* img);
 
 r_draw_style_rule* r_draw_get_style_rule(r_draw* c, enum r_style key);
 r_draw_style_rule* r_draw_find_style_rule(r_draw* c, int style);

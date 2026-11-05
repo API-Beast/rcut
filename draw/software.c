@@ -1,20 +1,22 @@
 #include "internal.h"
 
-static bool     __sw_renderer_is_cached       (void* userptr, uint64_t handle);
-static void     __sw_renderer_invalidate_cache(void* userptr, uint64_t handle);
-static uint64_t __sw_renderer_cache_argb      (void* userptr, int w, int h, const uint32_t* pixels, int stride, bool permanent);
-static uint64_t __sw_renderer_cache_monochrome(void* userptr, int w, int h, const uint8_t* pixels, int stride, bool permanent);
-static void     __sw_renderer_submit          (void* userptr, const r_draw_quad* quads, int num_quads);
+static bool     __sw_renderer_is_cached         (void* userptr, uint64_t handle);
+static void     __sw_renderer_invalidate_cache  (void* userptr, uint64_t handle);
+static uint64_t __sw_renderer_cache_argb        (void* userptr, int w, int h, const uint32_t* pixels, int stride, bool permanent);
+static uint64_t __sw_renderer_cache_monochrome  (void* userptr, int w, int h, const uint8_t* pixels, int stride, bool permanent);
+static uint64_t __sw_renderer_cache_image_buffer(void* userptr, r_image_buffer* img);
+static void     __sw_renderer_submit            (void* userptr, const r_draw_quad* quads, int num_quads);
 
 r_draw_backend r_draw_software_backend(r_draw_software* sw)
 {
     return (r_draw_backend){
-        .userptr          = sw,
-        .cache_argb       = __sw_renderer_cache_argb,
-        .cache_monochrome = __sw_renderer_cache_monochrome,
-        .submit           = __sw_renderer_submit,
-        .is_cached        = __sw_renderer_is_cached,
-        .invalidate_cache = __sw_renderer_invalidate_cache,
+        .userptr            = sw,
+        .cache_argb         = __sw_renderer_cache_argb,
+        .cache_monochrome   = __sw_renderer_cache_monochrome,
+        .cache_image_buffer = __sw_renderer_cache_image_buffer,
+        .submit             = __sw_renderer_submit,
+        .is_cached          = __sw_renderer_is_cached,
+        .invalidate_cache   = __sw_renderer_invalidate_cache,
     };
 }
 
@@ -24,6 +26,7 @@ r_draw_backend r_draw_software_backend(r_draw_software* sw)
 static inline uint64_t entry_pos(uint64_t handle) { return handle & ((1ull << POS_BITS) - 1); }
 static inline int      entry_w  (uint64_t handle) { return (int)((handle >> 40) & 0xFFF); }
 static inline int      entry_h  (uint64_t handle) { return (int)(handle >> 52); }
+static inline bool     is_ext   (const void* p)    { return (uintptr_t)p & 1; }
 
 static bool __sw_renderer_is_cached(void* userptr, uint64_t handle)
 {
@@ -45,18 +48,25 @@ static uint32_t* sw_alloc(r_draw_software* sw, int w, int h, uint64_t n, uint64_
     return sw->cache + pos % sw->cache_size;
 }
 
-static void* sw_alloc_permanent(r_draw_software* sw, int w, int h, size_t bytes, uint64_t* handle)
+static int sw_permanent_slot(r_draw_software* sw)
 {
-    if(w > 4095 || h > 4095) return NULL;
     int slot = 0;
     while(slot < sw->num_permanent && sw->permanent[slot]) slot++;
     if(slot == sw->num_permanent)
     {
         void** grown = realloc(sw->permanent, (size_t)(sw->num_permanent + 1) * sizeof(void*));
-        if(!grown) return NULL;
+        if(!grown) return -1;
         sw->permanent = grown;
         sw->permanent[sw->num_permanent++] = NULL;
     }
+    return slot;
+}
+
+static void* sw_alloc_permanent(r_draw_software* sw, int w, int h, size_t bytes, uint64_t* handle)
+{
+    if(w > 4095 || h > 4095) return NULL;
+    int slot = sw_permanent_slot(sw);
+    if(slot < 0) return NULL;
     sw->permanent[slot] = malloc(bytes);
     if(sw->permanent[slot]) *handle = (uint64_t)slot | PERM_BIT | ((uint64_t)w << 40) | ((uint64_t)h << 52);
     return sw->permanent[slot];
@@ -67,7 +77,7 @@ static void __sw_renderer_invalidate_cache(void* userptr, uint64_t handle)
     r_draw_software* sw = userptr;
     uint64_t pos = entry_pos(handle);
     if(!(handle & PERM_BIT) || pos >= (uint64_t)sw->num_permanent) return;
-    free(sw->permanent[pos]);
+    if(!is_ext(sw->permanent[pos])) free(sw->permanent[pos]);
     sw->permanent[pos] = NULL;
 }
 
@@ -90,6 +100,22 @@ static uint64_t __sw_renderer_cache_monochrome(void* userptr, int w, int h, cons
     for(int y = 0; y < h; y++)
         memcpy(dst + y * w, pixels + y * stride, w);
     return handle ? handle | MONO_BIT : 0;
+}
+
+static uint64_t __sw_renderer_cache_image_buffer(void* userptr, r_image_buffer* img)
+{
+    r_draw_software* sw = userptr;
+    void* tagged = (void*)((uintptr_t)img | 1);
+    if(img->w > 4095 || img->h > 4095) return 0;
+    uint64_t slot = entry_pos(img->handle);
+    if(!(img->handle & PERM_BIT) || slot >= (uint64_t)sw->num_permanent || sw->permanent[slot] != tagged)
+    {
+        int s = sw_permanent_slot(sw);
+        if(s < 0) return 0;
+        sw->permanent[s] = tagged;
+        slot = (uint64_t)s;
+    }
+    return slot | PERM_BIT | ((uint64_t)img->w << 40) | ((uint64_t)img->h << 52);
 }
 
 static inline uint32_t mul_lanes(uint32_t x, uint32_t a)
@@ -122,18 +148,18 @@ static inline uint32_t over(uint32_t d, uint32_t s)
     return s + scale(d, 255 - a);
 }
 
-static inline uint32_t blend_texel(uint32_t d, const uint32_t* e, int ew, bool mono, int sx, int sy, uint32_t c)
+static inline uint32_t blend_texel(uint32_t d, const uint32_t* e, int es, bool mono, int sx, int sy, uint32_t c)
 {
     if(mono)
     {
-        uint32_t a = ((const uint8_t*)e)[sy * ew + sx];
+        uint32_t a = ((const uint8_t*)e)[sy * es + sx];
         return a ? over(d, a == 255 ? c : scale(c, a)) : d;
     }
-    uint32_t p = e[sy * ew + sx];
+    uint32_t p = e[sy * es + sx];
     return p ? over(d, c == 0xFFFFFFFF ? p : tint(p, c)) : d;
 }
 
-static void blit_transformed(r_draw_software* sw, const r_draw_quad* q, const uint32_t* e, int ew, int eh, bool mono)
+static void blit_transformed(r_draw_software* sw, const r_draw_quad* q, const uint32_t* e, int ew, int eh, int es, bool mono)
 {
     const r_draw_transform* t = q->transform;
     float m[2][3], inv[2][3];
@@ -160,7 +186,7 @@ static void blit_transformed(r_draw_software* sw, const r_draw_quad* q, const ui
             int sx = (int)(q->src.x + (u - q->dst.x) * kx), sy = (int)(q->src.y + (v - q->dst.y) * ky);
             sx = sx < 0 ? 0 : sx >= ew ? ew - 1 : sx;
             sy = sy < 0 ? 0 : sy >= eh ? eh - 1 : sy;
-            row[x - sw->x] = blend_texel(row[x - sw->x], e, ew, mono, sx, sy, q->color);
+            row[x - sw->x] = blend_texel(row[x - sw->x], e, es, mono, sx, sy, q->color);
         }
     }
 }
@@ -179,7 +205,9 @@ static void __sw_renderer_submit(void* userptr, const r_draw_quad* quads, int nu
         int ew = entry_w(q->handle), eh = entry_h(q->handle);
         bool mono = q->handle & MONO_BIT;
         const uint32_t* e = q->handle & PERM_BIT ? sw->permanent[entry_pos(q->handle)] : sw->cache + entry_pos(q->handle) % sw->cache_size;
-        if(q->transform) { blit_transformed(sw, q, e, ew, eh, mono); continue; }
+        int es = ew;
+        if(is_ext(e)) { const r_image_buffer* img = (const void*)((uintptr_t)e & ~(uintptr_t)1); e = img->pixels; es = img->stride; }
+        if(q->transform) { blit_transformed(sw, q, e, ew, eh, es, mono); continue; }
         float dx = q->dst.x - sw->x, dy = q->dst.y - sw->y;
         int x0 = MAX((int)ceilf(dx - 0.5f), 0), x1 = MIN((int)ceilf(dx + q->dst.w - 0.5f), sw->w);
         int y0 = MAX((int)ceilf(dy - 0.5f), 0), y1 = MIN((int)ceilf(dy + q->dst.h - 0.5f), sw->h);
@@ -198,7 +226,7 @@ static void __sw_renderer_submit(void* userptr, const r_draw_quad* quads, int nu
             int n = x1 - x0;
             if(mono)
             {
-                const uint8_t* row = (const uint8_t*)e + sy * ew;
+                const uint8_t* row = (const uint8_t*)e + sy * es;
                 for(int x = 0; x < n; x++)
                 {
                     uint32_t a = row[xs[x]];
@@ -207,7 +235,7 @@ static void __sw_renderer_submit(void* userptr, const r_draw_quad* quads, int nu
             }
             else
             {
-                const uint32_t* row = e + sy * ew;
+                const uint32_t* row = e + sy * es;
                 if(c == 0xFFFFFFFF) for(int x = 0; x < n; x++) d[x] = over(d[x], row[xs[x]]);
                 else                for(int x = 0; x < n; x++) { uint32_t p = row[xs[x]]; if(p) d[x] = over(d[x], tint(p, c)); }
             }
@@ -243,7 +271,7 @@ void r_draw_software_free(r_draw_software* sw)
     free(sw->buffer);
     free(sw->cache);
     free(sw->columns);
-    for(int i = 0; i < sw->num_permanent; i++) free(sw->permanent[i]);
+    for(int i = 0; i < sw->num_permanent; i++) if(!is_ext(sw->permanent[i])) free(sw->permanent[i]);
     free(sw->permanent);
     *sw = (r_draw_software){0};
 }
