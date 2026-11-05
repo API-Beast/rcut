@@ -365,7 +365,7 @@ void r_text_edit_ex(r_ui_list* l, rect r, char* buffer, int capacity, const char
 	r_style(l, r, style);
 	// The caret goes below the text so it never hides a glyph.
 	int styles[] = { style | R_COMPONENT_SELECTION, style | R_COMPONENT_SELECTION, style | R_COMPONENT_SELECTION, style | R_COMPONENT_CARET, R_STYLE_TEXT, R_STYLE_TEXT };
-	int outer[] = { 0, 0, 0, 0, style, style | R_VARIANT_DULL };
+	int outer[] = { 0, 0, 0, 0, style, style | R_VARIANT_TERTIARY };
 	void (*update[])(r_context* c, r_drawable* d) = { edit_selection_first, edit_selection_middle, edit_selection_last, edit_caret_update, edit_text_update, edit_placeholder_update };
 	for(int i = 0; i < COUNTOF(styles); i++)
 	{

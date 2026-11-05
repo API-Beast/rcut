@@ -165,8 +165,9 @@ r_draw_style_rule* r_draw_find_style_rule(r_draw* c, int style)
         R_STATE_FOCUS, R_STATE_HOVER | R_STATE_FOCUS, R_STATE_PRESSED | R_STATE_HOVER | R_STATE_FOCUS, R_STATE_MASK
     };
     static const uint32_t strip_structure[] = {
-        0, R_VARIANT_MASK, R_COMPONENT_MASK, R_VARIANT_MASK | R_COMPONENT_MASK,
-        R_STYLE_BASE_MASK, R_STYLE_BASE_MASK | R_COMPONENT_MASK, R_STYLE_BASE_MASK | R_COMPONENT_MASK | R_VARIANT_MASK
+        0, R_VARIANT_MASK, R_FLAG_MASK, R_VARIANT_MASK | R_FLAG_MASK,
+        R_COMPONENT_MASK, R_COMPONENT_MASK | R_VARIANT_MASK, R_COMPONENT_MASK | R_VARIANT_MASK | R_FLAG_MASK,
+        R_STYLE_BASE_MASK, R_STYLE_BASE_MASK | R_COMPONENT_MASK, R_STYLE_BASE_MASK | R_COMPONENT_MASK | R_VARIANT_MASK | R_FLAG_MASK
     };
     if(c->theme) __draw_theme_flush(c);
     uint32_t base = (uint32_t)style;
@@ -186,16 +187,26 @@ r_draw_style_rule* r_draw_find_style_rule(r_draw* c, int style)
     return rule;
 }
 
+static rect rule_inner_rect(r_draw* c, r_draw_style_rule* rule, rect outer)
+{
+    rect r = r_draw_stylebox_inner_rect(c, rule->bg_stylebox, outer);
+    return r_shrink_sides(r, rule->padding_x, rule->padding_y, rule->padding_x, rule->padding_y);
+}
+
 static rect __draw_calc_inner_rect(r_context* ctx, int style, rect outer)
 {
     r_draw_style_rule* rule = r_draw_find_style_rule(ctx->userptr, style);
-    return rule ? r_draw_stylebox_inner_rect(ctx->userptr, rule->bg_stylebox, outer) : outer;
+    return rule ? rule_inner_rect(ctx->userptr, rule, outer) : outer;
 }
 
 static rect __draw_calc_outer_rect(r_context* ctx, int style, rect* inner)
 {
     r_draw_style_rule* rule = r_draw_find_style_rule(ctx->userptr, style);
-    return rule ? r_draw_stylebox_outer_rect(ctx->userptr, rule->bg_stylebox, inner) : *inner;
+    if(!rule) return *inner;
+    rect padded = r_grow_sides(*inner, rule->padding_x, rule->padding_y, rule->padding_x, rule->padding_y);
+    rect outer = r_draw_stylebox_outer_rect(ctx->userptr, rule->bg_stylebox, &padded);
+    *inner = r_shrink_sides(padded, rule->padding_x, rule->padding_y, rule->padding_x, rule->padding_y);
+    return outer;
 }
 
 static rect __draw_measure_text(r_context* ctx, int style, const char* text, int len, int wrap_width)
@@ -375,8 +386,8 @@ void r_draw_render_drawable(r_draw* c, r_drawable* item)
 
     int base_style = d->style & R_STYLE_BASE_MASK;
     bool content_only = base_style == R_STYLE_TEXT || base_style == R_STYLE_ICON;
-    int style = content_only && d->outer_style ? d->outer_style | (d->style & R_STATE_MASK) : d->style;
-    int state = interaction_state(c, d);
+    int style = content_only && d->outer_style ? (d->outer_style & ~R_FLAG_EMBEDDED) | (d->style & R_STATE_MASK) : d->style;
+    int state = interaction_state(c, d) | (style & R_STATE_MASK);
     r_draw_style_rule* rule = r_draw_find_style_rule(c, style | state);
 
     if(!rule)
@@ -392,7 +403,7 @@ void r_draw_render_drawable(r_draw* c, r_drawable* item)
         r_draw_render_stylebox(c, rule->bg_stylebox, r);
     }
     if(d->text || d->icon)
-        render_content(c, rule, d, content_only ? r : r_draw_stylebox_inner_rect(c, rule->bg_stylebox, r), content_only ? r_grow(r, 1 + text_reach(rule)) : r);
+        render_content(c, rule, d, content_only ? r : rule_inner_rect(c, rule, r), content_only ? r_grow(r, 1 + text_reach(rule)) : r);
     if(!content_only)
     {
         r_draw_render_stylebox(c, rule->overlay, r);
@@ -474,7 +485,7 @@ static rect drawable_bounds(r_draw* c, r_ui_list* l, list_placement* p, r_drawab
     }
     else
     {
-        r_draw_style_rule* rule = r_draw_find_style_rule(c, d->outer_style ? d->outer_style | (d->style & R_STATE_MASK) : d->style);
+        r_draw_style_rule* rule = r_draw_find_style_rule(c, d->outer_style ? (d->outer_style & ~R_FLAG_EMBEDDED) | (d->style & R_STATE_MASK) : d->style);
         if(rule) r = r_grow(r, 1 + text_reach(rule));
     }
     if(l->use_transform_matrix) r = map_rect(p->lm, r);

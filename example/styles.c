@@ -22,19 +22,23 @@ static const preview to_display[] = {
     SECTION("Text"),
     ITEM(R_STYLE_HEADER, 0, 22, "Header"),
     ITEM(R_STYLE_LABEL, 0, 20, "Label"),
-    ITEM(R_STYLE_LABEL | R_VARIANT_DULL, 0, 20, "Dull label"),
-    ITEM(R_STYLE_LABEL | R_VARIANT_BOLD, 0, 20, "Bold label"),
+    ITEM(R_STYLE_LABEL | R_VARIANT_TERTIARY, 0, 20, "Dull label"),
+    ITEM(R_STYLE_LABEL | R_VARIANT_PRIMARY, 0, 20, "Bold label"),
 
     SECTION("Buttons"),
-    ITEM(R_STYLE_BUTTON | R_VARIANT_BOLD, 160, 0, "Primary"),
-    ITEM(R_STYLE_BUTTON | R_VARIANT_BOLD | R_STATE_HOVER, 160, 0, "Primary"),
-    ITEM(R_STYLE_BUTTON | R_VARIANT_BOLD | R_STATE_PRESSED, 160, 0, "Primary"),
+    ITEM(R_STYLE_BUTTON | R_VARIANT_PRIMARY, 160, 0, "Primary"),
+    ITEM(R_STYLE_BUTTON | R_VARIANT_PRIMARY | R_STATE_HOVER, 160, 0, "Primary"),
+    ITEM(R_STYLE_BUTTON | R_VARIANT_PRIMARY | R_STATE_PRESSED, 160, 0, "Primary"),
     ITEM(R_STYLE_BUTTON, 160, 0, "Button"),
     ITEM(R_STYLE_BUTTON | R_STATE_HOVER, 160, 0, "Button"),
     ITEM(R_STYLE_BUTTON | R_STATE_PRESSED, 160, 0, "Button"),
     ITEM(R_STYLE_BUTTON | R_STATE_DISABLED, 160, 0, "Button"),
-    ITEM(R_STYLE_BUTTON | R_VARIANT_DULL, 160, 0, "Flat"),
-    ITEM(R_STYLE_BUTTON | R_VARIANT_DULL | R_STATE_HOVER, 160, 0, "Flat"),
+    ITEM(R_STYLE_BUTTON | R_VARIANT_TERTIARY, 160, 0, "Tertiary"),
+    ITEM(R_STYLE_BUTTON | R_VARIANT_TERTIARY | R_STATE_HOVER, 160, 0, "Tertiary"),
+    ITEM(R_STYLE_BUTTON | R_VARIANT_FLAT, 160, 0, "Flat"),
+    ITEM(R_STYLE_BUTTON | R_VARIANT_FLAT | R_STATE_HOVER, 160, 0, "Flat"),
+    ITEM(R_STYLE_BUTTON | R_FLAG_EMBEDDED, 160, 0, "Embedded"),
+    ITEM(R_STYLE_BUTTON | R_FLAG_EMBEDDED | R_STATE_HOVER, 160, 0, "Embedded"),
     ITEM(R_STYLE_BUTTON | R_COMPONENT_ENDCAP_START, 80, 0, "Start"),
     ITEM(R_STYLE_BUTTON | R_COMPONENT_JOINED, 80, 0, "Joined"),
     ITEM(R_STYLE_BUTTON | R_COMPONENT_JOINED | R_STATE_TOGGLED, 80, 0, "Selected"),
@@ -44,12 +48,14 @@ static const preview to_display[] = {
     ITEM(R_STYLE_DROPDOWN, 160, 0, "Dropdown"),
     ITEM(R_STYLE_DROPDOWN | R_STATE_HOVER, 160, 0, "Dropdown"),
     ITEM(R_STYLE_DROPDOWN | R_STATE_TOGGLED, 160, 0, "Dropdown"),
+    ITEM(R_STYLE_DROPDOWN | R_FLAG_EMBEDDED, 160, 0, "Dropdown"),
 
     SECTION("Text fields"),
     ITEM(R_STYLE_INPUT, 200, 0, "Text"),
     ITEM(R_STYLE_INPUT | R_STATE_HOVER, 200, 0, "Text"),
     ITEM(R_STYLE_INPUT | R_STATE_FOCUS, 200, 0, "Text"),
-    ITEM(R_STYLE_INPUT | R_VARIANT_DULL, 200, 0, "Placeholder"),
+    ITEM(R_STYLE_INPUT | R_VARIANT_TERTIARY, 200, 0, "Placeholder"),
+    ITEM(R_STYLE_INPUT | R_VARIANT_FLAT, 200, 0, "Flat"),
     ITEM(R_STYLE_INPUT | R_COMPONENT_SELECTION, 60, 18, NULL),
     ITEM(R_STYLE_INPUT | R_COMPONENT_CARET, 2, 18, NULL),
     ITEM(R_STYLE_INPUT_MULTILINE_EDIT, 200, 64, "Multiple\nlines"),
@@ -61,8 +67,11 @@ static const preview to_display[] = {
     ITEM(R_STYLE_CHECKBOX, 18, 18, NULL),
     ITEM(R_STYLE_CHECKBOX | R_STATE_HOVER, 18, 18, NULL),
     ICON(R_STYLE_CHECKBOX | R_STATE_TOGGLED, 18, 18, R_ICON_CHECKED),
+    ITEM(R_STYLE_CHECKBOX | R_VARIANT_FLAT, 18, 18, NULL),
+    ICON(R_STYLE_CHECKBOX | R_VARIANT_FLAT | R_STATE_TOGGLED, 18, 18, R_ICON_CHECKED),
     ITEM(R_STYLE_RADIO, 18, 18, NULL),
     ICON(R_STYLE_RADIO | R_STATE_TOGGLED, 18, 18, R_ICON_MARKED),
+    ICON(R_STYLE_RADIO | R_VARIANT_FLAT | R_STATE_TOGGLED, 18, 18, R_ICON_MARKED),
     ITEM(R_STYLE_TOGGLE | R_COMPONENT_TRACK, 32, 18, NULL),
     ITEM(R_STYLE_TOGGLE | R_COMPONENT_TRACK | R_STATE_TOGGLED, 32, 18, NULL),
     ITEM(R_STYLE_TOGGLE | R_COMPONENT_THUMB, 14, 14, NULL),
@@ -96,7 +105,7 @@ static const preview to_display[] = {
     ITEM(R_STYLE_MENU_ITEM, 160, 26, "Open"),
     ITEM(R_STYLE_MENU_ITEM | R_STATE_HOVER, 160, 26, "Open"),
     ITEM(R_STYLE_MENU_ITEM | R_STATE_SELECTED, 160, 26, "Open"),
-    ITEM(R_STYLE_MENU_ITEM | R_VARIANT_DULL, 160, 26, "Ctrl+O"),
+    ITEM(R_STYLE_MENU_ITEM | R_VARIANT_TERTIARY, 160, 26, "Ctrl+O"),
 
     SECTION("Tabs and lists"),
     ITEM(R_STYLE_TAB_BAR, 200, 32, NULL),
@@ -140,7 +149,7 @@ void rebuild_ui(r_sdl_frontend* f)
         r_align(R_LEFT_CENTER, column, &box);
         r_drawable* d = p->text ? r_labeled(s, box, p->style, p->text) : r_style(s, box, p->style);
         d->icon = p->icon;
-        r_label_ex(s, r_remaining(&row), R_STYLE_LABEL | R_VARIANT_DULL, R_ICON_NONE, (char*)p->name);
+        r_label_ex(s, r_remaining(&row), R_STYLE_LABEL | R_VARIANT_TERTIARY, R_ICON_NONE, (char*)p->name);
     }
     s->document_area.h = rows.start.h - rows.area.h + 32;
     r_scroll_end(l, s);

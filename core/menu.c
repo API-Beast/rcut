@@ -212,7 +212,7 @@ static void menu_build(r_ui_list* p, r_ui_list* parent, rect anchor, const r_men
 	{
 		if(strcmp(items[i].label, "-") == 0) { h += sep_h; continue; }
 		label_w = MAX(label_w, r_measure(c, R_STYLE_MENU_ITEM, items[i].label).w);
-		if(items[i].shortcut) shortcut_w = MAX(shortcut_w, r_measure(c, R_STYLE_MENU_ITEM | R_VARIANT_DULL, items[i].shortcut).w);
+		if(items[i].shortcut) shortcut_w = MAX(shortcut_w, r_measure(c, R_STYLE_MENU_ITEM | R_VARIANT_TERTIARY, items[i].shortcut).w);
 		any_icon  |= items[i].icon || items[i].checked;
 		any_arrow |= items[i].submenu != NULL;
 		h += item_h;
@@ -261,9 +261,9 @@ static void menu_build(r_ui_list* p, r_ui_list* parent, rect anchor, const r_men
 		}
 		if(item->shortcut)
 		{
-			int sw = r_measure(c, R_STYLE_MENU_ITEM | R_VARIANT_DULL, item->shortcut).w;
+			int sw = r_measure(c, R_STYLE_MENU_ITEM | R_VARIANT_TERTIARY, item->shortcut).w;
 			rect sr = r_cut_px(R_RIGHT, &inner, sw, P460);
-			r_label_ex(p, sr, R_STYLE_MENU_ITEM | R_VARIANT_DULL | state, R_ICON_NONE, item->shortcut)->parent_id = ir.id;
+			r_label_ex(p, sr, R_STYLE_MENU_ITEM | R_VARIANT_TERTIARY | state, R_ICON_NONE, item->shortcut)->parent_id = ir.id;
 		}
 		r_label_ex(p, inner, R_STYLE_MENU_ITEM | state, R_ICON_NONE, item->label)->parent_id = ir.id;
 

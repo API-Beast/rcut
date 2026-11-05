@@ -174,6 +174,7 @@ typedef struct box
 	float    radius;
 	float    corners[4];
 	float    pad_x, pad_y;
+	uint32_t hover, focus;
 	shadow_desc shadow, shadow2, inset;
 } box;
 
@@ -229,8 +230,6 @@ static int box_slot(theme_state* t, box b)
 	d.border_thickness[3] = side_width(b.border_bottom_w, bw);
 	if(b.border_top && b.border_top == b.bg)       d.border_thickness[1] = 0;
 	if(b.border_bottom && b.border_bottom == (b.bg2 ? b.bg2 : b.bg)) d.border_thickness[3] = 0;
-	d.extra_padding[0] = d.extra_padding[2] = b.pad_x;
-	d.extra_padding[1] = d.extra_padding[3] = b.pad_y;
 
 	r_stylebox_set_bg_color(&d, b.bg);
 	if(b.bg2 && b.bg2 != b.bg)
@@ -278,7 +277,7 @@ static uint32_t deepen(uint32_t c, float a)
 }
 
 enum { OP_FILL, OP_SURFACE, OP_BORDER, OP_BORDER_COLOR, OP_UNDERLINE, OP_BEVEL, OP_RADIUS, OP_CORNERS, OP_PADDING, OP_SHADOW, OP_SHADOW2,
-	OP_NO_SHADOW, OP_INSET, OP_GLOW, OP_TINT, OP_LABEL, OP_LABEL_COLOR, OP_FONT, OP_ICON, OP_LAYOUT, OP_FOCUS, OP_TEXT_OUTLINE, OP_TEXT_SHADOW };
+	OP_NO_SHADOW, OP_INSET, OP_GLOW, OP_TINT, OP_HOVER, OP_LABEL, OP_LABEL_COLOR, OP_FONT, OP_ICON, OP_LAYOUT, OP_FOCUS, OP_TEXT_OUTLINE, OP_TEXT_SHADOW };
 
 static theme_state* theme(r_draw* c){ assert(c->theme && "load a theme first"); return c->theme; }
 
@@ -323,6 +322,7 @@ void r_theme_no_shadow(r_draw* c){ push(c, (theme_op){ OP_NO_SHADOW }); }
 void r_theme_inset(r_draw* c, float y, float blur, float opacity){ push(c, (theme_op){ OP_INSET, .f = {y, blur, opacity} }); }
 void r_theme_glow(r_draw* c, uint32_t color, float width){ push(c, (theme_op){ OP_GLOW, .f = {width}, .u = {color} }); }
 void r_theme_tint(r_draw* c, uint32_t color){ push(c, (theme_op){ OP_TINT, .u = {color} }); }
+void r_theme_hover(r_draw* c, uint32_t color){ push(c, (theme_op){ OP_HOVER, .u = {color} }); }
 void r_theme_label(r_draw* c, uint32_t color, r_alignment align){ push(c, (theme_op){ OP_LABEL, .u = {color, align} }); }
 void r_theme_label_color(r_draw* c, uint32_t color){ push(c, (theme_op){ OP_LABEL_COLOR, .u = {color}, .fixed = true }); }
 void r_theme_label_color_auto(r_draw* c, uint32_t color){ push(c, (theme_op){ OP_LABEL_COLOR, .u = {color} }); }
@@ -330,6 +330,7 @@ void r_theme_font(r_draw* c, r_draw_font* font){ push(c, (theme_op){ OP_FONT, .f
 void r_theme_icon(r_draw* c, uint32_t color, int size){ push(c, (theme_op){ OP_ICON, .u = {color, size} }); }
 void r_theme_layout(r_draw* c, int size, int spacing){ push(c, (theme_op){ OP_LAYOUT, .u = {size, spacing} }); }
 void r_theme_focus(r_draw* c, enum r_theme_focus ring){ push(c, (theme_op){ OP_FOCUS, .u = {ring} }); }
+void r_theme_focus_border(r_draw* c, uint32_t color){ push(c, (theme_op){ OP_FOCUS, .u = {R_FOCUS_BORDER, color} }); }
 void r_theme_text_outline(r_draw* c, float width, uint32_t color){ push(c, (theme_op){ OP_TEXT_OUTLINE, .f = {width}, .u = {color} }); }
 void r_theme_text_shadow(r_draw* c, float x, float y, float blur, uint32_t color){ push(c, (theme_op){ OP_TEXT_SHADOW, .f = {x, y, blur}, .u = {color} }); }
 
@@ -362,12 +363,13 @@ static void run(theme_state* t, box* b, r_draw_style_rule* r, const theme_op* o)
 		if(b->border_top) b->border_top = over_straight(b->border_top, u[0]);
 		if(b->border_bottom) b->border_bottom = over_straight(b->border_bottom, u[0]);
 		break;
+	case OP_HOVER:        b->hover = u[0]; break;
 	case OP_LABEL:        r->label_color = u[0]; r->label_align = (r_alignment)u[1]; break;
 	case OP_LABEL_COLOR:  r->label_color = u[0]; break;
 	case OP_FONT:         r->label_font = o->font; break;
 	case OP_ICON:         r->icon_color = u[0]; r->icon_size = (int)u[1]; break;
 	case OP_LAYOUT:       r->size = (int)u[0]; r->spacing = (int)u[1]; break;
-	case OP_FOCUS:        r->focus_overlay = u[0] == R_FOCUS_RING; break;
+	case OP_FOCUS:        r->focus_overlay = u[0]; b->focus = u[1]; break;
 	case OP_TEXT_OUTLINE: r->text_outline = f[0]; r->text_outline_color = u[0]; break;
 	case OP_TEXT_SHADOW:  r->text_shadow_x = f[0]; r->text_shadow_y = f[1]; r->text_shadow_blur = f[2]; r->text_shadow_color = u[0]; break;
 	}
@@ -381,7 +383,7 @@ static bool applies(int decl_key, int key)
 	if((decl_key & fields[i]) && (decl_key & fields[i]) != (key & fields[i]))
 		return false;
 
-	return !(decl_key & R_STATE_MASK & ~key);
+	return !(decl_key & (R_STATE_MASK | R_FLAG_MASK) & ~key);
 }
 
 static int order(int key)
@@ -389,12 +391,11 @@ static int order(int key)
 	static const int states[] = { R_STATE_TOGGLED, R_STATE_SELECTED, R_STATE_FOCUS, R_STATE_HOVER, R_STATE_PRESSED, R_STATE_DISABLED };
 	int o = 0;
 	for(int i = 0; i < COUNTOF(states); i++) if(key & states[i]) o |= 1 << i;
-	return o * 4 + !!(key & R_STYLE_BASE_MASK) + !!(key & R_VARIANT_MASK) + !!(key & R_COMPONENT_MASK);
+	return o * 16 + !!(key & R_STYLE_BASE_MASK) + 2 * !!(key & R_COMPONENT_MASK) + 4 * !!(key & R_VARIANT_MASK) + 8 * !!(key & R_FLAG_MASK);
 }
 
-static void make(theme_state* t, int key)
+static int collect(theme_state* t, int key, theme_decl** list)
 {
-	theme_decl* list[COUNTOF(t->decls)];
 	int n = 0;
 	for(int i = 0; i < t->num_decls; i++)
 	{
@@ -404,14 +405,37 @@ static void make(theme_state* t, int key)
 		for(; j > 0 && order(list[j - 1]->key) > order(d->key); j--) list[j] = list[j - 1];
 		list[j] = d;
 	}
+	return n;
+}
+
+static bool hover_only(const theme_decl* d)
+{
+	for(int i = 0; i < d->num_ops; i++) if(d->ops[i].type != OP_HOVER) return false;
+	return true;
+}
+
+static box shape(const box* b)
+{
+	box s = { .radius = b->radius };
+	memcpy(s.corners, b->corners, sizeof(s.corners));
+	return s;
+}
+
+static void make(theme_state* t, int key, bool hover)
+{
+	theme_decl* list[COUNTOF(t->decls)];
+	int n = collect(t, key | (hover ? R_STATE_HOVER : 0), list);
 	box b = {0};
 	r_draw_style_rule r = {0};
 	bool fixed_label = false;
 
+	uint32_t hover_color = 0;
 	for(int i = 0; i < n; i++)
 	for(int k = 0; k < list[i]->num_ops; k++)
 	{
 		const theme_op* o = &list[i]->ops[k];
+		if(o->type == OP_HOVER) { hover_color = o->u[0]; continue; }
+		if(!applies(list[i]->key, key)) continue;
 		run(t, &b, &r, o);
 		if(o->type == OP_LABEL || o->type == OP_LABEL_COLOR) fixed_label = o->fixed;
 	}
@@ -444,10 +468,19 @@ static void make(theme_state* t, int key)
 
 	if(r.focus_overlay)
 	{
-		box ring_box = { .radius = b.radius, .shadow = ring(t->focus_ring, 2) };
-		memcpy(ring_box.corners, b.corners, sizeof(b.corners));
-		r.focus_overlay = box_slot(t, ring_box);
+		box f = shape(&b);
+		if(r.focus_overlay == R_FOCUS_RING) f.shadow = ring(t->focus_ring, 2);
+		else { f.border_w = b.border_w > 0 ? b.border_w : 1; f.border = b.focus; }
+		r.focus_overlay = box_slot(t, f);
 	}
+	if(hover && hover_color)
+	{
+		box h = shape(&b);
+		h.bg = hover_color;
+		r.hover_overlay = box_slot(t, h);
+	}
+	r.padding_x = (int)roundf(b.pad_x);
+	r.padding_y = (int)roundf(b.pad_y);
 
 	r.style = key;
 	r.bg_stylebox = box_slot(t, b);
@@ -463,7 +496,7 @@ static void make_base(theme_state* t, int key)
 		r_draw_style_rule* r = hash_value_at(map, i);
 		if(map->keys[i] >= 0 && r->style != key && (r->style & ~R_STATE_MASK) == key) map->keys[i] = -2;
 	}
-	make(t, key);
+	make(t, key, false);
 }
 
 static void make_states(theme_state* t, int key, int states)
@@ -471,10 +504,13 @@ static void make_states(theme_state* t, int key, int states)
 	int declared = 0;
 	for(int i = 0; i < t->num_decls; i++)
 	{
-		int k = t->decls[i].key;
-		if(applies(k & ~R_STATE_MASK, key)) declared |= k & states & R_STATE_MASK;
+		theme_decl* d = &t->decls[i];
+		if(!applies(d->key & ~R_STATE_MASK, key)) continue;
+		declared |= d->key & states & R_STATE_MASK & (hover_only(d) ? ~R_STATE_HOVER : ~0);
 	}
-	for(int s = declared; s; s = (s - 1) & declared) make(t, key | s);
+	bool hover = states & R_STATE_HOVER;
+	if(hover) make(t, key, true);
+	for(int s = declared; s; s = (s - 1) & declared) make(t, key | s, hover);
 }
 
 static int cur_key(r_draw* c){ theme_state* t = theme(c); assert(t->cur); return t->cur ? t->cur->key : 0; }
@@ -482,7 +518,7 @@ static int cur_key(r_draw* c){ theme_state* t = theme(c); assert(t->cur); return
 void r_theme_build(r_draw* c)
 {
 	int key = cur_key(c);
-	if(key & R_STATE_MASK) make(c->theme, key);
+	if(key & R_STATE_MASK) make(c->theme, key, false);
 	else make_base(c->theme, key);
 }
 
@@ -545,7 +581,7 @@ static void text_field(r_draw* c, int key, r_alignment align)
 	r_theme_build(c);
 	r_theme_build_states(c, R_STATE_HOVER | R_STATE_FOCUS);
 
-	r_theme(c, key | R_VARIANT_DULL);
+	r_theme(c, key | R_VARIANT_TERTIARY);
 	r_theme_label_color_auto(c, c->palette.text_dim);
 	r_theme_build(c);
 
@@ -649,7 +685,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_build(c);
 
 	r_theme(c, R_STYLE_FALLBACK | R_STATE_HOVER);
-	r_theme_tint(c, p->hover_overlay);
+	r_theme_hover(c, p->hover_overlay);
 
 	r_theme(c, R_STYLE_FALLBACK | R_STATE_PRESSED);
 	r_theme_no_shadow(c);
@@ -667,11 +703,11 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme(c, R_STYLE_LABEL);
 	r_theme_build(c);
 
-	r_theme(c, R_STYLE_LABEL | R_VARIANT_DULL);
+	r_theme(c, R_STYLE_LABEL | R_VARIANT_TERTIARY);
 	r_theme_label_color_auto(c, p->text_dim);
 	r_theme_build(c);
 
-	r_theme(c, R_STYLE_LABEL | R_VARIANT_BOLD);
+	r_theme(c, R_STYLE_LABEL | R_VARIANT_PRIMARY);
 	r_theme_font(c, t->bold);
 	r_theme_label_color_auto(c, p->text_strong);
 	r_theme_build(c);
@@ -722,13 +758,10 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 			r_theme(c, style | joined[i]);
 			r_theme_padding(c, 0, 4);
 			r_theme_no_shadow(c);
-			r_theme_focus(c, R_FOCUS_NONE);
+			r_theme_focus_border(c, p->focus);
 
-			r_theme(c, style | joined[i] | R_STATE_FOCUS);
-			r_theme_border_color(c, p->focus);
-
-			r_theme(c, style | joined[i] | R_STATE_TOGGLED | R_STATE_FOCUS);
-			r_theme_border_color(c, alpha(p->accent_text, 0.8f));
+			r_theme(c, style | joined[i] | R_STATE_TOGGLED);
+			r_theme_focus_border(c, alpha(p->accent_text, 0.8f));
 		}
 
 		r_theme(c, style | R_COMPONENT_TRACK);
@@ -747,7 +780,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_focus(c, R_FOCUS_RING);
 	r_theme_build(c);
 	r_theme_build_states(c, button_states);
-	r_theme_build_joined(c, button_states | R_STATE_TOGGLED | R_STATE_FOCUS);
+	r_theme_build_joined(c, button_states | R_STATE_TOGGLED);
 
 	r_theme(c, R_STYLE_SEGMENTED);
 	raised(c);
@@ -755,20 +788,19 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_label(c, p->text, R_CENTER);
 	r_theme_focus(c, R_FOCUS_RING);
 	r_theme_build(c);
-	r_theme_build_joined(c, button_states | R_STATE_TOGGLED | R_STATE_FOCUS);
+	r_theme_build_joined(c, button_states | R_STATE_TOGGLED);
 
-	r_theme(c, R_STYLE_BUTTON | R_VARIANT_BOLD);
+	r_theme(c, R_STYLE_BUTTON | R_VARIANT_PRIMARY);
 	r_theme_fill(c, p->primary, deepen(p->primary, 0.12f));
 	r_theme_border_color(c, deepen(p->primary, 0.06f));
 	r_theme_label_color_auto(c, p->accent_text);
 	r_theme_build(c);
 	r_theme_build_states(c, button_states);
 
-	r_theme(c, R_STYLE_BUTTON | R_VARIANT_DULL);
-	r_theme_fill(c, 0, 0);
-	r_theme_border(c, 0, 0);
+	r_theme(c, R_STYLE_BUTTON | R_VARIANT_TERTIARY);
+	r_theme_fill(c, alpha(p->control, 0.5f), 0);
+	r_theme_border_color(c, alpha(p->border, 0.5f));
 	r_theme_no_shadow(c);
-	r_theme_padding(c, 8, 4);
 	r_theme_label_color_auto(c, p->text);
 	r_theme_build(c);
 	r_theme_build_states(c, button_states);
@@ -829,6 +861,13 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 		r_theme_layout(c, 18, 0);
 		r_theme_build(c);
 		r_theme_build_states(c, R_STATE_HOVER | R_STATE_TOGGLED);
+
+		r_theme(c, (round ? R_STYLE_RADIO : R_STYLE_CHECKBOX) | R_VARIANT_FLAT);
+		r_theme_border(c, 1, p->border_hover);
+
+		r_theme(c, (round ? R_STYLE_RADIO : R_STYLE_CHECKBOX) | R_VARIANT_FLAT | R_STATE_TOGGLED);
+		r_theme_fill(c, 0, 0);
+		r_theme_icon(c, checked, round ? 8 : 14);
 	}
 
 	r_theme(c, R_STYLE_TOGGLE | R_COMPONENT_TRACK);
@@ -921,7 +960,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_fill(c, alpha(p->highlight, dl(p, 0.22f, 0.14f)), 0);
 	r_theme_icon(c, 0, 0);
 
-	r_theme(c, R_STYLE_MENU_ITEM | R_VARIANT_DULL | R_STATE_SELECTED);
+	r_theme(c, R_STYLE_MENU_ITEM | R_VARIANT_TERTIARY | R_STATE_SELECTED);
 	r_theme_fill(c, 0, 0);
 
 	for(int i = 0; i < 2; i++)
@@ -933,7 +972,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 		r_theme_label_color_auto(c, p->accent_text);
 		r_theme_icon(c, 0, 0);
 
-		r_theme(c, R_STYLE_MENU_ITEM | R_VARIANT_DULL | state);
+		r_theme(c, R_STYLE_MENU_ITEM | R_VARIANT_TERTIARY | state);
 		r_theme_label_color_auto(c, alpha(p->accent_text, 0.8f));
 	}
 
@@ -945,7 +984,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_build(c);
 	r_theme_build_states(c, menu_states);
 
-	r_theme(c, R_STYLE_MENU_ITEM | R_VARIANT_DULL);
+	r_theme(c, R_STYLE_MENU_ITEM | R_VARIANT_TERTIARY);
 	r_theme_font(c, t->small);
 	r_theme_label(c, p->text_dim, R_RIGHT_CENTER);
 	r_theme_icon(c, 0, 0);
@@ -1051,4 +1090,37 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_padding(c, 20, 16);
 	r_theme_shadow(c, 1, 3, dl(p, 0.6f, 0.25f));
 	r_theme_build(c);
+
+	r_theme(c, R_VARIANT_FLAT);
+	r_theme_fill(c, 0, 0);
+	r_theme_border(c, 0, 0);
+	r_theme_no_shadow(c);
+
+	r_theme(c, R_FLAG_EMBEDDED);
+	r_theme_fill(c, 0, 0);
+	r_theme_border(c, 0, 0);
+	r_theme_no_shadow(c);
+
+	static const struct { int style, states; } flat[] = {
+		{ R_STYLE_BUTTON, R_STATE_HOVER | R_STATE_PRESSED }, { R_STYLE_DROPDOWN, R_STATE_HOVER | R_STATE_PRESSED | R_STATE_TOGGLED },
+		{ R_STYLE_SEGMENTED, 0 }, { R_STYLE_INPUT, R_STATE_HOVER | R_STATE_FOCUS }, { R_STYLE_INPUT_MULTILINE_EDIT, R_STATE_HOVER | R_STATE_FOCUS },
+		{ R_STYLE_SPINBOX, R_STATE_HOVER | R_STATE_FOCUS }, { R_STYLE_SLIDEBOX, R_STATE_HOVER }, { R_STYLE_CHECKBOX, R_STATE_HOVER | R_STATE_TOGGLED },
+		{ R_STYLE_RADIO, R_STATE_HOVER | R_STATE_TOGGLED }, { R_STYLE_TAB, R_STATE_HOVER | R_STATE_SELECTED }, { R_STYLE_TAB_PAGE, 0 },
+		{ R_STYLE_PANEL, 0 }, { R_STYLE_DIALOG, 0 }, { R_STYLE_TOOLTIP, 0 }, { R_STYLE_MENU_BG, 0 }, { R_STYLE_CONTEXT_MENU_BG, 0 },
+		{ R_STYLE_MENUBAR_BG, 0 },
+	};
+	for(int i = 0; i < COUNTOF(flat); i++)
+	{
+		r_theme_tweak(c, flat[i].style | R_VARIANT_FLAT);
+		r_theme_build(c);
+		r_theme_build_states(c, flat[i].states);
+	}
+
+	int embedded[] = { R_STYLE_BUTTON, R_STYLE_DROPDOWN };
+	for(int i = 0; i < COUNTOF(embedded); i++)
+	{
+		r_theme_tweak(c, embedded[i] | R_FLAG_EMBEDDED);
+		r_theme_build(c);
+		r_theme_build_states(c, R_STATE_HOVER | R_STATE_PRESSED | R_STATE_TOGGLED);
+	}
 }

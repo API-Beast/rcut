@@ -192,6 +192,7 @@ typedef struct r_draw_style_rule
 
 	int bg_stylebox;
 	int overlay;
+	int padding_x, padding_y;
 	r_draw_font* label_font;
 	uint32_t    label_color;
 	int icon_size;
@@ -346,7 +347,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* options);
 //
 //
 //
-enum r_theme_focus { R_FOCUS_NONE, R_FOCUS_RING };
+enum r_theme_focus { R_FOCUS_NONE, R_FOCUS_RING, R_FOCUS_BORDER };
 void r_theme             (r_draw* c, int key);
 void r_theme_tweak       (r_draw* c, int key);
 void r_theme_build       (r_draw* c);
@@ -355,6 +356,7 @@ void r_theme_build_joined(r_draw* c, int states);
 void r_theme_fill        (r_draw* c, uint32_t top, uint32_t bottom);
 void r_theme_surface     (r_draw* c, uint32_t color);
 void r_theme_tint        (r_draw* c, uint32_t color);
+void r_theme_hover       (r_draw* c, uint32_t color);
 void r_theme_border      (r_draw* c, float width, uint32_t color);
 void r_theme_border_color(r_draw* c, uint32_t color);
 void r_theme_underline   (r_draw* c, float width, uint32_t color);
@@ -374,6 +376,7 @@ void r_theme_font        (r_draw* c, r_draw_font* font);
 void r_theme_icon        (r_draw* c, uint32_t color, int size);
 void r_theme_layout      (r_draw* c, int size, int spacing);
 void r_theme_focus       (r_draw* c, enum r_theme_focus ring);
+void r_theme_focus_border(r_draw* c, uint32_t color);
 void r_theme_text_outline(r_draw* c, float width, uint32_t color);
 void r_theme_text_shadow (r_draw* c, float x, float y, float blur, uint32_t color);
 void r_draw_set_scale(r_draw* c, float scale);

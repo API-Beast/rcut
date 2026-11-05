@@ -115,11 +115,11 @@ static const r_menu_item menubar[] = {
 
 #define DIALOG_ID 0xD1A106
 #define CARD    (R_STYLE_PANEL | R_VARIANT_RAISED)
-#define CAPTION (R_STYLE_LABEL | R_VARIANT_DULL)
+#define CAPTION (R_STYLE_LABEL | R_VARIANT_TERTIARY)
 // Looks of the rich text, added to the theme by rich_text_styles.
-#define RICH_BOLD     (R_STYLE_LABEL | R_VARIANT_BOLD)
+#define RICH_BOLD     (R_STYLE_LABEL | R_VARIANT_PRIMARY)
 #define RICH_TITLE    (R_STYLE_HEADER | R_VARIANT_RAISED)
-#define RICH_SHADOWED (R_STYLE_LABEL | R_VARIANT_LISTITEM)
+#define RICH_SHADOWED (R_STYLE_LABEL | R_VARIANT_CUSTOM_1)
 
 static r_ui_list* dialog;
 static char* dialog_text = "Your display name is shown to other people in shared documents, comments and notifications.";
@@ -147,7 +147,7 @@ static void tree_set_open(int i, bool open) { app.tree_open[i] = open; dirty = t
 static r_layout_iter card_begin(r_layout_iter* column, char* title)
 {
 	r_layout_iter card = r_group_begin(column, CARD);
-	r_label_ex(column->l, r_next(&card, 18), R_STYLE_LABEL | R_VARIANT_BOLD, R_ICON_NONE, title);
+	r_label_ex(column->l, r_next(&card, 18), R_STYLE_LABEL | R_VARIANT_PRIMARY, R_ICON_NONE, title);
 	return card;
 }
 
@@ -237,7 +237,7 @@ static void build(r_sdl_frontend* f)
 	r_layout_iter card = card_begin(&col, "Buttons");
 	r_layout_iter row = r_row(&card, -1, R_LEFT);
 	rect primary = r_next_fraction(&row, 0.5f);
-	r_button_ex(p, primary, R_STYLE_BUTTON | R_VARIANT_BOLD, R_ICON_NONE, "Primary");
+	r_button_ex(p, primary, R_STYLE_BUTTON | R_VARIANT_PRIMARY, R_ICON_NONE, "Primary");
 	r_on_click(p, primary, on_click_primary);
 	r_tooltip(p, primary, "Increments the click counter. Long tooltips are word wrapped to keep them readable.");
 	rect secondary = r_remaining(&row);
@@ -245,7 +245,7 @@ static void build(r_sdl_frontend* f)
 	r_on_click(p, secondary, on_click_primary);
 	row = r_row(&card, -1, R_LEFT);
 	rect flat = r_next_fraction(&row, 0.5f);
-	r_button_ex(p, flat, R_STYLE_BUTTON | R_VARIANT_DULL, R_ICON_SETTINGS, "Flat");
+	r_button_ex(p, flat, R_STYLE_BUTTON | R_VARIANT_FLAT, R_ICON_SETTINGS, "Flat");
 	r_on_click(p, flat, on_click_primary);
 	r_button_ex(p, r_remaining(&row), R_STYLE_BUTTON | R_STATE_DISABLED, R_ICON_NONE, "Disabled");
 	row = r_row(&card, -1, R_LEFT);
@@ -323,7 +323,7 @@ static void build(r_sdl_frontend* f)
 	rect edit = r_next_fraction(&row, 0.5f), save = r_remaining(&row);
 	r_button_ex(p, edit, R_STYLE_BUTTON, R_ICON_EDIT, "Edit...");
 	r_on_click(p, edit, open_dialog);
-	r_button_ex(p, save, R_STYLE_BUTTON | R_VARIANT_BOLD, R_ICON_SAVE, "Save");
+	r_button_ex(p, save, R_STYLE_BUTTON | R_VARIANT_PRIMARY, R_ICON_SAVE, "Save");
 	r_on_click(p, save, on_save);
 	r_group_end(&card, &col);
 
@@ -381,7 +381,7 @@ static void build(r_sdl_frontend* f)
 	library = r_next(&col, library.h);
 	r_panel(p, library, CARD);
 	r_layout_iter lib = r_stack(p, r_inner(c, CARD, library), R_TOP);
-	r_label_ex(p, r_next(&lib, 18), R_STYLE_LABEL | R_VARIANT_BOLD, R_ICON_NONE, "Library");
+	r_label_ex(p, r_next(&lib, 18), R_STYLE_LABEL | R_VARIANT_PRIMARY, R_ICON_NONE, "Library");
 	rect top, bottom;
 	r_split(p, r_remaining(&lib), R_TOP, R_PTR(&app.split), 80, 80, &top, &bottom);
 	r_ui_list* pages[2];
@@ -438,7 +438,7 @@ static void build_dialog(r_sdl_frontend* f)
 	r_layout_iter bottom_up = r_stack(d, r_remaining(&form), R_BOTTOM);
 	r_layout_iter buttons = r_row(&bottom_up, -1, R_RIGHT);
 	rect ok = r_next(&buttons, 90), cancel = r_next(&buttons, 90);
-	r_button_ex(d, ok, R_STYLE_BUTTON | R_VARIANT_BOLD, R_ICON_NONE, "OK");
+	r_button_ex(d, ok, R_STYLE_BUTTON | R_VARIANT_PRIMARY, R_ICON_NONE, "OK");
 	r_on_click(d, ok, close_dialog);
 	r_button(d, cancel, "Cancel");
 	r_on_click(d, cancel, close_dialog);

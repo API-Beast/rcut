@@ -147,7 +147,7 @@ void r_separator(r_ui_list* l, rect r)
 	rect line = r;
 	if(r.w >= r.h) { line.h = 1; line.y = r.y + r.h / 2; }
 	else           { line.w = 1; line.x = r.x + r.w / 2; }
-	r_style(l, line, R_STYLE_SEPARATOR | (r.w >= r.h ? R_VARIANT_HORZ : R_VARIANT_VERT));
+	r_style(l, line, R_STYLE_SEPARATOR | (r.w >= r.h ? 0 : R_FLAG_VERTICAL));
 }
 
 struct toggle_data
@@ -489,7 +489,7 @@ static void slider_parts(rect r, int ts, bool vertical, float t, rect* track, re
 static void slider(r_ui_list* l, rect r, bool vertical, float min, float max, float step, r_data_binding binding)
 {
 	int ts = r_layout_default_size(l->context, R_STYLE_SLIDER | R_COMPONENT_THUMB);
-	int orient = vertical ? R_VARIANT_VERT : R_VARIANT_HORZ;
+	int orient = vertical ? R_FLAG_VERTICAL : 0;
 	r_callback* cb = attach_slider(l, r, (struct slider_data){ binding, min, max, step, ts, vertical, r }, false);
 	rect track, fill, thumb;
 	slider_parts(r, ts, vertical, 0, &track, &fill, &thumb);
@@ -740,16 +740,16 @@ void r_scroll_end(r_ui_list* parent, r_ui_list* v)
 	r_callback_set_data(parent, wheel, &data, sizeof(data));
 
 	if(!v->has_scrollbar) // Empty gutter.
-		r_style(parent, (rect){ track.x, vr.y, sbw, vr.h, track.id }, R_STYLE_SCROLLBAR | R_VARIANT_VERT | R_COMPONENT_TRACK);
+		r_style(parent, (rect){ track.x, vr.y, sbw, vr.h, track.id }, R_STYLE_SCROLLBAR | R_FLAG_VERTICAL | R_COMPONENT_TRACK);
 	else
 	{
-		r_style(parent, track, R_STYLE_SCROLLBAR | R_VARIANT_VERT | R_COMPONENT_TRACK);
-		r_drawable* thumb_d = r_drawable_thumb(parent, r_style(parent, thumb, R_STYLE_SCROLLBAR | R_VARIANT_VERT | R_COMPONENT_THUMB), R_PTR(&v->scroll_y), 0, data.max_scroll, track, R_TOP);
+		r_style(parent, track, R_STYLE_SCROLLBAR | R_FLAG_VERTICAL | R_COMPONENT_TRACK);
+		r_drawable* thumb_d = r_drawable_thumb(parent, r_style(parent, thumb, R_STYLE_SCROLLBAR | R_FLAG_VERTICAL | R_COMPONENT_THUMB), R_PTR(&v->scroll_y), 0, data.max_scroll, track, R_TOP);
 
 		for(int i = 0; cap && i < 2; i++)
 		{
 			rect button = { track.x, i ? track.y + track.h : vr.y, sbw, cap, r_salt(track, P610 + i).id };
-			r_style(parent, button, R_STYLE_SCROLLBAR | R_VARIANT_VERT | (i ? R_COMPONENT_ENDCAP_END : R_COMPONENT_ENDCAP_START))->icon = i ? R_ICON_DOWN : R_ICON_UP;
+			r_style(parent, button, R_STYLE_SCROLLBAR | R_FLAG_VERTICAL | (i ? R_COMPONENT_ENDCAP_END : R_COMPONENT_ENDCAP_START))->icon = i ? R_ICON_DOWN : R_ICON_UP;
 			struct scroll_button_data b = { v, i ? 1 : -1 };
 			r_callback* cb = r_attach_callback(parent, button, R_MOUSE_PRESSED, scroll_button);
 			r_callback_set_data(parent, cb, &b, sizeof(b));

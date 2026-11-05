@@ -96,22 +96,33 @@ enum r_style
     R_STYLE_SEGMENTED,    // Joined choices, one is selected.
     R_STYLE_BASE_MASK = 0xFF,
     
-    R_STATE_SELECTED  = R_BIT(0) << 8, // Selection in a menu.
-    R_STATE_PRESSED   = R_BIT(1) << 8,
-    R_STATE_HOVER     = R_BIT(2) << 8,
-    R_STATE_DISABLED  = R_BIT(3) << 8,
-    R_STATE_TOGGLED   = R_BIT(4) << 8,
-	R_STATE_FOCUS     = R_BIT(5) << 8,
-	// Up to R_BIT(15) << 8
-    R_STATE_MASK = 0xFFFF << 8,
+    R_FLAG_VERTICAL   = R_BIT(0) << 8,  // Vertical scrollbar/slider/separator, horizontal by default.
+    R_FLAG_EMBEDDED   = R_BIT(1) << 8,  // Background adapts to the surrounding element (list, menu, context menu).
+    R_FLAG_MASK       = 0xFF << 8,
 
-    R_VARIANT_FLAT            = 0 << 24, // Usually means without border and the element is just implied through icon + label
-    R_VARIANT_RAISED          = 1 << 24, // Raised panel, by default panels are inset.
-    R_VARIANT_HORZ            = 2 << 24, // Horizontal scrollbar/slider
-	R_VARIANT_VERT            = 3 << 24, // Vertical scrollbar/slider
-    R_VARIANT_BOLD            = 4 << 24, // Primary button - More colorful
-    R_VARIANT_DULL            = 5 << 24, // Tertiary button - Less color, flatter
-	R_VARIANT_LISTITEM        = 6 << 24, // UI element is part of a list, that usually implies having the same background as the list and a flat appearance.
+    R_STATE_SELECTED  = R_BIT(0) << 16, // Selection in a menu.
+    R_STATE_PRESSED   = R_BIT(1) << 16,
+    R_STATE_HOVER     = R_BIT(2) << 16,
+    R_STATE_DISABLED  = R_BIT(3) << 16,
+    R_STATE_TOGGLED   = R_BIT(4) << 16,
+    R_STATE_FOCUS     = R_BIT(5) << 16,
+    R_STATE_MASK      = 0xFF << 16,
+
+    R_VARIANT_FLAT            = 1 << 24, // Usually means without border and the element is just implied through icon + label
+    R_VARIANT_RAISED          = 2 << 24, // Raised panel, by default panels are inset.
+    R_VARIANT_PRIMARY         = 3 << 24, // More colorful
+    R_VARIANT_TERTIARY        = 4 << 24, // Less color, flatter
+    R_VARIANT_LIST_ITEM       = 5 << 24, // Embedded in a list, should use a appropriate background for it
+    R_VARIANT_MENU_ITEM       = 6 << 24, // Embedded in a menu, should blend into it
+    R_VARIANT_CUSTOM_1        = 7 << 24,
+    R_VARIANT_CUSTOM_2        = 8 << 24,
+    R_VARIANT_CUSTOM_3        = 9 << 24,
+    R_VARIANT_CUSTOM_4        = 10 << 24,
+    R_VARIANT_CUSTOM_5        = 11 << 24,
+    R_VARIANT_CUSTOM_6        = 12 << 24,
+    R_VARIANT_CUSTOM_7        = 13 << 24,
+    R_VARIANT_CUSTOM_8        = 14 << 24,
+    R_VARIANT_CUSTOM_9        = 15 << 24,
     R_VARIANT_MASK            = 0xF << 24,
 
 	R_COMPONENT_JOINED        = 1 << 28, // Part of an complex input, wedged inbetween endcaps.
