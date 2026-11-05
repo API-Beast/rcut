@@ -46,6 +46,7 @@ void     __draw_emit(r_draw* c, uint64_t handle, uint32_t color, r_frect src, r_
 bool     __draw_still_cached(r_draw* c, uint64_t* handle);
 uint64_t __draw_cached(r_draw* c, uint64_t* handle, const uint32_t* pixels, int w, int h);
 void     __draw_invalidate(r_draw* c, uint64_t* handle);
+void     __draw_render_stylebox_image(r_draw* c, int stylebox, rect outer, r_image_buffer* img);
 
 void     __draw_theme_flush(r_draw* c);
 

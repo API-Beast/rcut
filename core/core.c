@@ -760,7 +760,7 @@ r_drawable* r_style(r_ui_list* l, rect r, int style)
 r_drawable* r_image(r_ui_list* l, rect r, r_image_buffer* img)
 {
 	r_drawable* d = r_style(l, r, R_STYLE_IMAGE);
-	d->data = img;
+	d->image_data = img;
 	return d;
 }
 
@@ -917,7 +917,7 @@ r_drawable* r_drawable_custom(r_ui_list* l, r_drawable* d, r_data_binding bindin
 
 bool r_drawable_take_change(r_drawable* d, rect* damage)
 {
-	if((d->style & R_STYLE_BASE_MASK) == R_STYLE_IMAGE && d->data && ((r_image_buffer*)d->data)->upload != R_IMAGE_UPLOAD_FINISHED)
+	if(d->image_data && d->image_data->upload != R_IMAGE_UPLOAD_FINISHED)
 	{
 		*damage = d->r;
 		return true;

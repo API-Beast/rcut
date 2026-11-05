@@ -49,21 +49,69 @@ void r_stylebox_set_bg_vertical_gradient(r_draw_stylebox_def* box, uint32_t* sto
 static bool render_stylebox_exact(r_draw* c, int slot, r_frect dst, uint32_t color);
 static uint64_t stylebox_handle(r_draw* c, struct r_draw_stylebox* sb, bool bg);
 
-static void emit_9grid(r_draw* c, uint64_t handle, uint32_t color, int w, int h, const int sides[4], float scale, r_frect dst)
+static void emit_9grid(r_draw* c, uint64_t handle, uint32_t color, int w, int h, const int sides[4], float scale, r_frect dst, bool center, bool ring)
 {
     float sx[4] = { 0, sides[0], w - sides[2], w }, sy[4] = { 0, sides[1], h - sides[3], h };
     float dx[4] = { dst.x, dst.x + ceilf(sides[0] * scale), dst.x + dst.w - ceilf(sides[2] * scale), dst.x + dst.w };
     float dy[4] = { dst.y, dst.y + ceilf(sides[1] * scale), dst.y + dst.h - ceilf(sides[3] * scale), dst.y + dst.h };
     for(int j = 0; j < 3; j++)
     for(int i = 0; i < 3; i++)
+    if(i == 1 && j == 1 ? center : ring)
         __draw_emit(c, handle, color, (r_frect){ sx[i], sy[j], sx[i+1] - sx[i], sy[j+1] - sy[j] }, (r_frect){ dx[i], dy[j], dx[i+1] - dx[i], dy[j+1] - dy[j] }, c->clip_px);
+}
+
+static r_frect cover_src(float w, float h, r_frect dst)
+{
+    float fit = MAX(dst.w / w, dst.h / h);
+    r_frect src = { 0, 0, dst.w / fit, dst.h / fit };
+    src.x = (w - src.w) / 2;
+    src.y = (h - src.h) / 2;
+    return src;
+}
+
+static void emit_image(r_draw* c, r_image_buffer* img, r_frect dst)
+{
+    if(!img->pixels || img->w <= 0 || img->h <= 0 || dst.w <= 0 || dst.h <= 0 || !c->backend.cache_image_buffer) return;
+    if(img->upload != R_IMAGE_UPLOAD_FINISHED || !__draw_still_cached(c, &img->handle))
+    {
+        img->handle = c->backend.cache_image_buffer(c->backend.userptr, img);
+        if(!img->handle) return;
+        if(img->upload == R_IMAGE_UPLOAD_ONCE) img->upload = R_IMAGE_UPLOAD_FINISHED;
+    }
+    float w = img->w, h = img->h, s = c->scale;
+    if(img->mode == R_IMAGE_COVER) __draw_emit(c, img->handle, 0xFFFFFFFF, cover_src(w, h, dst), dst, c->clip_px);
+    else if(img->mode == R_IMAGE_CENTERED)
+    {
+        float x = floorf(dst.x + (dst.w - w * s) / 2), y = floorf(dst.y + (dst.h - h * s) / 2);
+        float x0 = MAX(x, dst.x), y0 = MAX(y, dst.y), x1 = MIN(x + w * s, dst.x + dst.w), y1 = MIN(y + h * s, dst.y + dst.h);
+        __draw_emit(c, img->handle, 0xFFFFFFFF, (r_frect){ (x0 - x) / s, (y0 - y) / s, (x1 - x0) / s, (y1 - y0) / s }, (r_frect){ x0, y0, x1 - x0, y1 - y0 }, c->clip_px);
+    }
+    else if(img->mode == R_IMAGE_REPEATED)
+    {
+        for(float y = 0; y < dst.h; y += h * s)
+        for(float x = 0; x < dst.w; x += w * s)
+        {
+            float tw = MIN(w * s, dst.w - x), th = MIN(h * s, dst.h - y);
+            __draw_emit(c, img->handle, 0xFFFFFFFF, (r_frect){ 0, 0, tw / s, th / s }, (r_frect){ dst.x + x, dst.y + y, tw, th }, c->clip_px);
+        }
+    }
+    else __draw_emit(c, img->handle, 0xFFFFFFFF, (r_frect){ 0, 0, w, h }, dst, c->clip_px);
 }
 
 void r_draw_render_stylebox(r_draw* c, int stylebox, rect outer)
 {
-    if(stylebox <= 0 || stylebox >= RCUT_DRAW_MAX_STYLEBOXES) return;
-    struct r_draw_stylebox* sb = &c->styleboxes[stylebox];
-    if(sb->w <= 0) return;
+    __draw_render_stylebox_image(c, stylebox, outer, NULL);
+}
+
+void __draw_render_stylebox_image(r_draw* c, int stylebox, rect outer, r_image_buffer* img)
+{
+    struct r_draw_stylebox* sb = stylebox > 0 && stylebox < RCUT_DRAW_MAX_STYLEBOXES ? &c->styleboxes[stylebox] : NULL;
+    if(!sb || sb->w <= 0)
+    {
+        rect px = __draw_to_pixels(outer, c->scale);
+        if(img) emit_image(c, img, (r_frect){ px.x, px.y, px.w, px.h });
+        return;
+    }
     float s = sb->source_scale > 0.0f ? sb->source_scale : 1.0f;
     float ps = c->scale;
     float x0 = roundf(roundf(outer.x * ps) - sb->side_expand[0] * ps / s), y0 = roundf(roundf(outer.y * ps) - sb->side_expand[1] * ps / s);
@@ -74,18 +122,15 @@ void r_draw_render_stylebox(r_draw* c, int stylebox, rect outer)
     if(corner > 1.0f) corner = 1.0f;
 
     uint32_t color = 0xFFFFFFFF;
-    if(corner < 1.0f && !sb->has_separate_background && !sb->permanent && render_stylebox_exact(c, stylebox, dst, color)) return;
-    if(sb->has_separate_background)
-    {
-        r_frect bg = { dst.x + sb->side_bg_inset[0] * ps / s, dst.y + sb->side_bg_inset[1] * ps / s,
-                       dst.w - (sb->side_bg_inset[0] + sb->side_bg_inset[2]) * ps / s, dst.h - (sb->side_bg_inset[1] + sb->side_bg_inset[3]) * ps / s };
-        float fit = MAX(bg.w / sb->bg_w, bg.h / sb->bg_h);
-        r_frect src = { 0, 0, bg.w / fit, bg.h / fit };
-        src.x = (sb->bg_w - src.w) / 2;
-        src.y = (sb->bg_h - src.h) / 2;
-        __draw_emit(c, stylebox_handle(c, sb, true), color, src, bg, c->clip_px);
-    }
-    emit_9grid(c, stylebox_handle(c, sb, false), color, sb->w, sb->h, sb->side_width, corner * ps / s, dst);
+    if(corner < 1.0f && !img && !sb->has_separate_background && !sb->permanent && render_stylebox_exact(c, stylebox, dst, color)) return;
+    r_frect bg = { dst.x + sb->side_bg_inset[0] * ps / s, dst.y + sb->side_bg_inset[1] * ps / s,
+                   dst.w - (sb->side_bg_inset[0] + sb->side_bg_inset[2]) * ps / s, dst.h - (sb->side_bg_inset[1] + sb->side_bg_inset[3]) * ps / s };
+    if(sb->has_separate_background) __draw_emit(c, stylebox_handle(c, sb, true), color, cover_src(sb->bg_w, sb->bg_h, bg), bg, c->clip_px);
+    uint64_t handle = stylebox_handle(c, sb, false);
+    emit_9grid(c, handle, color, sb->w, sb->h, sb->side_width, corner * ps / s, dst, true, !img);
+    if(!img) return;
+    emit_image(c, img, bg);
+    emit_9grid(c, handle, color, sb->w, sb->h, sb->side_width, corner * ps / s, dst, false, true);
 }
 
 rect r_draw_stylebox_inner_rect(r_draw* c, int slot, rect outer)

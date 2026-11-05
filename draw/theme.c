@@ -214,6 +214,7 @@ static int add_box(theme_state* t, const r_draw_stylebox_def* d)
 
 static int box_slot(theme_state* t, box b)
 {
+	if(!b.bg && !b.bg2 && b.border_w <= 0 && b.border_top_w <= 0 && b.border_bottom_w <= 0 && !b.shadow.color && !b.shadow2.color && !b.inset.color) return 0;
 	r_draw_stylebox_def d;
 	memset(&d, 0, sizeof(d));
 	float bw = b.border_w > 0 ? b.border_w : 0;
@@ -695,6 +696,9 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_fill(c, checked, 0);
 	r_theme_border_color(c, checked);
 	r_theme_label_color_auto(c, p->accent_text);
+
+	r_theme(c, R_STYLE_IMAGE);
+	r_theme_build(c);
 
 	// Text
 	r_theme(c, R_STYLE_TEXT);

@@ -94,7 +94,7 @@ enum r_style
     R_STYLE_DIALOG,
     R_STYLE_TAB_PAGE,     // Background of the content below tabs.
     R_STYLE_SEGMENTED,    // Joined choices, one is selected.
-    R_STYLE_IMAGE,        // Draws the r_image_buffer in r_drawable.data.
+    R_STYLE_IMAGE,        // No stylebox, only r_drawable.image_data.
     R_STYLE_BASE_MASK = 0xFF,
     
     R_FLAG_VERTICAL   = R_BIT(0) << 8,  // Vertical scrollbar/slider/separator, horizontal by default.
@@ -267,12 +267,21 @@ typedef enum r_image_upload
 	R_IMAGE_UPLOAD_FINISHED,
 } r_image_upload;
 
+typedef enum r_image_mode
+{
+	R_IMAGE_STRETCHED,
+	R_IMAGE_COVER,    // Preserves aspect ratio, cropped and centered.
+	R_IMAGE_CENTERED, // Native size, cropped if larger.
+	R_IMAGE_REPEATED, // Tiled at native size from the top left.
+} r_image_mode;
+
 typedef struct r_image_buffer
 {
 	uint32_t* pixels; // Premultiplied ARGB
 	int w, h;
 	int stride; // stride in pixels
-	int upload; // Either R_IMAGE_UPLOAD_ONCE or R_IMAGE_UPLOAD_ALWAYS.
+	uint8_t upload; // Either R_IMAGE_UPLOAD_ONCE or R_IMAGE_UPLOAD_ALWAYS.
+	uint8_t mode;   // r_image_mode
 	// Note that the software renderer references the pixel data without copying.
 
 	uint64_t handle; // Internal handle assigned by the render backend. Usually a cache handle.
@@ -293,7 +302,7 @@ typedef struct r_drawable
 	void* layout_cache; // The actual positions of each glyph, mainly used for shaped text.
 	bool  wrap_label : 1;
 
-	void* data;
+	r_image_buffer* image_data; // Drawn as background inside the stylebox border.
 	struct r_dynamic_rect_data* dynamic;
 } r_drawable;
 
