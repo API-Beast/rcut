@@ -45,6 +45,7 @@ enum r_sdl_flags
 {
 	R_SDL_RESIZABLE = 1 << 0,
 	R_SDL_VSYNC     = 1 << 1,
+	R_SDL_HIDDEN    = 1 << 2,
 };
 
 r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags);

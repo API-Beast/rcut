@@ -8,10 +8,11 @@ find_package(Threads REQUIRED)
 find_package(SDL3 REQUIRED)
 
 find_package(harfbuzz QUIET)
-find_package(PNG QUIET) # Required by harfbuzz-raster
 find_path(HB_MINI_DIR hb_mini.h hb_mini.c HINTS ${CMAKE_CURRENT_SOURCE_DIR}/.. PATH_SUFFIXES hb_mini)
+
 if(harfbuzz_FOUND AND PNG_FOUND AND NOT RCUT_FONT_BACKEND MATCHES "hb_mini|stb")
 	message(STATUS "Using harfbuzz")
+	find_package(PNG REQUIRED)
 	set(FONT_BACKEND RCUT_USE_HARFBUZZ)
 	set(FONT_LIBS harfbuzz::harfbuzz harfbuzz::harfbuzz-raster)
 elseif(HB_MINI_DIR AND NOT RCUT_FONT_BACKEND STREQUAL "stb")
@@ -36,16 +37,27 @@ add_library(rcut_sdl STATIC rcut_sdl.c)
 target_link_libraries(rcut_sdl PUBLIC rcut_draw SDL3::SDL3-static Threads::Threads)
 target_include_directories(rcut_sdl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(gallery example/gallery.c)
-target_link_libraries(gallery rcut_sdl)
-add_executable(styles_example example/styles.c)
-target_link_libraries(styles_example rcut_sdl)
-foreach(step tutorial_1_0_hello tutorial_1_1_binding tutorial_1_2_layout tutorial_1_3_resizable tutorial_1_4_cutting)
-	add_executable(${step} example/${step}.c)
-	target_link_libraries(${step} rcut_sdl)
-endforeach()
-add_executable(api_documentation docs/api_documentation.c)
+option(RCUT_BUILD_EXAMPLES "Build examples" OFF)
+if(RCUT_BUILD_EXAMPLES)
+	add_executable(gallery example/gallery.c)
+	target_link_libraries(gallery rcut_sdl)
+	add_executable(styles_example example/styles.c)
+	target_link_libraries(styles_example rcut_sdl)
+	foreach(step tutorial_1_0_hello tutorial_1_1_binding tutorial_1_2_layout tutorial_1_3_resizable tutorial_1_4_cutting)
+		add_executable(${step} example/${step}.c)
+		target_link_libraries(${step} rcut_sdl)
+	endforeach()
+endif()
+
+# docs target: Documentation
+add_executable(api_documentation EXCLUDE_FROM_ALL docs/api_documentation.c)
 target_link_libraries(api_documentation rcut_sdl)
+find_package(Python3 COMPONENTS Interpreter)
+add_custom_target(docs
+	COMMAND api_documentation ${CMAKE_CURRENT_SOURCE_DIR}/docs/api/img
+	COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/docs/gen_api.py
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	DEPENDS api_documentation)
 
 # A misaligned hot loop in the rasterization can lead to up to 40% performance loss.
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")

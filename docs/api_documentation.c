@@ -293,9 +293,11 @@ static const struct { const char* name; void (*fn)(r_sdl_frontend*, r_ui_list*);
 int main(int argc, char** argv)
 {
 	const char* dir = argc > 1 ? argv[1] : "docs/api/img";
+	SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "offscreen");
+	
 	for(size_t i = 0; i < sizeof(docs) / sizeof(docs[0]); i++)
 	{
-		r_sdl_frontend* f = r_sdl_init(docs[i].name, docs[i].w, docs[i].h, 0);
+		r_sdl_frontend* f = r_sdl_init(docs[i].name, docs[i].w, docs[i].h, R_SDL_HIDDEN);
 		if(!f) return 1;
 		docs[i].fn(f, f->root);
 		r_sdl_update(f);

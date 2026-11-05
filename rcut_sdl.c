@@ -11,11 +11,13 @@ r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags)
     
     SDL_WindowFlags sdl_flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
     if(flags & R_SDL_RESIZABLE) sdl_flags |= SDL_WINDOW_RESIZABLE;
+    if(flags & R_SDL_HIDDEN)    sdl_flags |= SDL_WINDOW_HIDDEN;
 
     SDL_Window* root_window = SDL_CreateWindow(title, w, h, sdl_flags);
     if(!root_window) { SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS); return NULL; }
     r_sdl_frontend* c = calloc(1, sizeof(r_sdl_frontend));
     c->windows[0].window = root_window;
+    c->windows[0].hidden = flags & R_SDL_HIDDEN;
 
     c->auto_scale = true;
     c->vsync = flags & R_SDL_VSYNC;
