@@ -7,7 +7,7 @@ headers = "".join(open(os.path.join(root, "..", h)).read() for h in ("rcut_core.
 
 def signatures(name):
     out = []
-    for m in re.finditer(r"^[^\n;#/{}]*\b" + name + r"(?:_\w+)?\s*\((?:[^();{]|\([^()]*\))*\)(?=\s*[;{])", headers, re.M):
+    for m in re.finditer(r"^[^\n;#/{}=]*\b" + name + r"(?:_\w+)?\s*\((?:[^();{]|\([^()]*\))*\)(?=\s*[;{])", headers, re.M):
         out.append(re.sub(r"\b(" + name + r"\w*) \(", r"\1(", re.sub(r"\s+", " ", m.group(0).replace("static inline ", "")), count=1) + ";")
     if not out: sys.exit("no declaration for " + name)
     return "\n".join(out)
@@ -78,6 +78,7 @@ while i < len(lines):
                 break
             else:
                 kind, name = k, args[0] if args else None
+                opaque = args[1:] == ["opaque"]
                 i += 1
                 break
         i += 1
@@ -98,6 +99,8 @@ while i < len(lines):
         e.update(code=signatures(name))
     elif kind == "define":
         e.update(code=defines(name))
+    elif kind == "struct" and opaque:
+        e.update(code="typedef struct %s %s;" % (name, name))
     elif kind in ("enum", "struct"):
         e.update(code=definition(kind, name))
     else:
@@ -106,19 +109,26 @@ while i < len(lines):
         if not re.search(r"\b%s\b" % p, e["code"]): sys.exit("%s: no parameter %s" % (e["name"], p))
     entries.append(e)
 
-shots = set(re.findall(r"^\s*DOC\((\w+)", src, re.M))
+shots = set(re.findall(r"^\s*DOC(?:_CLICK)?\((\w+)", src, re.M))
 for e in entries:
     for x in e.get("examples", []):
         if x["screenshot"] != (x["fn"] in shots):
             sys.exit("%s: %s" % (x["fn"], "missing in docs[]" if x["screenshot"] else "in docs[] but not @example screenshot"))
 
-anchors = {}
+fns = {e["name"] for e in entries if e["kind"] == "function"}
+def owner(n): return max((f for f in fns if n == f or n.startswith(f + "_")), key=len)
+for e in entries:
+    if e["kind"] == "function":
+        e["code"] = "\n".join(l for l in e["code"].split("\n") if owner(re.search(r"(\w+)\(", l).group(1)) == e["name"])
+
+anchors, used = {}, set()
 for e in entries:
     if e["kind"] == "section": continue
-    e["anchor"] = e["name"]
+    e["anchor"] = e["name"] if e["name"] not in used else e["kind"] + "-" + e["name"]
+    used.add(e["anchor"])
     names = re.findall(r"(\w+)\(", e["code"])
     if e["kind"] == "enum":
-        body = re.sub(r"//[^\n]*|/\*.*?\*/", "", e["code"][e["code"].index("{") + 1:e["code"].rindex("}")], flags=re.S)
+        body = re.sub(r"//[^\n]*|/\*.*?\*/|^[ \t]*#[^\n]*", "", e["code"][e["code"].index("{") + 1:e["code"].rindex("}")], flags=re.S | re.M)
         names = [m.group(1) for m in (re.match(r"\s*([A-Za-z_]\w*)", p) for p in body.split(",")) if m]
     for n in [e["name"]] + names:
         anchors.setdefault(n, e)
@@ -182,7 +192,7 @@ for e in entries:
     if e["kind"] == "section":
         modules.setdefault(mod, []).append("<h2><a name=\"%s\"></a>%s</h2>\n%s" % (e["anchor"], e["name"], text("\n".join(e["desc"]), mod)))
         continue
-    out = "<h3><a name=\"%s\"></a>%s</h3>\n" % (e["name"], e["name"])
+    out = "<h3><a name=\"%s\"></a>%s</h3>\n" % (e["anchor"], e["name"])
     out += code(e["code"], mod, e, "sig") + "\n" + text("\n".join(e["desc"]), mod)
     if e["params"]:
         out += "<table class=\"params\"><tr><th>Parameter</th><th></th></tr>\n"
