@@ -355,21 +355,11 @@ rect r_with_margins(r_context* c, int style, rect outer)
 	return result;
 }
 
-rect r_measure_wrapped(r_context* c, int style, const char* text, int wrap_width)
-{
-	if(!text) return (rect){0};
-	if(c->interface.measure_text)
-		return c->interface.measure_text(c, style, text, -1, wrap_width);
-	rect r = r_measure_n(c, style, text, -1);
-	if(wrap_width > 0 && r.w > wrap_width) { r.h *= (r.w + wrap_width - 1) / wrap_width; r.w = wrap_width; }
-	return r;
-}
-
 rect r_measure_n(r_context* c, int style, const char* text, int len)
 {
 	if(!text) return (rect){0};
 	if(c->interface.measure_text)
-		return c->interface.measure_text(c, style, text, len, 0);
+		return c->interface.measure_text(c, style, text, len);
 	if(len < 0) len = (int)strlen(text);
 	int lines = 1, w = 0, max_w = 0;
 	for(int i = 0; i < len; i++)
@@ -396,7 +386,7 @@ rect r_measure_ex(r_context* c, int style, int icon, const char* text)
 	return (rect){.w = i.w + gap + t.w, .h = MAX(i.h, t.h)};
 }
 
-int r_break_text(r_context* c, int style, const char* text, int len, int width, bool force, int* w)
+int break_text(r_context* c, int style, const char* text, int len, int width, bool force, int* w)
 {
 	if(c->interface.break_text) return c->interface.break_text(c, style, text, len, width, force, w);
 	int i = 0, x = 0, end = 0;
@@ -411,19 +401,4 @@ int r_break_text(r_context* c, int style, const char* text, int len, int width, 
 	}
 	*w = x;
 	return end;
-}
-
-int r_text_index_at(r_context* c, int style, const char* text, int x)
-{
-	int best = 0, best_dist = x < 0 ? -x : x;
-	int i = 0;
-	while(text[i])
-	{
-		i = utf8_next(text, i);
-		int w = r_measure_n(c, style, text, i).w;
-		int d = w - x; if(d < 0) d = -d;
-		if(d < best_dist) { best = i; best_dist = d; }
-		if(w > x) break;
-	}
-	return best;
 }

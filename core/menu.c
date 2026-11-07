@@ -78,16 +78,20 @@ static bool tooltip_mouse_hover(const r_event* e, r_callback* self)
 	r_ui_list* p = r_popup(e->ui_list, self->parent->r, R_POPUP_TOOLTIP, P400);
 	if(p->count_draw_items == 0)
 	{
-		char* text = r_store(p, self->data, self->size);
-		rect inner = r_measure_wrapped(c, R_STYLE_TOOLTIP, text, 320);
+		r_drawable* bg = r_style(p, (rect){0}, R_STYLE_TOOLTIP);
+		r_layout_iter it = r_stack(p, (rect){0, 0, 320, 100000, p->root_area.id}, R_TOP);
+		r_layout_iter flow = r_flow_begin(&it, R_STYLE_TOOLTIP, R_LEFT_CENTER);
+		r_text(&flow, 0, self->data);
+		r_flow_end(&flow, &it);
+		rect inner = {0};
+		for(int i = 1; i < p->count_draw_items; i++) inner = rect_expand(inner, p->draw_items[i].r);
 		rect outer = r_outer(c, R_STYLE_TOOLTIP, &inner);
 		rect cursor = {.x = (int)e->list_mouse_x, .y = (int)e->list_mouse_y, .w = 14, .h = 22}; // Roughly the size of an arrow pointer.
 		outer = r_popup_place(e->ui_list, cursor, outer.w, outer.h, R_RIGHT);
 		outer.id = p->root_area.id;
-		p->root_area = outer;
-		r_drawable* d = r_style(p, outer, R_STYLE_TOOLTIP);
-		d->text = text;
-		d->wrap_label = true;
+		p->root_area = bg->r = outer;
+		inner = r_inner(c, R_STYLE_TOOLTIP, outer);
+		for(int i = 1; i < p->count_draw_items; i++) p->draw_items[i].r = r_offset(p->draw_items[i].r, inner.x, inner.y);
 	}
 	r_list_set_visibility(p, true);
 	return true;

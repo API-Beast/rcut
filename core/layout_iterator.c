@@ -1,7 +1,6 @@
 #include "internal.h"
 
 static inline bool stack_horizontal(r_layout_iter* s) { return (s->dir & (R_LEFT | R_RIGHT)) != 0; }
-static inline bool is_flow(r_layout_iter* s) { return s->dir == R_TOP_LEFT; }
 
 int r_layout_default_size(r_context* c, int style)
 {
@@ -49,12 +48,21 @@ static void flow_newline(r_layout_iter* s, int min_h)
 	if(l->draw_items[i].style == R_STYLE_TEXT && !l->draw_items[i].parent_id)
 		text_h = MAX(text_h, l->draw_items[i].r.h);
 
+	int dx = s->dir & R_RIGHT ? s->area.w : s->dir & R_H_CENTER ? s->area.w / 2 : 0, dy = 0;
+	uint64_t root = 0;
 	for(int i = s->line_first; i < l->count_draw_items; i++)
 	{
 		r_drawable* d = &l->draw_items[i];
-		if(d->parent_id) continue;
-		if(d->style == R_STYLE_TEXT) d->r.y = s->area.y + (h - text_h) / 2 + text_h - d->r.h;
-		if(d->style == R_STYLE_ICON) d->r.y = s->area.y + (h - d->r.h) / 2;
+		d->r.x += dx;
+		if(!d->parent_id)
+		{
+			bool text = d->style == R_STYLE_TEXT;
+			int uh = text ? text_h : d->r.h;
+			int y = s->area.y + (s->dir & R_TOP ? 0 : s->dir & R_BOTTOM ? h - uh : (h - uh) / 2);
+			dy = (text ? y + text_h - d->r.h : y) - d->r.y;
+			root = d->r.id;
+		}
+		if(!d->parent_id || d->parent_id == root) d->r.y += dy;
 	}
 	s->area = (rect){ s->start.x, s->area.y + h, s->start.w, s->area.h - h, s->area.id };
 	s->line_h = 0;
@@ -67,7 +75,7 @@ static rect flow_item(r_layout_iter* s, int w, int h)
 	s->count++;
 	s->area.x += w; s->area.w -= w;
 	s->line_h = MAX(s->line_h, h);
-	return r;
+	return s->last = r;
 }
 
 static rect flow_next(r_layout_iter* s, int w, int h)
@@ -76,10 +84,11 @@ static rect flow_next(r_layout_iter* s, int w, int h)
 	return flow_item(s, w, h);
 }
 
-r_layout_iter r_flow_begin(r_layout_iter* parent, int style)
+r_layout_iter r_flow_begin(r_layout_iter* parent, int style, r_alignment align)
 {
 	r_layout_iter s = r_group_begin(parent, 0);
-	s.dir = R_TOP_LEFT;
+	s.dir = align;
+	s.type = R_LAYOUT_FLOW;
 	s.style = style;
 	s.size = r_measure(parent->l->context, style, "").h;
 	s.spacing = 0;
@@ -96,7 +105,7 @@ void r_text(r_layout_iter* s, int style, const char* text)
 	{
 		if(text[pos] == '\n') { flow_newline(s, h); pos++; continue; }
 		bool line_empty = s->area.x == s->start.x;
-		int w, n = r_break_text(l->context, style, text + pos, len - pos, s->area.w, line_empty, &w);
+		int w, n = break_text(l->context, style, text + pos, len - pos, s->area.w, line_empty, &w);
 		if(n <= 0)
 		{
 			if(line_empty) break;
@@ -119,20 +128,25 @@ rect r_flow_end(r_layout_iter* s, r_layout_iter* parent)
 
 rect r_next(r_layout_iter* s, int size)
 {
-	if(is_flow(s)) return flow_next(s, size < 0 ? s->size : size, s->size);
+	if(s->type == R_LAYOUT_FLOW) return flow_next(s, size < 0 ? s->size : size, s->size);
 	if(s->count > 0) r_cut_px(s->dir, &s->area, s->spacing, 0);
 	if(size < 0) size = s->size;
 	rect r = r_cut_px(s->dir, &s->area, size, 0);
 	r.id = stack_id(s, P800);
 	s->count++;
-	return r;
+	return s->last = r;
 }
 
 rect r_next_keyed(r_layout_iter* s, int size, uint64_t key)
 {
 	rect r = r_next(s, size);
 	r.id = xxhash64(s->start.id, key, P800, 1);
-	return r;
+	return s->last = r;
+}
+
+rect r_last(r_layout_iter* s)
+{
+	return s->last;
 }
 
 rect r_next_fraction(r_layout_iter* s, float fraction)
@@ -151,24 +165,24 @@ rect r_next_fit_ex(r_layout_iter* s, int style, int icon, const char* text)
 {
 	rect inner = r_measure_ex(s->l->context, style, icon, text);
 	rect outer = r_outer(s->l->context, style, &inner);
-	if(is_flow(s)) return flow_next(s, outer.w, outer.h);
+	if(s->type == R_LAYOUT_FLOW) return flow_next(s, outer.w, outer.h);
 	return r_next(s, stack_horizontal(s) ? outer.w : outer.h);
 }
 
 rect r_remaining(r_layout_iter* s)
 {
-	if(is_flow(s)) return flow_item(s, s->area.w, s->size);
+	if(s->type == R_LAYOUT_FLOW) return flow_item(s, s->area.w, s->size);
 	if(s->count > 0) r_cut_px(s->dir, &s->area, s->spacing, 0);
 	rect r = s->area;
 	r.id = stack_id(s, P800);
 	s->count++;
 	r_cut_px(s->dir, &s->area, stack_horizontal(s) ? s->area.w : s->area.h, 0);
-	return r;
+	return s->last = r;
 }
 
 void r_gap(r_layout_iter* s, int size)
 {
-	if(is_flow(s)) { s->area.x += size; s->area.w -= size; return; }
+	if(s->type == R_LAYOUT_FLOW) { s->area.x += size; s->area.w -= size; return; }
 	r_cut_px(s->dir, &s->area, size, 0);
 }
 

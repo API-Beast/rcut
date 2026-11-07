@@ -240,4 +240,6 @@ static inline bool is_descendant(r_ui_list* l, r_ui_list* ancestor)
 	return false;
 }
 
+int break_text(r_context* c, int style, const char* text, int len, int width, bool force, int* w);
+
 #endif

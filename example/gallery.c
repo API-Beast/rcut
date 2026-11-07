@@ -127,8 +127,7 @@ static char* dialog_text = "Your display name is shown to other people in shared
 static void open_dialog(void)
 {
 	if(dialog) return;
-	int text_h = r_measure_wrapped(&frontend->context, CAPTION, dialog_text, 380 - 40).h;
-	dialog = r_sdl_dialog(frontend, DIALOG_ID, 380, 150 + text_h, "Edit profile");
+	dialog = r_sdl_dialog(frontend, DIALOG_ID, 380, 190, "Edit profile");
 	dirty = true;
 }
 
@@ -339,7 +338,7 @@ static void build(r_sdl_frontend* f)
 	r_group_end(&card, &col);
 
 	card = card_begin(&col, "Storage");
-	struct { char* name; float used; } disks[] = { { "Documents", 0.72f }, { "Photos", 0.35f }, { "Cache", 0.18f } };
+	static struct { char* name; float used; } disks[] = { { "Documents", 0.72f }, { "Photos", 0.35f }, { "Cache", 0.18f } };
 	static char percent[3][16];
 	for(int i = 0; i < 3; i++)
 	{
@@ -349,13 +348,13 @@ static void build(r_sdl_frontend* f)
 		row = r_row(&disk, 20, R_RIGHT);
 		r_label_ex(p, r_next(&row, 40), CAPTION, R_ICON_NONE, percent[i]);
 		r_label(p, r_remaining(&row), disks[i].name);
-		r_progress(p, r_next(&disk, 6), disks[i].used);
+		r_progress(p, r_next(&disk, 6), 0, 1, R_PTR(&disks[i].used));
 		r_group_end(&disk, &card);
 	}
 	r_group_end(&card, &col);
 
 	card = card_begin(&col, "Rich text");
-	r_layout_iter text = r_flow_begin(&card, R_STYLE_LABEL);
+	r_layout_iter text = r_flow_begin(&card, R_STYLE_LABEL, R_LEFT_CENTER);
 	r_text(&text, RICH_TITLE, "Outlined Title\n");
 	r_text(&text, 0, "Text flows through ");
 	r_text(&text, RICH_BOLD, "bold");
@@ -430,9 +429,10 @@ static void build_dialog(r_sdl_frontend* f)
 {
 	r_ui_list* d = dialog;
 	rect area = r_dialog_begin(d);
-	int text_h = r_measure_wrapped(&f->context, CAPTION, dialog_text, area.w).h;
 	r_layout_iter form = r_stack(d, area, R_TOP);
-	r_paragraph(d, r_next(&form, text_h), CAPTION, dialog_text);
+	r_layout_iter text = r_flow_begin(&form, CAPTION, R_TOP_LEFT);
+	r_text(&text, 0, dialog_text);
+	r_flow_end(&text, &form);
 	r_label_ex(d, r_next(&form, 18), CAPTION, R_ICON_NONE, "Display name");
 	r_line_edit(d, r_next(&form, -1), app.name, sizeof(app.name), "Your name");
 	r_layout_iter bottom_up = r_stack(d, r_remaining(&form), R_BOTTOM);

@@ -32,7 +32,8 @@ def definition(kind, name):
     return headers[start:m.end()]
 
 def defines(name):
-    out = re.findall(r"^[ \t]*#define[ \t]+" + name + r"\b(?:[^\n]*\\\n)*[^\n]*", headers, re.M)
+    pattern = re.escape(name[:-1]) + r"\w*" if name.endswith("*") else name + r"\b"
+    out = re.findall(r"^[ \t]*#define[ \t]+" + pattern + r"(?:[^\n]*\\\n)*[^\n]*", headers, re.M)
     if not out: sys.exit("no define for " + name)
     return "\n".join(l.strip() for l in out)
 
@@ -88,9 +89,10 @@ while i < len(lines):
         if not m: sys.exit("line %d: @example must be followed by a function" % i)
         if not entries or entries[-1]["kind"] == "section": sys.exit("line %d: @example without entry" % i)
         i += 2
-        body = []
+        body, shown = [], True
         while lines[i] != "}":
-            body.append(lines[i][1:] if lines[i].startswith("\t") else lines[i])
+            shown = shown and lines[i].strip() != "//@example_end"
+            if shown: body.append(lines[i][1:] if lines[i].startswith("\t") else lines[i])
             i += 1
         entries[-1]["examples"].append(dict(fn=m.group(1), desc=desc, code="\n".join(body), screenshot=name == "screenshot"))
         continue
@@ -109,7 +111,7 @@ while i < len(lines):
         if not re.search(r"\b%s\b" % p, e["code"]): sys.exit("%s: no parameter %s" % (e["name"], p))
     entries.append(e)
 
-shots = set(re.findall(r"^\s*DOC(?:_CLICK)?\((\w+)", src, re.M))
+shots = set(re.findall(r"^\s*DOC\((\w+)", src, re.M))
 for e in entries:
     for x in e.get("examples", []):
         if x["screenshot"] != (x["fn"] in shots):
@@ -126,7 +128,7 @@ for e in entries:
     if e["kind"] == "section": continue
     e["anchor"] = e["name"] if e["name"] not in used else e["kind"] + "-" + e["name"]
     used.add(e["anchor"])
-    names = re.findall(r"(\w+)\(", e["code"])
+    names = re.findall(r"#define\s+(\w+)" if e["kind"] == "define" else r"(\w+)\(", e["code"])
     if e["kind"] == "enum":
         body = re.sub(r"//[^\n]*|/\*.*?\*/|^[ \t]*#[^\n]*", "", e["code"][e["code"].index("{") + 1:e["code"].rindex("}")], flags=re.S | re.M)
         names = [m.group(1) for m in (re.match(r"\s*([A-Za-z_]\w*)", p) for p in body.split(",")) if m]

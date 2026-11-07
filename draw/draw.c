@@ -2,7 +2,7 @@
 
 static rect __draw_calc_inner_rect(r_context* ctx, int style, rect outer);
 static rect __draw_calc_outer_rect(r_context* ctx, int style, rect* inner);
-static rect __draw_measure_text   (r_context* ctx, int style, const char* text, int len, int wrap_width);
+static rect __draw_measure_text   (r_context* ctx, int style, const char* text, int len);
 static rect __draw_measure_icon   (r_context* ctx, int style, int icon, int* gap);
 static int  __draw_break_text     (r_context* ctx, int style, const char* text, int len, int width, bool force, int* w);
 static void __draw_get_layout     (r_context* ctx, int style, int* size, int* spacing);
@@ -60,7 +60,7 @@ void r_draw_set_scale(r_draw* c, float scale)
         struct r_draw_stylebox* sb = &c->styleboxes[i];
         if(!sb->w || sb->permanent || sb->bg_permanent) continue;
         r_draw_stylebox_def d = sb->definition;
-        r_draw_generate_stylebox(c, i, &d);
+        r_draw_generate_stylebox(c, i, &d); // Generation is not _rerendering_, rerendering is done as needed, governed by the cache. (Which we just cleared.)
     }
     for(r_ui_list* l = c->context->chain_start; l; l = l->chain_next)
         l->needs_redraw = true;
@@ -215,10 +215,10 @@ static rect __draw_calc_outer_rect(r_context* ctx, int style, rect* inner)
     return outer;
 }
 
-static rect __draw_measure_text(r_context* ctx, int style, const char* text, int len, int wrap_width)
+static rect __draw_measure_text(r_context* ctx, int style, const char* text, int len)
 {
     r_draw_style_rule* rule = r_draw_find_style_rule(ctx->userptr, style);
-    return r_draw_measure_text_wrapped(ctx->userptr, rule ? rule->label_font : NULL, text, len, wrap_width);
+    return r_draw_measure_text(ctx->userptr, rule ? rule->label_font : NULL, text, len);
 }
 
 static int __draw_break_text(r_context* ctx, int style, const char* text, int len, int width, bool force, int* w)
@@ -341,16 +341,13 @@ static void render_content(r_draw* c, r_draw_style_rule* rule, r_drawable* d, re
     int gap, icon_size = icon_metrics(c, rule, &gap);
     rect clip = rect_intersect(bounds, c->pass_clip);
     area = r_offset(area, d->label_offset_x, d->label_offset_y);
-    if(d->wrap_label) align = (align & ~(R_V_CENTER | R_BOTTOM)) | R_TOP;
-    int wrap = d->wrap_label ? area.w : 0;
 
     if(d->icon)
     {
         rect ir = {.w = icon_size, .h = icon_size};
         if(d->text)
         {
-            if(wrap) wrap = MAX(wrap - icon_size - gap, 1);
-            rect t = r_draw_measure_text_wrapped(c, rule->label_font, d->text, -1, wrap);
+            rect t = r_draw_measure_text(c, rule->label_font, d->text, -1);
             rect group = {.w = icon_size + gap + t.w, .h = t.h};
             r_align(align, area, &group);
             rect line = {.x = group.x, .y = group.y, .w = icon_size, .h = r_draw_measure_text(c, rule->label_font, "", -1).h};
@@ -361,7 +358,7 @@ static void render_content(r_draw* c, r_draw_style_rule* rule, r_drawable* d, re
         else r_align(align, area, &ir);
         if(rect_intersect(ir, clip).w > 0) r_draw_render_icon(c, (uint16_t)d->icon, icon_color, ir);
     }
-    if(d->text) __draw_render_text(c, d, rule, area, align, clip, wrap);
+    if(d->text) __draw_render_text(c, d, rule, area, align, clip);
 }
 
 static int interaction_state(r_draw* c, r_drawable* d)

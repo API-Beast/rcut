@@ -168,7 +168,7 @@ typedef struct box
 	uint32_t bg, bg2;
 	uint32_t surface;
 	uint32_t border;
-	uint32_t border_top, border_bottom;
+	uint32_t border_top, border_bottom, border_left, border_right;
 	float    border_w;
 	float    border_top_w, border_bottom_w;
 	float    radius;
@@ -227,6 +227,8 @@ static int box_slot(theme_state* t, box b)
 	}
 	if(b.border_top)    d.border_gradient[1].base_color = b.border_top;
 	if(b.border_bottom) d.border_gradient[3].base_color = b.border_bottom;
+	if(b.border_left)   d.border_gradient[0].base_color = b.border_left;
+	if(b.border_right)  d.border_gradient[2].base_color = b.border_right;
 	d.border_thickness[1] = side_width(b.border_top_w, bw);
 	d.border_thickness[3] = side_width(b.border_bottom_w, bw);
 	if(b.border_top && b.border_top == b.bg)       d.border_thickness[1] = 0;
@@ -277,7 +279,7 @@ static uint32_t deepen(uint32_t c, float a)
 	return r;
 }
 
-enum { OP_FILL, OP_SURFACE, OP_BORDER, OP_BORDER_COLOR, OP_UNDERLINE, OP_BEVEL, OP_RADIUS, OP_CORNERS, OP_PADDING, OP_SHADOW, OP_SHADOW2,
+enum { OP_FILL, OP_SURFACE, OP_BORDER, OP_BORDER_COLOR, OP_UNDERLINE, OP_BEVEL, OP_BORDER_SPLIT, OP_RADIUS, OP_CORNERS, OP_PADDING, OP_SHADOW, OP_SHADOW2,
 	OP_NO_SHADOW, OP_INSET, OP_GLOW, OP_TINT, OP_HOVER, OP_LABEL, OP_LABEL_COLOR, OP_FONT, OP_ICON, OP_LAYOUT, OP_FOCUS, OP_TEXT_OUTLINE, OP_TEXT_SHADOW };
 
 static theme_state* theme(r_draw* c){ assert(c->theme && "load a theme first"); return c->theme; }
@@ -314,6 +316,7 @@ void r_theme_border(r_draw* c, float width, uint32_t color){ push(c, (theme_op){
 void r_theme_border_color(r_draw* c, uint32_t color){ push(c, (theme_op){ OP_BORDER_COLOR, .u = {color} }); }
 void r_theme_underline(r_draw* c, float width, uint32_t color){ push(c, (theme_op){ OP_UNDERLINE, .f = {width}, .u = {color} }); }
 void r_theme_bevel(r_draw* c, uint32_t top, uint32_t bottom){ push(c, (theme_op){ OP_BEVEL, .u = {top, bottom} }); }
+void r_theme_border_split(r_draw* c, float width, uint32_t top_left, uint32_t bottom_right){ push(c, (theme_op){ OP_BORDER_SPLIT, .f = {width}, .u = {top_left, bottom_right} }); }
 void r_theme_radius(r_draw* c, float radius){ push(c, (theme_op){ OP_RADIUS, .f = {radius} }); }
 void r_theme_corners(r_draw* c, float top_left, float top_right, float bottom_left, float bottom_right){ push(c, (theme_op){ OP_CORNERS, .f = {top_left, top_right, bottom_left, bottom_right} }); }
 void r_theme_padding(r_draw* c, float x, float y){ push(c, (theme_op){ OP_PADDING, .f = {x, y} }); }
@@ -347,6 +350,7 @@ static void run(theme_state* t, box* b, r_draw_style_rule* r, const theme_op* o)
 	case OP_BORDER_COLOR: b->border = u[0]; break;
 	case OP_UNDERLINE:    b->border_w = -1; b->border_bottom_w = f[0]; b->border = u[0]; break;
 	case OP_BEVEL:        b->border_top = u[0]; b->border_bottom = u[1]; break;
+	case OP_BORDER_SPLIT: b->border_w = f[0]; b->border_top = b->border_left = u[0]; b->border_bottom = b->border_right = b->border = u[1]; break;
 	case OP_RADIUS:       b->radius = f[0]; break;
 	case OP_CORNERS:
 		for(int i = 0; i < 4; i++) b->corners[i] = f[i] ? f[i] : 0.001f;
@@ -363,6 +367,8 @@ static void run(theme_state* t, box* b, r_draw_style_rule* r, const theme_op* o)
 		if(b->border) b->border = over_straight(b->border, u[0]);
 		if(b->border_top) b->border_top = over_straight(b->border_top, u[0]);
 		if(b->border_bottom) b->border_bottom = over_straight(b->border_bottom, u[0]);
+		if(b->border_left) b->border_left = over_straight(b->border_left, u[0]);
+		if(b->border_right) b->border_right = over_straight(b->border_right, u[0]);
 		break;
 	case OP_HOVER:        b->hover = u[0]; break;
 	case OP_LABEL:        r->label_color = u[0]; r->label_align = (r_alignment)u[1]; break;
@@ -733,9 +739,17 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_padding(c, 4, 4);
 	r_theme_build(c);
 
+	r_theme(c, R_STYLE_PANEL | R_VARIANT_INSET);
+	r_theme_fill(c, mix(p->panel, BLACK, dl(p, 0.2f, 0.04f)), 0);
+	r_theme_border_split(c, 1, mix(p->panel, BLACK, dl(p, 0.5f, 0.3f)), mix(p->panel, WHITE, dl(p, 0.05f, 0.7f)));
+	r_theme_inset(c, 1, 4, dl(p, 0.5f, 0.25f));
+	r_theme_radius(c, 0);
+	r_theme_build(c);
+
 	r_theme(c, R_STYLE_PANEL | R_VARIANT_RAISED);
 	r_theme_fill(c, p->card, 0);
-	r_theme_radius(c, 4);
+	r_theme_border_split(c, 1, mix(p->card, WHITE, dl(p, 0.1f, 0.7f)), mix(p->card, BLACK, dl(p, 0.4f, 0.25f)));
+	r_theme_radius(c, 0);
 	r_theme_padding(c, 14, 12);
 	r_theme_shadow(c, 1, 3, dl(p, 0.35f, 0.1f));
 	r_theme_build(c);

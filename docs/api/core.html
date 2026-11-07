@@ -20,7 +20,7 @@ See <span class="todo">&lt;TODO: rcut_SDL targets&gt;</span>.</p>
 <p><code>r_create_ui_list_ex</code> takes explicit capacities instead of <code>RCUT_LIST_MAX_ELEMENTS</code>.</p>
 <div class="note"><strong>Note:</strong> Memory is only reserved, not commited, as such there is no reason to use the _ex variant unless you are working on systems with small address spaces or processors without a MMU.</div>
 <div class="example"><pre><a class="t" href="#r_ui_list">r_ui_list</a>* l = <a class="f" href="#r_create_ui_list">r_create_ui_list_ex</a>(&amp;f-&gt;context, <span class="n">0</span>, <span class="n">100</span>, <span class="n">320</span>, <span class="n">80</span>, <span class="n">16</span>, <span class="n">4</span>);
-<a class="f" href="#r_label">r_label</a>(l, l-&gt;root_area, <span class="s">"Hello from a second list"</span>);</pre><img class="shot" src="img/doc_r_create_ui_list.png"></div>
+<a class="f" href="#r_label">r_label</a>(l, <a class="f" href="#r_shrink">r_shrink</a>(l-&gt;root_area, <span class="n">16</span>), <span class="s">"Hello from a second list"</span>);</pre><img class="shot" src="img/doc_r_create_ui_list.png"></div>
 <p class="see">See also: <code>r_delete_ui_list</code>, <a href="#r_popup"><code>r_popup</code></a>, <a href="#r_viewport"><code>r_viewport</code></a>, <a href="#r_scroll_begin"><code>r_scroll_begin</code></a></p>
 
 <h3><a name="r_destroy_ui_list"></a>r_destroy_ui_list</h3>
@@ -59,6 +59,7 @@ See <span class="todo">&lt;TODO: rcut_SDL targets&gt;</span>.</p>
 <h3><a name="r_list_set_visibility"></a>r_list_set_visibility</h3>
 <pre class="sig"><span class="k">void</span> r_list_set_visibility(<a class="t" href="#r_ui_list">r_ui_list</a>* list, <span class="k">bool</span> visible);</pre>
 <p>Shows or hides the list, a hidden list and its child lists are not drawn and receive no input.</p>
+<p class="see">See also: <a href="#r_list_is_visible"><code>r_list_is_visible</code></a>, <a href="#r_create_ui_list"><code>r_create_ui_list</code></a></p>
 
 <h3><a name="r_ui_list"></a>r_ui_list</h3>
 <pre class="sig"><span class="k">struct</span> r_ui_list
@@ -108,25 +109,25 @@ See <span class="todo">&lt;TODO: rcut_SDL targets&gt;</span>.</p>
 
 	<span class="k">int</span> frame_parity;
 	<span class="t">uint32_t</span> build_count;
-	<a class="t" href="#r_paged_buffer">r_paged_buffer</a> draw_buffers[<span class="n">2</span>];
+	r_paged_buffer draw_buffers[<span class="n">2</span>];
 	<a class="t" href="#r_drawable">r_drawable</a>*    draw_items;
 	<a class="t" href="#r_drawable">r_drawable</a>*    draw_items_last_frame;
 	<span class="k">int</span>            count_draw_items;
 	<span class="k">int</span>            count_draw_items_last_frame;
 
-	<a class="t" href="#r_paged_buffer">r_paged_buffer</a> interact_buffers[<span class="n">2</span>];
+	r_paged_buffer interact_buffers[<span class="n">2</span>];
 	<a class="t" href="#r_interact">r_interact</a>*    interact_items;
 	<a class="t" href="#r_interact">r_interact</a>*    interact_items_last_frame;
 	<span class="k">int</span>            count_interact_items;
 	<span class="k">int</span>            count_interact_last_frame;
 
-	<a class="t" href="#r_paged_buffer">r_paged_buffer</a> storage_buffers[<span class="n">2</span>];
+	r_paged_buffer storage_buffers[<span class="n">2</span>];
 	<span class="t">uint8_t</span>*       storage_buffer;
 	<span class="t">uint8_t</span>*       storage_buffer_last_frame;
 	<span class="k">int</span>            storage_buffer_cur_tail;
 	<span class="k">int</span>            storage_buffer_last_tail;
 
-	<a class="t" href="#r_hashmap">r_hashmap</a> id_hash[<span class="n">2</span>];
+	r_hashmap id_hash[<span class="n">2</span>];
 
 	<a class="t" href="#rect">rect</a>     drawn_area;
 	<span class="t">uint64_t</span> drawn_target;
@@ -183,6 +184,7 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <h3><a name="r_list_get_content_rect"></a>r_list_get_content_rect</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_list_get_content_rect(<a class="t" href="#r_ui_list">r_ui_list</a>* list);</pre>
 <p>Returns the bounding rectangle of all drawables in the list, in list space.</p>
+<p class="see">See also: <a href="#r_scroll_end"><code>r_scroll_end</code></a>, <a href="#rect_expand"><code>rect_expand</code></a></p>
 
 <h3><a name="r_list_get_transform"></a>r_list_get_transform</h3>
 <pre class="sig"><span class="k">void</span> r_list_get_transform(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <span class="k">int</span>* origin_x, <span class="k">int</span>* origin_y, <a class="t" href="#rect">rect</a>* clip);</pre>
@@ -191,15 +193,18 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <h3><a name="r_list_is_visible"></a>r_list_is_visible</h3>
 <pre class="sig"><span class="k">bool</span> r_list_is_visible(<a class="t" href="#r_ui_list">r_ui_list</a>* l);</pre>
 <p>Returns false if the list or any of its parent lists is hidden.</p>
+<p class="see">See also: <a href="#r_list_set_visibility"><code>r_list_set_visibility</code></a></p>
 
 <h3><a name="r_list_print"></a>r_list_print</h3>
 <pre class="sig"><span class="k">void</span> r_list_print(<a class="t" href="#r_ui_list">r_ui_list</a>* l);</pre>
 <p>Prints the list's drawables and interactables to stdout for debugging.</p>
+<p class="see">See also: <a href="#r_ui_list"><code>r_ui_list</code></a></p>
 
 <h3><a name="RCUT_EPHEMERAL_MAX_ELEMENTS"></a>RCUT_EPHEMERAL_MAX_ELEMENTS</h3>
 <pre class="sig"><span class="p">#define</span> <span class="e">RCUT_EPHEMERAL_MAX_ELEMENTS</span> <span class="n">256</span> <span class="c">// Tooltips, all other lists use RCUT_LIST_MAX_ELEMENTS</span>
 <span class="p">#define</span> <span class="e">RCUT_EPHEMERAL_MAX_ELEMENTS</span> <span class="n">512</span> <span class="c">// Tooltips, all other lists use RCUT_LIST_MAX_ELEMENTS</span></pre>
 <p>Maximum number of elements of a tooltip list, all other lists use <a href="#RCUT_LIST_MAX_ELEMENTS"><code>RCUT_LIST_MAX_ELEMENTS</code></a>.</p>
+<p class="see">See also: <a href="#RCUT_LIST_MAX_ELEMENTS"><code>RCUT_LIST_MAX_ELEMENTS</code></a>, <a href="#r_tooltip"><code>r_tooltip</code></a>, <a href="#r_popup"><code>r_popup</code></a></p>
 
 <h2><a name="s-Context"></a>Context</h2>
 <p><span class="todo">&lt;TODO: Introduce context and frontends&gt;</span></p>
@@ -211,10 +216,12 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <h3><a name="r_init_context"></a>r_init_context</h3>
 <pre class="sig"><span class="k">void</span> r_init_context(<a class="t" href="#r_context">r_context</a>* r);</pre>
 <p>Initializes the context and reserves memory for its UI lists.</p>
+<p class="see">See also: <a href="#r_free_context"><code>r_free_context</code></a>, <a href="#r_context"><code>r_context</code></a>, <a href="#r_create_ui_list"><code>r_create_ui_list</code></a></p>
 
 <h3><a name="r_free_context"></a>r_free_context</h3>
 <pre class="sig"><span class="k">void</span> r_free_context(<a class="t" href="#r_context">r_context</a>* r);</pre>
 <p>Frees all UI lists and memory owned by the context.</p>
+<p class="see">See also: <a href="#r_init_context"><code>r_init_context</code></a></p>
 
 <h3><a name="r_interface"></a>r_interface</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_interface
@@ -222,7 +229,7 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 	<a class="t" href="#rect">rect</a>     (*calc_outer_rect)    (<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <a class="t" href="#rect">rect</a>* inner);
 	<a class="t" href="#rect">rect</a>     (*calc_inner_rect)    (<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <a class="t" href="#rect">rect</a> outer);
 	<span class="t">uint64_t</span> (*get_viewport_target)(<a class="t" href="#r_ui_list">r_ui_list</a>* parent, <a class="t" href="#rect">rect</a> relative_to);
-	<a class="t" href="#rect">rect</a>     (*measure_text)       (<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> len, <span class="k">int</span> wrap_width);
+	<a class="t" href="#rect">rect</a>     (*measure_text)       (<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> len);
 	<a class="t" href="#rect">rect</a>     (*measure_icon)       (<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">int</span> icon, <span class="k">int</span>* gap);
 	<span class="k">int</span>      (*break_text)         (<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> len, <span class="k">int</span> width, <span class="k">bool</span> force, <span class="k">int</span>* w);
 	<span class="k">void</span>     (*get_layout)         (<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">int</span>* size, <span class="k">int</span>* spacing);
@@ -251,19 +258,13 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <pre class="sig"><span class="p">#define</span> <span class="e">RCUT_CONTEXT_MAX_LISTS</span> <span class="n">128</span>
 <span class="p">#define</span> <span class="e">RCUT_CONTEXT_MAX_LISTS</span> <span class="n">256</span></pre>
 <p>Maximum number of regular UI lists per context.</p>
+<p class="see">See also: <a href="#RCUT_CONTEXT_MAX_EPHEMERAL_LISTS"><code>RCUT_CONTEXT_MAX_EPHEMERAL_LISTS</code></a>, <a href="#r_create_ui_list"><code>r_create_ui_list</code></a></p>
 
 <h3><a name="RCUT_CONTEXT_MAX_EPHEMERAL_LISTS"></a>RCUT_CONTEXT_MAX_EPHEMERAL_LISTS</h3>
 <pre class="sig"><span class="p">#define</span> <span class="e">RCUT_CONTEXT_MAX_EPHEMERAL_LISTS</span> <span class="n">128</span>
 <span class="p">#define</span> <span class="e">RCUT_CONTEXT_MAX_EPHEMERAL_LISTS</span> <span class="n">256</span></pre>
 <p>Maximum number of ephemeral UI lists (popups, viewports, tooltips) per context.</p>
-
-<h3><a name="r_paged_buffer"></a>r_paged_buffer</h3>
-<pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_paged_buffer r_paged_buffer;</pre>
-<p>Growable buffer that reserves virtual memory up front and commits pages on demand.</p>
-
-<h3><a name="r_hashmap"></a>r_hashmap</h3>
-<pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_hashmap r_hashmap;</pre>
-<p>Internal hash map used by UI lists and the renderer.</p>
+<p class="see">See also: <a href="#RCUT_CONTEXT_MAX_LISTS"><code>RCUT_CONTEXT_MAX_LISTS</code></a>, <a href="#r_popup"><code>r_popup</code></a>, <a href="#r_viewport"><code>r_viewport</code></a></p>
 
 <h2><a name="s-Rects-and-IDs"></a>Rects and IDs</h2>
 <p><span class="todo">&lt;TODO: Explain rects and IDs&gt;</span></p>
@@ -310,7 +311,7 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <p class="see">See also: <a href="#r_salt"><code>r_salt</code></a>, <a href="#r_stack"><code>r_stack</code></a></p>
 
 <h3><a name="r_alignment"></a>r_alignment</h3>
-<pre class="sig"><span class="k">typedef</span> <span class="k">enum</span>
+<pre class="sig"><span class="k">typedef</span> <span class="k">enum</span> r_alignment
 {
 	<span class="e">R_BOTTOM</span>     = (<span class="n">1</span> &lt;&lt; <span class="n">0</span>),
 	<span class="e">R_V_CENTER</span>   = (<span class="n">1</span> &lt;&lt; <span class="n">1</span>),
@@ -335,10 +336,12 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <pre class="sig"><a class="t" href="#rect">rect</a> rect_expand_pt(<a class="t" href="#rect">rect</a> a, <span class="k">int</span> x, <span class="k">int</span> y);
 <a class="t" href="#rect">rect</a> rect_expand(<a class="t" href="#rect">rect</a> a, <a class="t" href="#rect">rect</a> b);</pre>
 <p>Returns the smallest rectangle containing both <code>a</code> and <code>b</code> with the ID of <code>a</code>, <code>rect_expand_pt</code> does the same for a point.</p>
+<p class="see">See also: <a href="#rect_intersect"><code>rect_intersect</code></a>, <a href="#r_grow"><code>r_grow</code></a></p>
 
 <h3><a name="rect_intersect"></a>rect_intersect</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> rect_intersect(<a class="t" href="#rect">rect</a> a, <a class="t" href="#rect">rect</a> b);</pre>
 <p>Returns the overlap of <code>a</code> and <code>b</code> with the ID of <code>a</code>, its size is 0 if they don't overlap.</p>
+<p class="see">See also: <a href="#rect_expand"><code>rect_expand</code></a></p>
 
 <h3><a name="r_salts"></a>r_salts</h3>
 <pre class="sig"><span class="k">enum</span> r_salts {
@@ -348,7 +351,8 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 	<span class="e">R_SALT15</span> = <span class="n">1097</span>, <span class="e">R_SALT16</span> = <span class="n">1103</span>, <span class="e">R_SALT17</span> = <span class="n">1109</span>, <span class="e">R_SALT18</span> = <span class="n">1117</span>, <span class="e">R_SALT19</span> = <span class="n">1123</span>,
 	<span class="e">R_SALT20</span> = <span class="n">1129</span>,
 };</pre>
-<p>Predefined salt values for <a href="#r_salt"><code>r_salt</code></a> and the cutting functions.</p>
+<p>Predefined salt values for <a href="#r_salt"><code>r_salt</code></a> and the cutting functions. You can use these freely or use your own values. There are no "bad" salts other than reusing the same salt at multiple places.</p>
+<p class="see">See also: <a href="#r_salt"><code>r_salt</code></a>, <a href="#r_cut_px"><code>r_cut_px</code></a></p>
 
 <h3><a name="r_cut_fraction"></a>r_cut_fraction</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_cut_fraction(<a class="t" href="#r_alignment">r_alignment</a> dir, <a class="t" href="#rect">rect</a>* to_cut, <span class="k">float</span> fraction, <span class="t">uint64_t</span> salt);</pre>
@@ -357,32 +361,39 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <h3><a name="r_cut_group"></a>r_cut_group</h3>
 <pre class="sig"><span class="k">void</span> r_cut_group(<a class="t" href="#r_alignment">r_alignment</a> dir, <a class="t" href="#rect">rect</a>* to_cut, <a class="t" href="#rect">rect</a>** r, <span class="k">int</span> num_rects);</pre>
 <p>Cuts one rectangle per entry of <code>r</code> from <code>to_cut</code>, sized by each entry's current width or height.</p>
+<p class="see">See also: <a href="#r_cut_px"><code>r_cut_px</code></a>, <a href="#r_expand_group"><code>r_expand_group</code></a></p>
 
 <h3><a name="r_expand_px"></a>r_expand_px</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_expand_px(<a class="t" href="#r_alignment">r_alignment</a> dir, <a class="t" href="#rect">rect</a>* to_expand, <span class="k">int</span> pixels, <span class="t">uint64_t</span> salt);</pre>
 <p>Grows <code>to_expand</code> by <code>pixels</code> towards <code>dir</code> and returns the added area.</p>
+<p class="see">See also: <a href="#r_cut_px"><code>r_cut_px</code></a>, <a href="#r_expand_group"><code>r_expand_group</code></a></p>
 
 <h3><a name="r_expand_group"></a>r_expand_group</h3>
 <pre class="sig"><span class="k">void</span> r_expand_group(<a class="t" href="#r_alignment">r_alignment</a> dir, <a class="t" href="#rect">rect</a>* to_expand, <a class="t" href="#rect">rect</a>** r, <span class="k">int</span> num_rects);</pre>
 <p>Grows <code>to_expand</code> once per entry of <code>r</code>, sized by each entry's current width or height, and stores the added areas in <code>r</code>.</p>
+<p class="see">See also: <a href="#r_expand_px"><code>r_expand_px</code></a>, <a href="#r_cut_group"><code>r_cut_group</code></a></p>
 
 <h3><a name="r_offset"></a>r_offset</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_offset(<a class="t" href="#rect">rect</a> r, <span class="k">int</span> x_offset, <span class="k">int</span> y_offset);</pre>
 <p>Moves a rectangle by the given offset, keeping its ID.</p>
+<p class="see">See also: <a href="#r_grow"><code>r_grow</code></a>, <a href="#r_aligned"><code>r_aligned</code></a></p>
 
 <h3><a name="r_grow"></a>r_grow</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_grow(<a class="t" href="#rect">rect</a> r, <span class="k">int</span> pixels);
 <a class="t" href="#rect">rect</a> r_grow_sides(<a class="t" href="#rect">rect</a> r, <span class="k">int</span> left, <span class="k">int</span> top, <span class="k">int</span> right, <span class="k">int</span> bottom);</pre>
 <p>Grows a rectangle by <code>pixels</code> on all sides, or per side with <code>r_grow_sides</code>, keeping its ID.</p>
+<p class="see">See also: <a href="#r_shrink"><code>r_shrink</code></a>, <a href="#r_offset"><code>r_offset</code></a></p>
 
 <h3><a name="r_shrink"></a>r_shrink</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_shrink(<a class="t" href="#rect">rect</a> r, <span class="k">int</span> pixels);
 <a class="t" href="#rect">rect</a> r_shrink_sides(<a class="t" href="#rect">rect</a> r, <span class="k">int</span> left, <span class="k">int</span> top, <span class="k">int</span> right, <span class="k">int</span> bottom);</pre>
 <p>Shrinks a rectangle by <code>pixels</code> on all sides, or per side with <code>r_shrink_sides</code>, keeping its ID.</p>
+<p class="see">See also: <a href="#r_grow"><code>r_grow</code></a>, <a href="#r_inner"><code>r_inner</code></a></p>
 
 <h3><a name="r_min_size"></a>r_min_size</h3>
 <pre class="sig"><span class="k">void</span> r_min_size(<a class="t" href="#rect">rect</a> *r, <span class="k">int</span> w, <span class="k">int</span> h);</pre>
 <p>Enlarges the rectangle to at least <code>w</code> by <code>h</code> pixels.</p>
+<p class="see">See also: <a href="#r_fill"><code>r_fill</code></a></p>
 
 <h2><a name="s-Layout"></a>Layout</h2>
 <p><span class="todo">&lt;TODO: Introduce layout iterators&gt;</span></p>
@@ -401,8 +412,18 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 	<span class="k">int</span>         style;
 	<span class="k">int</span>         line_h;
 	<span class="k">int</span>         line_first;
+	<a class="t" href="#rect">rect</a>        last;
+	<a class="t" href="#r_layout_type">r_layout_type</a> type;
 } r_layout_iter;</pre>
 <p><span class="todo">&lt;TODO: Describe iterator fields&gt;</span></p>
+
+<h3><a name="r_layout_type"></a>r_layout_type</h3>
+<pre class="sig"><span class="k">typedef</span> <span class="k">enum</span> r_layout_type
+{
+	<span class="e">R_LAYOUT_STACK</span>, <span class="c">// Cuts consecutive rectangles in the direction `dir`.</span>
+	<span class="e">R_LAYOUT_FLOW</span>,  <span class="c">// Places rectangles left to right, wrapping into new lines aligned by `dir`.</span>
+} r_layout_type;</pre>
+<p>How a layout iterator places its rectangles.</p>
 
 <h3><a name="r_stack"></a>r_stack</h3>
 <pre class="sig"><a class="t" href="#r_layout_iter">r_layout_iter</a> r_stack(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> area, <a class="t" href="#r_alignment">r_alignment</a> dir);</pre>
@@ -429,6 +450,11 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <h3><a name="r_remaining"></a>r_remaining</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_remaining(<a class="t" href="#r_layout_iter">r_layout_iter</a>* s);</pre>
 <p>Returns all space left in the layout iterator.</p>
+<p class="see">See also: <a href="#r_next"><code>r_next</code></a>, <a href="#r_stack"><code>r_stack</code></a></p>
+
+<h3><a name="r_last"></a>r_last</h3>
+<pre class="sig"><a class="t" href="#rect">rect</a> r_last(<a class="t" href="#r_layout_iter">r_layout_iter</a>* s);</pre>
+<p>Returns the rectangle the layout iterator returned last, to place several elements on the same rectangle.</p>
 
 <h3><a name="r_fill"></a>r_fill</h3>
 <pre class="sig"><span class="k">void</span> r_fill(<a class="t" href="#r_alignment">r_alignment</a> dir, <a class="t" href="#rect">rect</a> target, <a class="t" href="#rect">rect</a>** r, <span class="k">int</span> num_rects);</pre>
@@ -444,6 +470,7 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <h3><a name="r_gap"></a>r_gap</h3>
 <pre class="sig"><span class="k">void</span> r_gap(<a class="t" href="#r_layout_iter">r_layout_iter</a>* s, <span class="k">int</span> size);</pre>
 <p>Skips <code>size</code> pixels of the layout iterator's remaining area.</p>
+<p class="see">See also: <a href="#r_next"><code>r_next</code></a>, <a href="#r_stack"><code>r_stack</code></a></p>
 
 <h3><a name="r_row"></a>r_row</h3>
 <pre class="sig"><a class="t" href="#r_layout_iter">r_layout_iter</a> r_row(<a class="t" href="#r_layout_iter">r_layout_iter</a>* s, <span class="k">int</span> size, <a class="t" href="#r_alignment">r_alignment</a> dir);</pre>
@@ -458,12 +485,17 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <p><span class="todo">&lt;TODO: Describe returned group rect&gt;</span></p>
 
 <h3><a name="r_flow_begin"></a>r_flow_begin</h3>
-<pre class="sig"><a class="t" href="#r_layout_iter">r_layout_iter</a> r_flow_begin(<a class="t" href="#r_layout_iter">r_layout_iter</a>* parent, <span class="k">int</span> style);</pre>
-<p><span class="todo">&lt;TODO: Explain flowing text layout&gt;</span></p>
+<pre class="sig"><a class="t" href="#r_layout_iter">r_layout_iter</a> r_flow_begin(<a class="t" href="#r_layout_iter">r_layout_iter</a>* parent, <span class="k">int</span> style, <a class="t" href="#r_alignment">r_alignment</a> align);</pre>
+<p>Starts a flow layout inside <code>parent</code>: elements are placed left to right and wrap into new lines.
+The horizontal bits of <code>align</code> align each line, the vertical bits align the elements within a line.</p>
 
 <h3><a name="r_text"></a>r_text</h3>
 <pre class="sig"><span class="k">void</span> r_text(<a class="t" href="#r_layout_iter">r_layout_iter</a>* flow, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* text);</pre>
-<p><span class="todo">&lt;TODO: Describe flowing text pieces&gt;</span></p>
+<p>Adds word-wrapped text to a flow layout, split into one label per line, using the flow's style if <code>style</code> is 0.</p>
+<div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
+<a class="t" href="#r_layout_iter">r_layout_iter</a> flow = <a class="f" href="#r_flow_begin">r_flow_begin</a>(&amp;it, <a class="e" href="#r_style">R_STYLE_LABEL</a>, <a class="e" href="#r_alignment">R_TOP_LEFT</a>);
+<a class="f" href="#r_text">r_text</a>(&amp;flow, <span class="n">0</span>, <span class="s">"Text wraps at word boundaries to fit the width of the flow layout."</span>);
+<a class="f" href="#r_flow_end">r_flow_end</a>(&amp;flow, &amp;it);</pre><img class="shot" src="img/doc_r_text.png"></div>
 
 <h3><a name="r_flow_end"></a>r_flow_end</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_flow_end(<a class="t" href="#r_layout_iter">r_layout_iter</a>* flow, <a class="t" href="#r_layout_iter">r_layout_iter</a>* parent);</pre>
@@ -494,26 +526,32 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <h3><a name="r_inner"></a>r_inner</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_inner(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <a class="t" href="#rect">rect</a> outer);</pre>
 <p>Returns the content rectangle of an element with the style, given its outer rectangle.</p>
+<p class="see">See also: <a href="#r_outer"><code>r_outer</code></a>, <a href="draw.html#r_draw_stylebox_inner_rect"><code>r_draw_stylebox_inner_rect</code></a></p>
 
 <h3><a name="r_outer"></a>r_outer</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_outer(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <a class="t" href="#rect">rect</a>* inner);</pre>
 <p>Returns the outer rectangle an element with the style needs to fit the content rectangle <code>inner</code>.</p>
+<p class="see">See also: <a href="#r_inner"><code>r_inner</code></a>, <a href="#r_measure"><code>r_measure</code></a>, <a href="draw.html#r_draw_stylebox_outer_rect"><code>r_draw_stylebox_outer_rect</code></a></p>
 
 <h3><a name="r_with_margins"></a>r_with_margins</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_with_margins(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <a class="t" href="#rect">rect</a> outer);</pre>
 <p>Grows the outer rectangle by half the style's default spacing on every side.</p>
+<p class="see">See also: <a href="#r_remove_margins"><code>r_remove_margins</code></a>, <a href="#r_layout_default_spacing"><code>r_layout_default_spacing</code></a></p>
 
 <h3><a name="r_remove_margins"></a>r_remove_margins</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_remove_margins(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <a class="t" href="#rect">rect</a> with_margins);</pre>
 <p>Removes the margins added by <a href="#r_with_margins"><code>r_with_margins</code></a>.</p>
+<p class="see">See also: <a href="#r_with_margins"><code>r_with_margins</code></a></p>
 
 <h3><a name="r_layout_default_size"></a>r_layout_default_size</h3>
 <pre class="sig"><span class="k">int</span> r_layout_default_size(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style);</pre>
 <p>Returns the theme's default element size for the style, 28 if the frontend provides none.</p>
+<p class="see">See also: <a href="#r_layout_default_spacing"><code>r_layout_default_spacing</code></a>, <a href="draw.html#r_theme_layout"><code>r_theme_layout</code></a>, <a href="#r_interface"><code>r_interface</code></a></p>
 
 <h3><a name="r_layout_default_spacing"></a>r_layout_default_spacing</h3>
 <pre class="sig"><span class="k">int</span> r_layout_default_spacing(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style);</pre>
 <p>Returns the theme's default spacing between elements of the style, 8 if the frontend provides none.</p>
+<p class="see">See also: <a href="#r_layout_default_size"><code>r_layout_default_size</code></a>, <a href="draw.html#r_theme_layout"><code>r_theme_layout</code></a></p>
 
 <h2><a name="s-Text-measurement"></a>Text measurement</h2>
 <p><span class="todo">&lt;TODO: Introduce text measuring&gt;</span></p>
@@ -521,21 +559,12 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <h3><a name="r_measure"></a>r_measure</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_measure(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* label);
 <a class="t" href="#rect">rect</a> r_measure_n(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> len);
-<a class="t" href="#rect">rect</a> r_measure_wrapped(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> wrap_width);
 <a class="t" href="#rect">rect</a> r_measure_ex(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">int</span> icon, <span class="k">const</span> <span class="k">char</span>* text);</pre>
 <p><span class="todo">&lt;TODO: Describe measuring variants&gt;</span></p>
 
 <h3><a name="r_style_measure_all"></a>r_style_measure_all</h3>
 <pre class="sig"><span class="k">void</span> r_style_measure_all(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* label, <a class="t" href="#rect">rect</a>* outer_with_margins, <a class="t" href="#rect">rect</a>* outer, <a class="t" href="#rect">rect</a>* inner);</pre>
 <p><span class="todo">&lt;TODO: Explain inner/outer/margin rects&gt;</span></p>
-
-<h3><a name="r_break_text"></a>r_break_text</h3>
-<pre class="sig"><span class="k">int</span> r_break_text(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> len, <span class="k">int</span> width, <span class="k">bool</span> force, <span class="k">int</span>* w);</pre>
-<p><span class="todo">&lt;TODO: Explain line breaking, force&gt;</span></p>
-
-<h3><a name="r_text_index_at"></a>r_text_index_at</h3>
-<pre class="sig"><span class="k">int</span> r_text_index_at(<a class="t" href="#r_context">r_context</a>* c, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> x);</pre>
-<p>Returns the byte index of the character boundary closest to <code>x</code> pixels into <code>text</code>.</p>
 
 <h2><a name="s-Widgets"></a>Widgets</h2>
 <p><span class="todo">&lt;TODO: Introduce high level widgets&gt;</span></p>
@@ -558,7 +587,7 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
 <a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">24</span>), <span class="s">"Plain label"</span>);
 <a class="f" href="#r_label">r_label_value</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">24</span>), <span class="s">"Volume: %.2f"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;volume));</pre><img class="shot" src="img/doc_r_label.png"></div>
-<p class="see">See also: <a href="#r_paragraph"><code>r_paragraph</code></a>, <a href="#r_header"><code>r_header</code></a></p>
+<p class="see">See also: <a href="#r_text"><code>r_text</code></a>, <a href="#r_header"><code>r_header</code></a></p>
 
 <h3><a name="r_on_click"></a>r_on_click</h3>
 <pre class="sig"><span class="k">void</span> r_on_click(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">void</span> (*on_click)(<span class="k">void</span>));
@@ -590,14 +619,20 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <a class="f" href="#r_checkbox">r_checkbox</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), <span class="s">"Mute"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;mute));
 <a class="f" href="#r_checkbox">r_checkbox</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), <span class="s">"Fullscreen"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;fullscreen));</pre><img class="shot" src="img/doc_r_checkbox.png"></div>
 
-<h3><a name="r_slider_h"></a>r_slider_h</h3>
-<pre class="sig"><span class="k">void</span> r_slider_h(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">float</span> min, <span class="k">float</span> max, <span class="k">float</span> step, <a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
+<h3><a name="r_slider"></a>r_slider</h3>
+<pre class="sig"><span class="k">void</span> r_slider_h(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">float</span> min, <span class="k">float</span> max, <span class="k">float</span> step, <a class="t" href="#r_data_binding">r_data_binding</a> binding);
+<span class="k">void</span> r_slider_v(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">float</span> min, <span class="k">float</span> max, <span class="k">float</span> step, <a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
 <p><span class="todo">&lt;TODO: Describe step and binding&gt;</span></p>
 <div class="example"><pre><span class="k">static</span> <span class="k">float</span> volume = <span class="n">0.6f</span>;
 <span class="c">// [...]</span>
 <a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
 <a class="f" href="#r_label">r_label_value</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">24</span>), <span class="s">"Volume %.2f"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;volume));
-<a class="f" href="#r_slider_h">r_slider_h</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">24</span>), <span class="n">0</span>, <span class="n">1</span>, <span class="n">0.05f</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;volume));</pre><img class="shot" src="img/doc_r_slider_h.png"></div>
+<a class="f" href="#r_slider">r_slider_h</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">24</span>), <span class="n">0</span>, <span class="n">1</span>, <span class="n">0.05f</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;volume));</pre><img class="shot" src="img/doc_r_slider_h.png"></div>
+<div class="example"><pre><span class="k">static</span> <span class="k">float</span> levels[<span class="n">3</span>] = { <span class="n">0.8f</span>, <span class="n">0.5f</span>, <span class="n">0.3f</span> };
+<span class="c">// [...]</span>
+<a class="t" href="#r_layout_iter">r_layout_iter</a> row = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_LEFT</a>);
+<span class="k">for</span>(<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">3</span>; i++)
+	<a class="f" href="#r_slider">r_slider_v</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;row, <span class="n">24</span>), <span class="n">0</span>, <span class="n">1</span>, <span class="n">0.05f</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;levels[i]));</pre><img class="shot" src="img/doc_r_slider_v.png"></div>
 <p class="see">See also: <a href="#r_slider_box"><code>r_slider_box</code></a>, <a href="#r_spinbox"><code>r_spinbox</code></a></p>
 
 <h3><a name="r_style"></a>r_style</h3>
@@ -639,24 +674,36 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
     <span class="e">R_STYLE_DIALOG</span>,
     <span class="e">R_STYLE_TAB_PAGE</span>,     <span class="c">// Background of the content below tabs.</span>
     <span class="e">R_STYLE_SEGMENTED</span>,    <span class="c">// Joined choices, one is selected.</span>
+    <span class="e">R_STYLE_IMAGE</span>,        <span class="c">// No stylebox, only r_drawable.image_data.</span>
     <span class="e">R_STYLE_BASE_MASK</span> = <span class="n">0xFF</span>,
     
-    <span class="e">R_STATE_SELECTED</span>  = <a class="e" href="#R_BIT">R_BIT</a>(<span class="n">0</span>) &lt;&lt; <span class="n">8</span>, <span class="c">// Selection in a menu.</span>
-    <span class="e">R_STATE_PRESSED</span>   = <a class="e" href="#R_BIT">R_BIT</a>(<span class="n">1</span>) &lt;&lt; <span class="n">8</span>,
-    <span class="e">R_STATE_HOVER</span>     = <a class="e" href="#R_BIT">R_BIT</a>(<span class="n">2</span>) &lt;&lt; <span class="n">8</span>,
-    <span class="e">R_STATE_DISABLED</span>  = <a class="e" href="#R_BIT">R_BIT</a>(<span class="n">3</span>) &lt;&lt; <span class="n">8</span>,
-    <span class="e">R_STATE_TOGGLED</span>   = <a class="e" href="#R_BIT">R_BIT</a>(<span class="n">4</span>) &lt;&lt; <span class="n">8</span>,
-	<span class="e">R_STATE_FOCUS</span>     = <a class="e" href="#R_BIT">R_BIT</a>(<span class="n">5</span>) &lt;&lt; <span class="n">8</span>,
-	<span class="c">// Up to R_BIT(15) &lt;&lt; 8</span>
-    <span class="e">R_STATE_MASK</span> = <span class="n">0xFFFF</span> &lt;&lt; <span class="n">8</span>,
+    <span class="e">R_FLAG_VERTICAL</span>   = <span class="e">R_BIT</span>(<span class="n">0</span>) &lt;&lt; <span class="n">8</span>,  <span class="c">// Vertical scrollbar/slider/separator, horizontal by default.</span>
+    <span class="e">R_FLAG_EMBEDDED</span>   = <span class="e">R_BIT</span>(<span class="n">1</span>) &lt;&lt; <span class="n">8</span>,  <span class="c">// Background adapts to the surrounding element (list, menu, context menu).</span>
+    <span class="e">R_FLAG_MASK</span>       = <span class="n">0xFF</span> &lt;&lt; <span class="n">8</span>,
 
-    <span class="e">R_VARIANT_FLAT</span>            = <span class="n">0</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Usually means without border and the element is just implied through icon + label</span>
-    <span class="e">R_VARIANT_RAISED</span>          = <span class="n">1</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Raised panel, by default panels are inset.</span>
-    <span class="e">R_VARIANT_HORZ</span>            = <span class="n">2</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Horizontal scrollbar/slider</span>
-	<span class="e">R_VARIANT_VERT</span>            = <span class="n">3</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Vertical scrollbar/slider</span>
-    <span class="e">R_VARIANT_BOLD</span>            = <span class="n">4</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Primary button - More colorful</span>
-    <span class="e">R_VARIANT_DULL</span>            = <span class="n">5</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Tertiary button - Less color, flatter</span>
-	<span class="e">R_VARIANT_LISTITEM</span>        = <span class="n">6</span> &lt;&lt; <span class="n">24</span>, <span class="c">// UI element is part of a list, that usually implies having the same background as the list and a flat appearance.</span>
+    <span class="e">R_STATE_SELECTED</span>  = <span class="e">R_BIT</span>(<span class="n">0</span>) &lt;&lt; <span class="n">16</span>, <span class="c">// Selection in a menu.</span>
+    <span class="e">R_STATE_PRESSED</span>   = <span class="e">R_BIT</span>(<span class="n">1</span>) &lt;&lt; <span class="n">16</span>,
+    <span class="e">R_STATE_HOVER</span>     = <span class="e">R_BIT</span>(<span class="n">2</span>) &lt;&lt; <span class="n">16</span>,
+    <span class="e">R_STATE_DISABLED</span>  = <span class="e">R_BIT</span>(<span class="n">3</span>) &lt;&lt; <span class="n">16</span>,
+    <span class="e">R_STATE_TOGGLED</span>   = <span class="e">R_BIT</span>(<span class="n">4</span>) &lt;&lt; <span class="n">16</span>,
+    <span class="e">R_STATE_FOCUS</span>     = <span class="e">R_BIT</span>(<span class="n">5</span>) &lt;&lt; <span class="n">16</span>,
+    <span class="e">R_STATE_MASK</span>      = <span class="n">0xFF</span> &lt;&lt; <span class="n">16</span>,
+
+    <span class="e">R_VARIANT_FLAT</span>            = <span class="n">1</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Usually means without border and the element is just implied through icon + label</span>
+    <span class="e">R_VARIANT_INSET</span>           = <span class="n">2</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Inset panel.</span>
+	<span class="e">R_VARIANT_RAISED</span>          = <span class="n">3</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Raised panel.</span>
+    <span class="e">R_VARIANT_PRIMARY</span>         = <span class="n">4</span> &lt;&lt; <span class="n">24</span>, <span class="c">// More colorful</span>
+    <span class="e">R_VARIANT_TERTIARY</span>        = <span class="n">5</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Less color, flatter</span>
+    <span class="e">R_VARIANT_LIST_ITEM</span>       = <span class="n">6</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Embedded in a list, should use a appropriate background for it</span>
+    <span class="e">R_VARIANT_MENU_ITEM</span>       = <span class="n">7</span> &lt;&lt; <span class="n">24</span>, <span class="c">// Embedded in a menu, should blend into it</span>
+    <span class="e">R_VARIANT_CUSTOM_1</span>        = <span class="n">8</span> &lt;&lt; <span class="n">24</span>,
+    <span class="e">R_VARIANT_CUSTOM_2</span>        = <span class="n">9</span> &lt;&lt; <span class="n">24</span>,
+    <span class="e">R_VARIANT_CUSTOM_3</span>        = <span class="n">10</span> &lt;&lt; <span class="n">24</span>,
+    <span class="e">R_VARIANT_CUSTOM_4</span>        = <span class="n">11</span> &lt;&lt; <span class="n">24</span>,
+    <span class="e">R_VARIANT_CUSTOM_5</span>        = <span class="n">12</span> &lt;&lt; <span class="n">24</span>,
+    <span class="e">R_VARIANT_CUSTOM_6</span>        = <span class="n">13</span> &lt;&lt; <span class="n">24</span>,
+    <span class="e">R_VARIANT_CUSTOM_7</span>        = <span class="n">14</span> &lt;&lt; <span class="n">24</span>,
+    <span class="e">R_VARIANT_CUSTOM_8</span>        = <span class="n">15</span> &lt;&lt; <span class="n">24</span>,
     <span class="e">R_VARIANT_MASK</span>            = <span class="n">0xF</span> &lt;&lt; <span class="n">24</span>,
 
 	<span class="e">R_COMPONENT_JOINED</span>        = <span class="n">1</span> &lt;&lt; <span class="n">28</span>, <span class="c">// Part of an complex input, wedged inbetween endcaps.</span>
@@ -687,22 +734,22 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
 <a class="f" href="#r_header">r_header</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">28</span>), <span class="s">"Audio"</span>);
 <a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">20</span>), <span class="s">"Output device"</span>);</pre><img class="shot" src="img/doc_r_header.png"></div>
-
-<h3><a name="r_paragraph"></a>r_paragraph</h3>
-<pre class="sig"><span class="k">void</span> r_paragraph(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">int</span> style, <span class="k">const</span> <span class="k">char</span>* text);</pre>
-<p>Draws word-wrapped text, using the label style if <code>style</code> is 0.</p>
-<div class="example"><pre><a class="f" href="#r_paragraph">r_paragraph</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <span class="n">0</span>, <span class="s">"Paragraphs wrap their text at word boundaries to fit the width of the rectangle they are given."</span>);</pre><img class="shot" src="img/doc_r_paragraph.png"></div>
+<p class="see">See also: <a href="#r_label"><code>r_label</code></a></p>
 
 <h3><a name="r_panel"></a>r_panel</h3>
 <pre class="sig"><span class="k">void</span> r_panel(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">int</span> style);</pre>
 <p>Draws a background panel, using <code>R_STYLE_PANEL</code> if <code>style</code> is 0.</p>
-<div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> cols = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_LEFT</a>);
-<a class="t" href="#rect">rect</a> inset  = <a class="f" href="#r_next">r_next_fraction</a>(&amp;cols, <span class="n">0.5f</span>);
-<a class="t" href="#rect">rect</a> raised = <a class="f" href="#r_remaining">r_remaining</a>(&amp;cols);
-<a class="f" href="#r_panel">r_panel</a>(ui, inset,  <span class="n">0</span>);
-<a class="f" href="#r_panel">r_panel</a>(ui, raised, <a class="e" href="#r_style">R_STYLE_PANEL</a> | <a class="e" href="#r_style">R_VARIANT_RAISED</a>);
-<a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(inset, <span class="n">8</span>),  <span class="s">"Inset"</span>);
-<a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(raised, <span class="n">8</span>), <span class="s">"Raised"</span>);</pre><img class="shot" src="img/doc_r_panel.png"></div>
+<div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> rows = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
+
+<a class="f" href="#r_panel">r_panel</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;rows, <span class="n">64</span>), <span class="n">0</span>);
+<a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(<a class="f" href="#r_last">r_last</a>(&amp;rows), <span class="n">8</span>), <span class="s">"R_STYLE_PANEL"</span>);
+
+<a class="f" href="#r_panel">r_panel</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;rows, <span class="n">64</span>), <a class="e" href="#r_style">R_STYLE_PANEL</a> | <a class="e" href="#r_style">R_VARIANT_INSET</a>);
+<a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(<a class="f" href="#r_last">r_last</a>(&amp;rows), <span class="n">8</span>), <span class="s">"R_VARIANT_INSET"</span>);
+
+<a class="f" href="#r_panel">r_panel</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;rows, <span class="n">64</span>), <a class="e" href="#r_style">R_STYLE_PANEL</a> | <a class="e" href="#r_style">R_VARIANT_RAISED</a>);
+<a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(<a class="f" href="#r_last">r_last</a>(&amp;rows), <span class="n">8</span>), <span class="s">"R_VARIANT_RAISED"</span>);</pre><img class="shot" src="img/doc_r_panel.png"></div>
+<p class="see">See also: <a href="#r_style"><code>r_style</code></a>, <a href="#r_separator"><code>r_separator</code></a></p>
 
 <h3><a name="r_separator"></a>r_separator</h3>
 <pre class="sig"><span class="k">void</span> r_separator(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r);</pre>
@@ -711,6 +758,7 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">20</span>), <span class="s">"Above"</span>);
 <a class="f" href="#r_separator">r_separator</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">1</span>));
 <a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">20</span>), <span class="s">"Below"</span>);</pre><img class="shot" src="img/doc_r_separator.png"></div>
+<p class="see">See also: <a href="#r_panel"><code>r_panel</code></a>, <a href="#r_split"><code>r_split</code></a></p>
 
 <h3><a name="r_toggle"></a>r_toggle</h3>
 <pre class="sig"><span class="k">void</span> r_toggle(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">const</span> <span class="k">char</span>* text, <a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
@@ -721,6 +769,7 @@ Reserved virtual memory is a limited resource on 32 bit systems, but basically f
 <a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
 <a class="f" href="#r_toggle">r_toggle</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), <span class="s">"Mute"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;mute));
 <a class="f" href="#r_toggle">r_toggle</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), <span class="s">"Fullscreen"</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;fullscreen));</pre><img class="shot" src="img/doc_r_toggle.png"></div>
+<p class="see">See also: <a href="#r_checkbox"><code>r_checkbox</code></a>, <a href="#r_radio"><code>r_radio</code></a></p>
 
 <h3><a name="r_radio"></a>r_radio</h3>
 <pre class="sig"><span class="k">void</span> r_radio(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">const</span> <span class="k">char</span>* text, <span class="t">int64_t</span> value, <a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
@@ -743,15 +792,6 @@ it.spacing = <span class="n">2</span>;
 <span class="k">for</span>(<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">3</span>; i++)
 	<a class="f" href="#r_selectable">r_selectable</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">26</span>), files[i], i, <a class="e" href="#R_PTR">R_PTR</a>(&amp;selected));</pre><img class="shot" src="img/doc_r_selectable.png"></div>
 
-<h3><a name="r_slider_v"></a>r_slider_v</h3>
-<pre class="sig"><span class="k">void</span> r_slider_v(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">float</span> min, <span class="k">float</span> max, <span class="k">float</span> step, <a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
-<p>Vertical version of <a href="#r_slider_h"><code>r_slider_h</code></a>.</p>
-<div class="example"><pre><span class="k">static</span> <span class="k">float</span> levels[<span class="n">3</span>] = { <span class="n">0.8f</span>, <span class="n">0.5f</span>, <span class="n">0.3f</span> };
-<span class="c">// [...]</span>
-<a class="t" href="#r_layout_iter">r_layout_iter</a> row = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_LEFT</a>);
-<span class="k">for</span>(<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">3</span>; i++)
-	<a class="f" href="#r_slider_v">r_slider_v</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;row, <span class="n">24</span>), <span class="n">0</span>, <span class="n">1</span>, <span class="n">0.05f</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;levels[i]));</pre><img class="shot" src="img/doc_r_slider_v.png"></div>
-
 <h3><a name="r_slider_box"></a>r_slider_box</h3>
 <pre class="sig"><span class="k">void</span> r_slider_box(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">float</span> min, <span class="k">float</span> max, <span class="k">float</span> step, <a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
 <p><span class="todo">&lt;TODO: Explain drag and input&gt;</span></p>
@@ -769,11 +809,12 @@ it.spacing = <span class="n">2</span>;
 <a class="f" href="#r_spinbox">r_spinbox</a>(ui, r, <span class="n">0</span>, <span class="n">99</span>, <span class="n">1</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;count));</pre><img class="shot" src="img/doc_r_spinbox.png"></div>
 
 <h3><a name="r_progress"></a>r_progress</h3>
-<pre class="sig"><span class="k">void</span> r_progress(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">float</span> fraction);</pre>
-<p>Draws a progress bar filled to <code>fraction</code>, clamped to the range 0 to 1.</p>
-<div class="example"><pre><a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
+<pre class="sig"><span class="k">void</span> r_progress(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">float</span> min, <span class="k">float</span> max, <a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
+<p>Draws a progress bar filled to the bound value within <code>min</code> to <code>max</code>, clamped to that range.</p>
+<div class="example"><pre><span class="k">static</span> <span class="k">float</span> progress = <span class="n">65.0f</span>;
+<a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
 <a class="f" href="#r_label">r_label</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">20</span>), <span class="s">"Downloading... 65%"</span>);
-<a class="f" href="#r_progress">r_progress</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">8</span>), <span class="n">0.65f</span>);</pre><img class="shot" src="img/doc_r_progress.png"></div>
+<a class="f" href="#r_progress">r_progress</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">8</span>), <span class="n">0</span>, <span class="n">100</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;progress));</pre><img class="shot" src="img/doc_r_progress.png"></div>
 
 <h3><a name="r_tabs"></a>r_tabs</h3>
 <pre class="sig"><span class="k">void</span> r_tabs(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">char</span>** labels, <span class="k">int</span> count, <a class="t" href="#r_data_binding">r_data_binding</a> selected, <a class="t" href="#r_ui_list">r_ui_list</a>** pages);</pre>
@@ -783,8 +824,8 @@ it.spacing = <span class="n">2</span>;
 <span class="k">static</span> <span class="k">char</span>* labels[] = { <span class="s">"Files"</span>, <span class="s">"Recent"</span> };
 <a class="t" href="#r_ui_list">r_ui_list</a>* pages[<span class="n">2</span>];
 <a class="f" href="#r_tabs">r_tabs</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), labels, <span class="n">2</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;tab), pages);
-<a class="f" href="#r_label">r_label</a>(pages[<span class="n">0</span>], <a class="f" href="#r_shrink">r_shrink</a>(pages[<span class="n">0</span>]-&gt;document_area, <span class="n">8</span>), <span class="s">"Content of the first tab"</span>);
-<a class="f" href="#r_label">r_label</a>(pages[<span class="n">1</span>], <a class="f" href="#r_shrink">r_shrink</a>(pages[<span class="n">1</span>]-&gt;document_area, <span class="n">8</span>), <span class="s">"Content of the second tab"</span>);</pre><img class="shot" src="img/doc_r_tabs.png"></div>
+<a class="f" href="#r_label">r_label</a>(pages[<span class="n">0</span>], <a class="f" href="#r_shrink">r_shrink</a>(pages[<span class="n">0</span>]-&gt;document_area, <span class="n">8</span>), <span class="s">"Contents of the first tab"</span>);
+<a class="f" href="#r_label">r_label</a>(pages[<span class="n">1</span>], <a class="f" href="#r_shrink">r_shrink</a>(pages[<span class="n">1</span>]-&gt;document_area, <span class="n">8</span>), <span class="s">"Contents of the second tab"</span>);</pre><img class="shot" src="img/doc_r_tabs.png"></div>
 
 <h3><a name="r_dropdown"></a>r_dropdown</h3>
 <pre class="sig"><span class="k">void</span> r_dropdown(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">char</span>** items, <span class="k">int</span> count, <a class="t" href="#r_data_binding">r_data_binding</a> selected);</pre>
@@ -792,7 +833,7 @@ it.spacing = <span class="n">2</span>;
 <div class="example"><pre><span class="k">static</span> <span class="k">int</span> language = <span class="n">0</span>;
 <span class="c">// [...]</span>
 <span class="k">static</span> <span class="k">char</span>* languages[] = { <span class="s">"English"</span>, <span class="s">"Deutsch"</span>, <span class="s">"Français"</span> };
-<a class="t" href="#rect">rect</a> r = <a class="f" href="#r_aligned">r_aligned</a>(<a class="e" href="#r_alignment">R_CENTER</a>, ui-&gt;root_area, (<a class="t" href="#rect">rect</a>){ .w = <span class="n">160</span>, .h = <span class="n">28</span> });
+<a class="t" href="#rect">rect</a> r = <a class="f" href="#r_aligned">r_aligned</a>(<a class="e" href="#r_alignment">R_TOP</a>, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">16</span>), (<a class="t" href="#rect">rect</a>){ .w = <span class="n">160</span>, .h = <span class="n">28</span> });
 <a class="f" href="#r_dropdown">r_dropdown</a>(ui, r, languages, <span class="n">3</span>, <a class="e" href="#R_PTR">R_PTR</a>(&amp;language));</pre><img class="shot" src="img/doc_r_dropdown.png"></div>
 
 <h3><a name="r_segmented"></a>r_segmented</h3>
@@ -839,15 +880,15 @@ it.spacing = <span class="n">2</span>;
 <span class="k">static</span> <span class="k">char</span> search[<span class="n">64</span>] = <span class="s">"rcut"</span>;
 <span class="c">// [...]</span>
 <a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
-<a class="f" href="#r_line_edit">r_line_edit</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), name, <a class="e" href="#R_PTR">sizeof</a>(name), <span class="s">"Your name"</span>);
-<a class="f" href="#r_line_edit">r_line_edit</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), search, <a class="e" href="#R_PTR">sizeof</a>(search), <span class="s">"Search"</span>);</pre><img class="shot" src="img/doc_r_line_edit.png"></div>
+<a class="f" href="#r_line_edit">r_line_edit</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), name, <span class="k">sizeof</span>(name), <span class="s">"Your name"</span>);
+<a class="f" href="#r_line_edit">r_line_edit</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), search, <span class="k">sizeof</span>(search), <span class="s">"Search"</span>);</pre><img class="shot" src="img/doc_r_line_edit.png"></div>
 
 <h3><a name="r_text_area"></a>r_text_area</h3>
 <pre class="sig"><span class="k">void</span> r_text_area(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">char</span>* buffer, <span class="k">int</span> capacity, <span class="k">const</span> <span class="k">char</span>* placeholder);</pre>
 <p><span class="todo">&lt;TODO: Describe multiline editing&gt;</span></p>
 <div class="example"><pre><span class="k">static</span> <span class="k">char</span> notes[<span class="n">256</span>] = <span class="s">"Meeting notes\n- Ship the docs\n- Review the theme"</span>;
 <span class="c">// [...]</span>
-<a class="f" href="#r_text_area">r_text_area</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), notes, <a class="e" href="#R_PTR">sizeof</a>(notes), <span class="s">"Write something..."</span>);</pre><img class="shot" src="img/doc_r_text_area.png"></div>
+<a class="f" href="#r_text_area">r_text_area</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), notes, <span class="k">sizeof</span>(notes), <span class="s">"Write something..."</span>);</pre><img class="shot" src="img/doc_r_text_area.png"></div>
 
 <h3><a name="r_text_edit_ex"></a>r_text_edit_ex</h3>
 <pre class="sig"><span class="k">void</span> r_text_edit_ex(<a class="t" href="#r_ui_list">r_ui_list</a>* l, <a class="t" href="#rect">rect</a> r, <span class="k">char</span>* buffer, <span class="k">int</span> capacity, <span class="k">const</span> <span class="k">char</span>* placeholder, <span class="k">int</span> style, <span class="k">bool</span> multiline);</pre>
@@ -855,7 +896,7 @@ it.spacing = <span class="n">2</span>;
 <div class="example"><pre><span class="k">static</span> <span class="k">char</span> search[<span class="n">64</span>] = <span class="s">"rcut"</span>;
 <span class="c">// [...]</span>
 <a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(ui, <a class="f" href="#r_shrink">r_shrink</a>(ui-&gt;root_area, <span class="n">12</span>), <a class="e" href="#r_alignment">R_TOP</a>);
-<a class="f" href="#r_text_edit_ex">r_text_edit_ex</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), search, <a class="e" href="#R_PTR">sizeof</a>(search), <span class="s">"Search"</span>, <a class="e" href="#r_style">R_STYLE_INPUT</a> | <a class="e" href="#r_style">R_VARIANT_FLAT</a>, <span class="k">false</span>);</pre><img class="shot" src="img/doc_r_text_edit_ex.png"></div>
+<a class="f" href="#r_text_edit_ex">r_text_edit_ex</a>(ui, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), search, <span class="k">sizeof</span>(search), <span class="s">"Search"</span>, <a class="e" href="#r_style">R_STYLE_INPUT</a> | <a class="e" href="#r_style">R_VARIANT_FLAT</a>, <span class="k">false</span>);</pre><img class="shot" src="img/doc_r_text_edit_ex.png"></div>
 
 <h3><a name="r_text_edit_state"></a>r_text_edit_state</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_text_edit_state r_text_edit_state;</pre>
@@ -867,6 +908,7 @@ it.spacing = <span class="n">2</span>;
 <div class="example"><pre><a class="t" href="#rect">rect</a> ok = <a class="f" href="#r_aligned">r_aligned</a>(<a class="e" href="#r_alignment">R_CENTER</a>, ui-&gt;root_area, (<a class="t" href="#rect">rect</a>){ .w = <span class="n">100</span>, .h = <span class="n">32</span> });
 <a class="f" href="#r_button">r_button</a>(ui, ok, <span class="s">"OK"</span>);
 <a class="f" href="#r_tooltip">r_tooltip</a>(ui, ok, <span class="s">"Applies the settings and closes the window."</span>);</pre></div>
+<p class="see">See also: <a href="#r_popup"><code>r_popup</code></a>, <a href="#RCUT_MOUSE_*"><code>RCUT_MOUSE_*</code></a></p>
 
 <h3><a name="r_dialog_begin"></a>r_dialog_begin</h3>
 <pre class="sig"><a class="t" href="#rect">rect</a> r_dialog_begin(<a class="t" href="#r_ui_list">r_ui_list</a>* dialog);</pre>
@@ -877,7 +919,7 @@ it.spacing = <span class="n">2</span>;
 <a class="t" href="#rect">rect</a> area = <a class="f" href="#r_dialog_begin">r_dialog_begin</a>(dialog);
 <a class="t" href="#r_layout_iter">r_layout_iter</a> it = <a class="f" href="#r_stack">r_stack</a>(dialog, area, <a class="e" href="#r_alignment">R_TOP</a>);
 <a class="f" href="#r_label">r_label</a>(dialog, <a class="f" href="#r_next">r_next</a>(&amp;it, <span class="n">20</span>), <span class="s">"Display name"</span>);
-<a class="f" href="#r_line_edit">r_line_edit</a>(dialog, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), name, <a class="e" href="#R_PTR">sizeof</a>(name), <span class="s">"Your name"</span>);</pre></div>
+<a class="f" href="#r_line_edit">r_line_edit</a>(dialog, <a class="f" href="#r_next">r_next</a>(&amp;it, -<span class="n">1</span>), name, <span class="k">sizeof</span>(name), <span class="s">"Your name"</span>);</pre></div>
 
 <h3><a name="r_icon_variant"></a>r_icon_variant</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">enum</span> r_icon_variant{
@@ -998,8 +1040,8 @@ it.spacing = <span class="n">2</span>;
 		<span class="k">struct</span>{
             r_fn* getter;
             r_fn* setter;
-            <a class="t" href="#r_signature">r_signature</a> setter_sig;
-            <a class="t" href="#r_signature">r_signature</a> getter_sig;
+            r_signature setter_sig;
+            r_signature getter_sig;
             <span class="t">uint64_t</span> index;
             <span class="k">void</span>* pointer;
 		};
@@ -1022,53 +1064,26 @@ it.spacing = <span class="n">2</span>;
     .ptr        = (<span class="k">void</span>*)(<span class="e">BASE</span>),                                 \
     .num_bits   = (<span class="e">LENGTH</span>),                                      \
     .bit_offset = (<span class="e">OFFSET</span>),                                      \
-    .ptr_type   = <a class="e" href="#R_PTR">R_TYPEOF</a>(*(<span class="e">BASE</span>)) })</pre>
+    .ptr_type   = <span class="e">R_TYPEOF</span>(*(<span class="e">BASE</span>)) })</pre>
 <p>Binds <code>LENGTH</code> bits starting at bit <code>OFFSET</code> of the integer at <code>BASE</code>.</p>
+<p class="see">See also: <a href="#R_PTR"><code>R_PTR</code></a>, <a href="#R_GETSET"><code>R_GETSET</code></a>, <a href="#r_data_binding"><code>r_data_binding</code></a></p>
 
 <h3><a name="R_GETSET"></a>R_GETSET</h3>
 <pre class="sig"><span class="p">#define</span> <span class="e">R_GETSET</span>(...) r_data_compact((<a class="t" href="#r_data_desc">r_data_desc</a>){ __VA_ARGS__ })</pre>
 <p><span class="todo">&lt;TODO: Explain getter/setter binding&gt;</span></p>
 
-<h3><a name="R_SIGNATURE_LIST"></a>R_SIGNATURE_LIST</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_SIGNATURE_LIST</span>(X)  \
-    X(b,     <span class="k">bool</span>) \
-    X(i32,   <span class="t">int32_t</span>) \
-    X(i64,   <span class="t">int64_t</span>) \
-    X(u32,   <span class="t">uint32_t</span>) \
-    X(u64,   <span class="t">uint64_t</span>) \
-    X(f32,   <span class="k">float</span>) \
-    X(f64,   <span class="k">double</span>)</pre>
-<p>X-macro of the value types supported by getter/setter bindings, used internally.</p>
-
 <h3><a name="r_data_desc"></a>r_data_desc</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_data_desc {
-<span class="p">#define</span> <a class="e" href="#R_SIGNATURE_LIST">X</a>(tag, ret) ret (*getter_##tag)(<span class="k">void</span>); ret (*getter_##tag ##_i32)(<span class="k">int</span>); ret (*getter_##tag ##_u64)(<span class="t">uint64_t</span>); ret (*getter_##tag ##_ptr)(<span class="k">void</span>*); ret (*getter_##tag ##_ptr_i32)(<span class="k">void</span>*);
-    <a class="e" href="#R_SIGNATURE_LIST">R_SIGNATURE_LIST</a>(<a class="e" href="#R_SIGNATURE_LIST">X</a>)
-<span class="p">#undef</span> <a class="e" href="#R_SIGNATURE_LIST">X</a>
-<span class="p">#define</span> <a class="e" href="#R_SIGNATURE_LIST">X</a>(tag, target_type) <span class="k">void</span> (*setter_##tag)(target_type); <span class="k">void</span> (*setter_i32_##tag)(<span class="k">int</span>, target_type); <span class="k">void</span> (*setter_u64_##tag)(<span class="t">uint64_t</span>, target_type); <span class="k">void</span> (*setter_ptr_##tag)(<span class="k">void</span>*, target_type);  <span class="k">void</span> (*setter_ptr_i32_##tag)(<span class="k">void</span>*, <span class="t">int32_t</span>, target_type);
-    <a class="e" href="#R_SIGNATURE_LIST">R_SIGNATURE_LIST</a>(<a class="e" href="#R_SIGNATURE_LIST">X</a>)
-<span class="p">#undef</span> <a class="e" href="#R_SIGNATURE_LIST">X</a>
+<span class="p">#define</span> X(tag, ret) ret (*getter_##tag)(<span class="k">void</span>); ret (*getter_##tag ##_i32)(<span class="k">int</span>); ret (*getter_##tag ##_u64)(<span class="t">uint64_t</span>); ret (*getter_##tag ##_ptr)(<span class="k">void</span>*); ret (*getter_##tag ##_ptr_i32)(<span class="k">void</span>*);
+    <span class="e">R_SIGNATURE_LIST</span>(X)
+<span class="p">#undef</span> X
+<span class="p">#define</span> X(tag, target_type) <span class="k">void</span> (*setter_##tag)(target_type); <span class="k">void</span> (*setter_i32_##tag)(<span class="k">int</span>, target_type); <span class="k">void</span> (*setter_u64_##tag)(<span class="t">uint64_t</span>, target_type); <span class="k">void</span> (*setter_ptr_##tag)(<span class="k">void</span>*, target_type);  <span class="k">void</span> (*setter_ptr_i32_##tag)(<span class="k">void</span>*, <span class="t">int32_t</span>, target_type);
+    <span class="e">R_SIGNATURE_LIST</span>(X)
+<span class="p">#undef</span> X
     <span class="t">uint64_t</span> index;
     <span class="k">void</span>* pointer;
 } r_data_desc;</pre>
 <p><span class="todo">&lt;TODO: Explain getter/setter fields&gt;</span></p>
-
-<h3><a name="r_data_compact"></a>r_data_compact</h3>
-<pre class="sig"><a class="t" href="#r_data_binding">r_data_binding</a> <a class="e" href="#R_GETSET">r_data_compact</a>(<a class="t" href="#r_data_desc">r_data_desc</a> d);</pre>
-<p>Converts an <a href="#r_data_desc"><code>r_data_desc</code></a> into an <a href="#r_data_binding"><code>r_data_binding</code></a>, used by <a href="#R_GETSET"><code>R_GETSET</code></a>.</p>
-
-<h3><a name="R_TYPEOF"></a>R_TYPEOF</h3>
-<pre class="sig"><span class="p">#define</span> <a class="e" href="#R_PTR">R_TYPEOF</a>(V) _Generic((V),                               \
-        _Bool:              <a class="e" href="#r_data_type">R_BOOL</a>,                              \
-        <span class="k">float</span>:              <a class="e" href="#r_data_type">R_FLOAT</a>, <span class="k">double</span>:             <a class="e" href="#r_data_type">R_FLOAT</a>,\
-        <span class="k">char</span>:               <a class="e" href="#r_data_type">R_INT</a>,                              \
-        <span class="k">signed</span> <span class="k">char</span>:        <a class="e" href="#r_data_type">R_INT</a>,   <span class="k">short</span>:              <a class="e" href="#r_data_type">R_INT</a>, \
-        <span class="k">int</span>:                <a class="e" href="#r_data_type">R_INT</a>,   <span class="k">long</span>:               <a class="e" href="#r_data_type">R_INT</a>, \
-        <span class="k">long</span> <span class="k">long</span>:          <a class="e" href="#r_data_type">R_INT</a>,                              \
-        <span class="k">unsigned</span> <span class="k">char</span>:      <a class="e" href="#r_data_type">R_UINT</a>,  <span class="k">unsigned</span> <span class="k">short</span>:     <a class="e" href="#r_data_type">R_UINT</a>,\
-        <span class="k">unsigned</span> <span class="k">int</span>:       <a class="e" href="#r_data_type">R_UINT</a>,  <span class="k">unsigned</span> <span class="k">long</span>:      <a class="e" href="#r_data_type">R_UINT</a>,\
-        <span class="k">unsigned</span> <span class="k">long</span> <span class="k">long</span>: <a class="e" href="#r_data_type">R_UINT</a>)</pre>
-<p>Returns the <a href="#r_data_type"><code>r_data_type</code></a> of an expression.</p>
 
 <h3><a name="r_data_type"></a>r_data_type</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">enum</span> r_data_type
@@ -1079,40 +1094,27 @@ it.spacing = <span class="n">2</span>;
 	<span class="e">R_UINT</span>,  <span class="c">// Always positive.</span>
 } r_data_type;</pre>
 <p>Type of the value a pointer binding refers to.</p>
-
-<h3><a name="r_signature"></a>r_signature</h3>
-<pre class="sig"><span class="k">typedef</span> <span class="k">enum</span> r_signature
-{
-<span class="p">#define</span> <a class="e" href="#R_SIGNATURE_LIST">X</a>(tag, ret) <span class="e">R_</span>##tag ##_FN, <span class="e">R_</span>##tag ##_FN_i32, <span class="e">R_</span>##tag ##_FN_u64, <span class="e">R_</span>##tag ##_FN_ptr, <span class="e">R_</span>##tag ##_FN_ptr_i32,
-    R_v_FN, R_v_FN_ptr,
-    <a class="e" href="#R_SIGNATURE_LIST">R_SIGNATURE_LIST</a>(<a class="e" href="#R_SIGNATURE_LIST">X</a>)
-<span class="p">#undef</span> <a class="e" href="#R_SIGNATURE_LIST">X</a>
-<span class="p">#define</span> <a class="e" href="#R_SIGNATURE_LIST">X</a>(tag, target_type) R_v_FN_##tag, R_v_FN_i32_##tag, R_v_FN_u64_##tag, R_v_FN_ptr_##tag, R_v_FN_ptr_i32_##tag,
-    <a class="e" href="#R_SIGNATURE_LIST">R_SIGNATURE_LIST</a>(<a class="e" href="#R_SIGNATURE_LIST">X</a>)
-<span class="p">#undef</span> <a class="e" href="#R_SIGNATURE_LIST">X</a>
-    <span class="e">R_SIGNATURE_MAX</span>
-} r_signature;</pre>
-<p>Function signatures of getter/setter bindings, used internally.</p>
-
-<h3><a name="r_call"></a>r_call</h3>
-<pre class="sig"><span class="k">void</span> r_call(<a class="t" href="#r_signature">r_signature</a> signature, r_fn* fn, <span class="t">uint64_t</span> i, <span class="k">double</span> d, <span class="k">void</span>* ptr);</pre>
-<p>Calls <code>fn</code> with the arguments that match <code>signature</code>, taken from <code>i</code>, <code>d</code> and <code>ptr</code>.</p>
+<p class="see">See also: <a href="#R_PTR"><code>R_PTR</code></a>, <a href="#r_data_binding"><code>r_data_binding</code></a></p>
 
 <h3><a name="r_seti"></a>r_seti</h3>
 <pre class="sig"><span class="k">void</span> r_seti(<a class="t" href="#r_data_binding">r_data_binding</a> binding, <span class="t">int64_t</span> value);</pre>
 <p>Writes an integer to the binding, converted to the bound type.</p>
+<p class="see">See also: <a href="#r_geti"><code>r_geti</code></a>, <a href="#r_setd"><code>r_setd</code></a>, <a href="#r_data_binding"><code>r_data_binding</code></a></p>
 
 <h3><a name="r_geti"></a>r_geti</h3>
 <pre class="sig"><span class="t">int64_t</span> r_geti(<a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
 <p>Reads the binding as an integer.</p>
+<p class="see">See also: <a href="#r_seti"><code>r_seti</code></a>, <a href="#r_getd"><code>r_getd</code></a></p>
 
 <h3><a name="r_setd"></a>r_setd</h3>
 <pre class="sig"><span class="k">void</span> r_setd(<a class="t" href="#r_data_binding">r_data_binding</a> binding, <span class="k">double</span> value);</pre>
 <p>Writes a double to the binding, converted to the bound type.</p>
+<p class="see">See also: <a href="#r_getd"><code>r_getd</code></a>, <a href="#r_seti"><code>r_seti</code></a></p>
 
 <h3><a name="r_getd"></a>r_getd</h3>
 <pre class="sig"><span class="k">double</span> r_getd(<a class="t" href="#r_data_binding">r_data_binding</a> binding);</pre>
 <p>Reads the binding as a double.</p>
+<p class="see">See also: <a href="#r_setd"><code>r_setd</code></a>, <a href="#r_geti"><code>r_geti</code></a></p>
 
 <h2><a name="s-Low-level-utility-functions"></a>Low level utility functions</h2>
 <p><span class="todo">&lt;TODO: Introduce low level utilities&gt;</span></p>
@@ -1120,6 +1122,7 @@ it.spacing = <span class="n">2</span>;
 <h3><a name="r_is_pressed_visual"></a>r_is_pressed_visual</h3>
 <pre class="sig"><span class="k">bool</span> r_is_pressed_visual(<a class="t" href="#r_context">r_context</a>* c, <span class="t">uint64_t</span> id);</pre>
 <p>Returns true if the element should look pressed: it is pressed and the mouse is still over it.</p>
+<p class="see">See also: <a href="draw.html#r_draw_take_damage"><code>r_draw_take_damage</code></a></p>
 
 <h3><a name="r_dispatch"></a>r_dispatch</h3>
 <pre class="sig"><span class="k">bool</span> r_dispatch(<a class="t" href="#r_interact">r_interact</a>* target, <a class="t" href="#r_event_type">r_event_type</a> event_type, <a class="t" href="#r_event">r_event</a>* event);</pre>
@@ -1128,14 +1131,17 @@ it.spacing = <span class="n">2</span>;
 <h3><a name="r_change_focus"></a>r_change_focus</h3>
 <pre class="sig"><span class="k">void</span> r_change_focus(<a class="t" href="#r_context">r_context</a>* c, <a class="t" href="#r_interact">r_interact</a>* new_focus);</pre>
 <p>Moves the keyboard focus to <code>new_focus</code>, or clears it if NULL, and sends <code>R_FOCUS_EXIT</code> and <code>R_FOCUS_ENTER</code>.</p>
+<p class="see">See also: <a href="#r_event_type"><code>r_event_type</code></a>, <a href="#r_focus_wants_text"><code>r_focus_wants_text</code></a></p>
 
 <h3><a name="r_focus_wants_text"></a>r_focus_wants_text</h3>
 <pre class="sig"><span class="k">bool</span> r_focus_wants_text(<a class="t" href="#r_context">r_context</a>* c);</pre>
 <p>Returns true if the focused element accepts text input.</p>
+<p class="see">See also: <a href="#r_post_text"><code>r_post_text</code></a>, <a href="#r_change_focus"><code>r_change_focus</code></a></p>
 
 <h3><a name="r_hover_cursor"></a>r_hover_cursor</h3>
 <pre class="sig"><a class="t" href="#r_cursor">r_cursor</a> r_hover_cursor(<a class="t" href="#r_context">r_context</a>* c);</pre>
 <p>Returns the mouse cursor of the hovered or dragged element.</p>
+<p class="see">See also: <a href="#r_cursor"><code>r_cursor</code></a></p>
 
 <h3><a name="r_cursor"></a>r_cursor</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">enum</span> r_cursor
@@ -1147,14 +1153,11 @@ it.spacing = <span class="n">2</span>;
 	<span class="e">R_CURSOR_RESIZE_V</span>, <span class="c">// Up-down</span>
 } r_cursor;</pre>
 <p>Mouse cursor shapes, see <a href="#r_hover_cursor"><code>r_hover_cursor</code></a>.</p>
+<p class="see">See also: <a href="#r_hover_cursor"><code>r_hover_cursor</code></a>, <a href="#r_interact"><code>r_interact</code></a></p>
 
 <h3><a name="r_close_popups"></a>r_close_popups</h3>
 <pre class="sig"><span class="k">bool</span> r_close_popups(<a class="t" href="#r_context">r_context</a>* c, <span class="k">bool</span> only_topmost);</pre>
 <p><span class="todo">&lt;TODO: Explain only_topmost, return&gt;</span></p>
-
-<h3><a name="R_BIT"></a>R_BIT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_BIT</span>(x) (<span class="n">1u</span> &lt;&lt; (x))</pre>
-<p>Unsigned integer with bit <code>x</code> set.</p>
 
 <h2><a name="s-Low-level-input"></a>Low level input</h2>
 <p><span class="todo">&lt;TODO: Introduce frontend input posting&gt;</span></p>
@@ -1173,42 +1176,44 @@ it.spacing = <span class="n">2</span>;
 <tr><td><code>mouse_button</code></td><td><code>R_MOUSE_LEFT</code>, <code>R_MOUSE_MIDDLE</code> or <code>R_MOUSE_RIGHT</code> (same numbering as SDL).</td></tr>
 </table>
 
-<h3><a name="RCUT_MOUSE_PRESSED_INITIAL_REPEAT"></a>RCUT_MOUSE_PRESSED_INITIAL_REPEAT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_MOUSE_PRESSED_INITIAL_REPEAT</span> <span class="n">0.5</span></pre>
-<p>Seconds a mouse button must be held before <code>R_MOUSE_PRESSED</code> starts repeating.</p>
-
-<h3><a name="RCUT_MOUSE_PRESSED_REPEAT"></a>RCUT_MOUSE_PRESSED_REPEAT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_MOUSE_PRESSED_REPEAT</span> <span class="n">0.2</span></pre>
-<p>Seconds between repeated <code>R_MOUSE_PRESSED</code> events.</p>
-
-<h3><a name="RCUT_MOUSE_HOVER_INITIAL_DELAY"></a>RCUT_MOUSE_HOVER_INITIAL_DELAY</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_MOUSE_HOVER_INITIAL_DELAY</span> <span class="n">0.4</span></pre>
-<p>Seconds the mouse must rest on an element before the first <code>R_MOUSE_HOVER</code> event.</p>
-
-<h3><a name="RCUT_MOUSE_HOVER_REPEAT"></a>RCUT_MOUSE_HOVER_REPEAT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_MOUSE_HOVER_REPEAT</span>  <span class="n">0.2</span></pre>
-<p>Seconds between repeated <code>R_MOUSE_HOVER</code> events.</p>
-
-<h3><a name="RCUT_MOUSE_MULTI_CLICK_TIME"></a>RCUT_MOUSE_MULTI_CLICK_TIME</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_MOUSE_MULTI_CLICK_TIME</span> <span class="n">0.4</span></pre>
-<p>Maximum seconds between clicks on the same element to count as a double or triple click.</p>
+<h3><a name="RCUT_MOUSE_*"></a>RCUT_MOUSE_*</h3>
+<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_MOUSE_DRAG_DISTANCE_DEFAULT</span> <span class="n">4</span>
+<span class="p">#define</span> <span class="e">RCUT_MOUSE_PRESSED_INITIAL_REPEAT</span> <span class="n">0.5</span>
+<span class="p">#define</span> <span class="e">RCUT_MOUSE_PRESSED_REPEAT</span> <span class="n">0.2</span>
+<span class="p">#define</span> <span class="e">RCUT_MOUSE_HOVER_INITIAL_DELAY</span> <span class="n">0.4</span>
+<span class="p">#define</span> <span class="e">RCUT_MOUSE_HOVER_REPEAT</span>  <span class="n">0.2</span>
+<span class="p">#define</span> <span class="e">RCUT_MOUSE_MULTI_CLICK_TIME</span> <span class="n">0.4</span></pre>
+<p>Mouse timings in seconds and the drag threshold in pixels:</p>
+<ul>
+<li><code>RCUT_MOUSE_DRAG_DISTANCE_DEFAULT</code>: Pixels the mouse must move while pressed before a drag starts.</li>
+<li><code>RCUT_MOUSE_PRESSED_INITIAL_REPEAT</code>: Seconds a mouse button must be held before <code>R_MOUSE_PRESSED</code> starts repeating.</li>
+<li><code>RCUT_MOUSE_PRESSED_REPEAT</code>: Seconds between repeated <code>R_MOUSE_PRESSED</code> events.</li>
+<li><code>RCUT_MOUSE_HOVER_INITIAL_DELAY</code>: Seconds the mouse must rest on an element before the first <code>R_MOUSE_HOVER</code> event.</li>
+<li><code>RCUT_MOUSE_HOVER_REPEAT</code>: Seconds between repeated <code>R_MOUSE_HOVER</code> events.</li>
+<li><code>RCUT_MOUSE_MULTI_CLICK_TIME</code>: Maximum seconds between clicks on the same element to count as a double or triple click.</li>
+</ul>
+<p class="see">See also: <a href="#r_event_type"><code>r_event_type</code></a>, <a href="#r_advance_time"><code>r_advance_time</code></a></p>
 
 <h3><a name="r_post_mouse_move"></a>r_post_mouse_move</h3>
 <pre class="sig"><span class="t">uint64_t</span> r_post_mouse_move(<a class="t" href="#r_context">r_context</a>* r, <span class="t">uint64_t</span> target, <span class="k">float</span> x, <span class="k">float</span> y);</pre>
 <p>Sends a mouse move in target space to the context and returns the ID of the element that handled it, or 0.</p>
+<p class="see">See also: <a href="#r_post_mouse_down"><code>r_post_mouse_down</code></a>, <a href="#r_post_mouse_up"><code>r_post_mouse_up</code></a>, <a href="#r_post_mouse_wheel"><code>r_post_mouse_wheel</code></a></p>
 
 <h3><a name="r_post_mouse_up"></a>r_post_mouse_up</h3>
 <pre class="sig"><span class="t">uint64_t</span> r_post_mouse_up(<a class="t" href="#r_context">r_context</a>* r, <span class="t">uint64_t</span> target, <span class="k">int</span> mouse_button, <span class="k">float</span> x, <span class="k">float</span> y);</pre>
 <p>Sends a mouse button release in target space to the context and returns the ID of the element that handled it, or 0.</p>
+<p class="see">See also: <a href="#r_post_mouse_down"><code>r_post_mouse_down</code></a>, <a href="#r_post_mouse_move"><code>r_post_mouse_move</code></a></p>
 
 <h3><a name="r_post_mouse_wheel"></a>r_post_mouse_wheel</h3>
 <pre class="sig"><span class="t">uint64_t</span> r_post_mouse_wheel(<a class="t" href="#r_context">r_context</a>* r, <span class="t">uint64_t</span> target, <span class="k">float</span> x, <span class="k">float</span> y, <span class="k">float</span> scroll_x, <span class="k">float</span> scroll_y);</pre>
 <p>Sends a scroll event to the elements under the mouse, topmost first, and returns the ID of the one that handled it, or 0.</p>
+<p class="see">See also: <a href="#r_post_mouse_move"><code>r_post_mouse_move</code></a>, <a href="#r_scroll_begin"><code>r_scroll_begin</code></a></p>
 
 <h3><a name="r_post_text"></a>r_post_text</h3>
 <pre class="sig"><span class="t">uint64_t</span> r_post_text(<a class="t" href="#r_context">r_context</a>* r, <span class="t">uint64_t</span> target, <span class="k">const</span> <span class="k">char</span>* str);
 <span class="t">uint64_t</span> r_post_text_edit(<a class="t" href="#r_context">r_context</a>* r, <span class="t">uint64_t</span> target, <span class="k">const</span> <span class="k">char</span>* str, <span class="k">int</span> start, <span class="k">int</span> length);</pre>
 <p>Sends committed text to the focused element, <code>r_post_text_edit</code> sends IME composition text, both return the ID of the element that handled it, or 0.</p>
+<p class="see">See also: <a href="#r_post_key_input"><code>r_post_key_input</code></a>, <a href="#r_focus_wants_text"><code>r_focus_wants_text</code></a></p>
 
 <h3><a name="r_modifier_flags"></a>r_modifier_flags</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">enum</span> r_modifier_flags
@@ -1219,6 +1224,7 @@ it.spacing = <span class="n">2</span>;
 	<span class="e">R_MOD_WIN</span>   = (<span class="n">1</span> &lt;&lt; <span class="n">3</span>)
 } r_modifier_flags;</pre>
 <p>Modifier key flags for <a href="#r_post_key_input"><code>r_post_key_input</code></a>.</p>
+<p class="see">See also: <a href="#r_post_key_input"><code>r_post_key_input</code></a></p>
 
 <h3><a name="r_event_type"></a>r_event_type</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">enum</span> r_event_type
@@ -1274,85 +1280,31 @@ it.spacing = <span class="n">2</span>;
 } r_event;</pre>
 <p><span class="todo">&lt;TODO: Describe event fields&gt;</span></p>
 
-<h3><a name="RCUT_MOUSE_DRAG_DISTANCE_DEFAULT"></a>RCUT_MOUSE_DRAG_DISTANCE_DEFAULT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_MOUSE_DRAG_DISTANCE_DEFAULT</span> <span class="n">4</span></pre>
-<p>Pixels the mouse must move while pressed before a drag starts.</p>
+<h3><a name="R_MOUSE_*"></a>R_MOUSE_*</h3>
+<pre class="sig"><span class="p">#define</span> <span class="e">R_MOUSE_LEFT</span>   <span class="n">1</span>
+<span class="p">#define</span> <span class="e">R_MOUSE_MIDDLE</span> <span class="n">2</span>
+<span class="p">#define</span> <span class="e">R_MOUSE_RIGHT</span>  <span class="n">3</span></pre>
+<p>Mouse buttons, numbered the same as in SDL.</p>
+<p class="see">See also: <a href="#r_post_mouse_down"><code>r_post_mouse_down</code></a>, <a href="#r_post_mouse_up"><code>r_post_mouse_up</code></a></p>
 
-<h3><a name="RCUT_HIT_STACK_MAX"></a>RCUT_HIT_STACK_MAX</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_HIT_STACK_MAX</span> <span class="n">32</span></pre>
-<p>Maximum number of overlapping interactables considered by a single hit test.</p>
-
-<h3><a name="R_MOUSE_LEFT"></a>R_MOUSE_LEFT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_MOUSE_LEFT</span>   <span class="n">1</span></pre>
-<p>Left mouse button.</p>
-
-<h3><a name="R_MOUSE_MIDDLE"></a>R_MOUSE_MIDDLE</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_MOUSE_MIDDLE</span> <span class="n">2</span></pre>
-<p>Middle mouse button.</p>
-
-<h3><a name="R_MOUSE_RIGHT"></a>R_MOUSE_RIGHT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_MOUSE_RIGHT</span>  <span class="n">3</span></pre>
-<p>Right mouse button.</p>
-
-<h3><a name="R_KEY_BACKSPACE"></a>R_KEY_BACKSPACE</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_BACKSPACE</span> <span class="n">8</span></pre>
-<p>Key code of Backspace.</p>
-
-<h3><a name="R_KEY_TAB"></a>R_KEY_TAB</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_TAB</span>       <span class="n">9</span></pre>
-<p>Key code of Tab.</p>
-
-<h3><a name="R_KEY_ENTER"></a>R_KEY_ENTER</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_ENTER</span>     <span class="n">13</span></pre>
-<p>Key code of Enter.</p>
-
-<h3><a name="R_KEY_ALT"></a>R_KEY_ALT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_ALT</span>       <span class="n">18</span></pre>
-<p>Key code of Alt.</p>
-
-<h3><a name="R_KEY_ESCAPE"></a>R_KEY_ESCAPE</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_ESCAPE</span>    <span class="n">27</span></pre>
-<p>Key code of Escape.</p>
-
-<h3><a name="R_KEY_SPACE"></a>R_KEY_SPACE</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_SPACE</span>     <span class="n">32</span></pre>
-<p>Key code of Space.</p>
-
-<h3><a name="R_KEY_PAGEUP"></a>R_KEY_PAGEUP</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_PAGEUP</span>    <span class="n">33</span></pre>
-<p>Key code of Page Up.</p>
-
-<h3><a name="R_KEY_PAGEDOWN"></a>R_KEY_PAGEDOWN</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_PAGEDOWN</span>  <span class="n">34</span></pre>
-<p>Key code of Page Down.</p>
-
-<h3><a name="R_KEY_END"></a>R_KEY_END</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_END</span>       <span class="n">35</span></pre>
-<p>Key code of End.</p>
-
-<h3><a name="R_KEY_HOME"></a>R_KEY_HOME</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_HOME</span>      <span class="n">36</span></pre>
-<p>Key code of Home.</p>
-
-<h3><a name="R_KEY_LEFT"></a>R_KEY_LEFT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_LEFT</span>      <span class="n">37</span></pre>
-<p>Key code of Left Arrow.</p>
-
-<h3><a name="R_KEY_UP"></a>R_KEY_UP</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_UP</span>        <span class="n">38</span></pre>
-<p>Key code of Up Arrow.</p>
-
-<h3><a name="R_KEY_RIGHT"></a>R_KEY_RIGHT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_RIGHT</span>     <span class="n">39</span></pre>
-<p>Key code of Right Arrow.</p>
-
-<h3><a name="R_KEY_DOWN"></a>R_KEY_DOWN</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_DOWN</span>      <span class="n">40</span></pre>
-<p>Key code of Down Arrow.</p>
-
-<h3><a name="R_KEY_DELETE"></a>R_KEY_DELETE</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_DELETE</span>    <span class="n">46</span></pre>
-<p>Key code of Delete.</p>
+<h3><a name="R_KEY_*"></a>R_KEY_*</h3>
+<pre class="sig"><span class="p">#define</span> <span class="e">R_KEY_BACKSPACE</span> <span class="n">8</span>
+<span class="p">#define</span> <span class="e">R_KEY_TAB</span>       <span class="n">9</span>
+<span class="p">#define</span> <span class="e">R_KEY_ENTER</span>     <span class="n">13</span>
+<span class="p">#define</span> <span class="e">R_KEY_ALT</span>       <span class="n">18</span>
+<span class="p">#define</span> <span class="e">R_KEY_ESCAPE</span>    <span class="n">27</span>
+<span class="p">#define</span> <span class="e">R_KEY_SPACE</span>     <span class="n">32</span>
+<span class="p">#define</span> <span class="e">R_KEY_PAGEUP</span>    <span class="n">33</span>
+<span class="p">#define</span> <span class="e">R_KEY_PAGEDOWN</span>  <span class="n">34</span>
+<span class="p">#define</span> <span class="e">R_KEY_END</span>       <span class="n">35</span>
+<span class="p">#define</span> <span class="e">R_KEY_HOME</span>      <span class="n">36</span>
+<span class="p">#define</span> <span class="e">R_KEY_LEFT</span>      <span class="n">37</span>
+<span class="p">#define</span> <span class="e">R_KEY_UP</span>        <span class="n">38</span>
+<span class="p">#define</span> <span class="e">R_KEY_RIGHT</span>     <span class="n">39</span>
+<span class="p">#define</span> <span class="e">R_KEY_DOWN</span>      <span class="n">40</span>
+<span class="p">#define</span> <span class="e">R_KEY_DELETE</span>    <span class="n">46</span></pre>
+<p>Key codes of the keys rcut handles specially, they are Windows virtual key codes that frontends need to map their keys to; letters are expected as uppercase ASCII ('A'-'Z') and digits as ASCII.</p>
+<p class="see">See also: <a href="#r_post_key_input"><code>r_post_key_input</code></a></p>
 
 <h2><a name="s-Low-level-UI-building"></a>Low level UI building</h2>
 <p><span class="todo">&lt;TODO: Introduce low level building&gt;</span></p>
@@ -1385,8 +1337,8 @@ it.spacing = <span class="n">2</span>;
 	<span class="t">int16_t</span> label_offset_x, label_offset_y;
 
 	<span class="k">void</span>* layout_cache; <span class="c">// The actual positions of each glyph, mainly used for shaped text.</span>
-	<span class="k">bool</span>  wrap_label : <span class="n">1</span>;
 
+	r_image_buffer* image_data; <span class="c">// Drawn as background inside the stylebox border.</span>
 	<span class="k">struct</span> <a class="t" href="#r_dynamic_rect_data">r_dynamic_rect_data</a>* dynamic;
 } r_drawable;</pre>
 <p><span class="todo">&lt;TODO: Describe drawable fields&gt;</span></p>
@@ -1402,6 +1354,7 @@ it.spacing = <span class="n">2</span>;
 <h3><a name="r_list_find_this_frame_drawable"></a>r_list_find_this_frame_drawable</h3>
 <pre class="sig"><a class="t" href="#r_drawable">r_drawable</a>* r_list_find_this_frame_drawable(<a class="t" href="#r_ui_list">r_ui_list</a>* list, <span class="t">uint64_t</span> id);</pre>
 <p>Returns the drawable with the given ID from the current frame, or NULL.</p>
+<p class="see">See also: <a href="#r_list_find_last_frame_drawable"><code>r_list_find_last_frame_drawable</code></a>, <a href="#r_drawable"><code>r_drawable</code></a></p>
 
 <h3><a name="r_list_find_last_frame_drawable"></a>r_list_find_last_frame_drawable</h3>
 <pre class="sig"><a class="t" href="#r_drawable">r_drawable</a>* r_list_find_last_frame_drawable(<a class="t" href="#r_ui_list">r_ui_list</a>* list, <span class="t">uint64_t</span> id);</pre>
@@ -1506,10 +1459,12 @@ it.spacing = <span class="n">2</span>;
 <h3><a name="r_find_interact"></a>r_find_interact</h3>
 <pre class="sig"><a class="t" href="#r_interact">r_interact</a>* r_find_interact(<a class="t" href="#r_context">r_context</a>* c, <span class="t">uint64_t</span> id);</pre>
 <p>Returns the visible interactable with the given ID, or NULL.</p>
+<p class="see">See also: <a href="#r_list_find_this_frame_interact"><code>r_list_find_this_frame_interact</code></a>, <a href="#r_interact"><code>r_interact</code></a></p>
 
 <h3><a name="r_list_find_this_frame_interact"></a>r_list_find_this_frame_interact</h3>
 <pre class="sig"><a class="t" href="#r_interact">r_interact</a>* r_list_find_this_frame_interact(<a class="t" href="#r_ui_list">r_ui_list</a>* list, <span class="t">uint64_t</span> id);</pre>
 <p>Returns the interactable with the given ID from the current frame, or NULL.</p>
+<p class="see">See also: <a href="#r_list_find_last_frame_interact"><code>r_list_find_last_frame_interact</code></a>, <a href="#r_find_interact"><code>r_find_interact</code></a></p>
 
 <h3><a name="r_list_find_last_frame_interact"></a>r_list_find_last_frame_interact</h3>
 <pre class="sig"><a class="t" href="#r_interact">r_interact</a>* r_list_find_last_frame_interact(<a class="t" href="#r_ui_list">r_ui_list</a>* list, <span class="t">uint64_t</span> id);</pre>

@@ -125,11 +125,6 @@ void r_header(r_ui_list* l, rect r, const char* text)
 	r_label_ex(l, r, R_STYLE_HEADER, R_ICON_NONE, text);
 }
 
-void r_paragraph(r_ui_list* l, rect r, int style, const char* text)
-{
-	r_label_ex(l, r, style ? style : R_STYLE_LABEL, R_ICON_NONE, text)->wrap_label = true;
-}
-
 void r_icon(r_ui_list* l, rect r, int style, int icon)
 {
 	r_drawable* d = r_style(l, r, R_STYLE_ICON);
@@ -626,14 +621,12 @@ void r_spinbox(r_ui_list* l, rect r, float min, float max, float step, r_data_bi
 	}
 }
 
-void r_progress(r_ui_list* l, rect r, float fraction)
+void r_progress(r_ui_list* l, rect r, float min, float max, r_data_binding binding)
 {
-	fraction = clampf(fraction, 0.0f, 1.0f);
 	r = r_offset(r, 0, 1);
 	r_style(l, r, R_STYLE_PROGRESS | R_COMPONENT_TRACK);
-	rect fill = r_inner(l->context, R_STYLE_PROGRESS | R_COMPONENT_FILL, r);
-	fill.w = (int)(fill.w * fraction + 0.5f);
-	if(fill.w > 0) r_style(l, fill, R_STYLE_PROGRESS | R_COMPONENT_FILL);
+	rect track = r_inner(l->context, R_STYLE_PROGRESS | R_COMPONENT_FILL, r);
+	r_drawable_fill(l, r_style(l, track, R_STYLE_PROGRESS | R_COMPONENT_FILL), binding, min, max, track, R_LEFT)->parent_id = r.id;
 }
 
 struct scroll_data

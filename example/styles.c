@@ -90,6 +90,7 @@ static const preview to_display[] = {
 
     SECTION("Containers"),
     ITEM(R_STYLE_PANEL, 200, 64, NULL),
+    ITEM(R_STYLE_PANEL | R_VARIANT_INSET, 200, 64, NULL),
     ITEM(R_STYLE_PANEL | R_VARIANT_RAISED, 200, 64, NULL),
     ITEM(R_STYLE_DIALOG, 200, 80, NULL),
     ITEM(R_STYLE_BACKDROP, 200, 40, NULL),

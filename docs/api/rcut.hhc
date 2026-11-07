@@ -39,8 +39,6 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_damage_clear"><param name="Local" value="core.html#r_damage_clear"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_CONTEXT_MAX_LISTS"><param name="Local" value="core.html#RCUT_CONTEXT_MAX_LISTS"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_CONTEXT_MAX_EPHEMERAL_LISTS"><param name="Local" value="core.html#RCUT_CONTEXT_MAX_EPHEMERAL_LISTS"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_paged_buffer"><param name="Local" value="core.html#r_paged_buffer"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_hashmap"><param name="Local" value="core.html#r_hashmap"></OBJECT>
 </UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="Rects and IDs"><param name="Local" value="core.html#s-Rects-and-IDs"></OBJECT>
 <UL>
@@ -63,9 +61,11 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="Layout"><param name="Local" value="core.html#s-Layout"></OBJECT>
 <UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_layout_iter"><param name="Local" value="core.html#r_layout_iter"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_layout_type"><param name="Local" value="core.html#r_layout_type"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_stack"><param name="Local" value="core.html#r_stack"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_next"><param name="Local" value="core.html#r_next"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_remaining"><param name="Local" value="core.html#r_remaining"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_last"><param name="Local" value="core.html#r_last"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_fill"><param name="Local" value="core.html#r_fill"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_layout"><param name="Local" value="core.html#r_layout"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_gap"><param name="Local" value="core.html#r_gap"></OBJECT>
@@ -90,8 +90,6 @@
 <UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_measure"><param name="Local" value="core.html#r_measure"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_style_measure_all"><param name="Local" value="core.html#r_style_measure_all"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_break_text"><param name="Local" value="core.html#r_break_text"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_text_index_at"><param name="Local" value="core.html#r_text_index_at"></OBJECT>
 </UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="Widgets"><param name="Local" value="core.html#s-Widgets"></OBJECT>
 <UL>
@@ -99,17 +97,15 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_label"><param name="Local" value="core.html#r_label"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_on_click"><param name="Local" value="core.html#r_on_click"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_checkbox"><param name="Local" value="core.html#r_checkbox"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_slider_h"><param name="Local" value="core.html#r_slider_h"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_slider"><param name="Local" value="core.html#r_slider"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_style"><param name="Local" value="core.html#r_style"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_icon"><param name="Local" value="core.html#r_icon"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_header"><param name="Local" value="core.html#r_header"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_paragraph"><param name="Local" value="core.html#r_paragraph"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_panel"><param name="Local" value="core.html#r_panel"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_separator"><param name="Local" value="core.html#r_separator"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_toggle"><param name="Local" value="core.html#r_toggle"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_radio"><param name="Local" value="core.html#r_radio"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_selectable"><param name="Local" value="core.html#r_selectable"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_slider_v"><param name="Local" value="core.html#r_slider_v"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_slider_box"><param name="Local" value="core.html#r_slider_box"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_spinbox"><param name="Local" value="core.html#r_spinbox"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_progress"><param name="Local" value="core.html#r_progress"></OBJECT>
@@ -140,13 +136,8 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="R_PTR"><param name="Local" value="core.html#R_PTR"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="R_BITFIELD"><param name="Local" value="core.html#R_BITFIELD"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="R_GETSET"><param name="Local" value="core.html#R_GETSET"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_SIGNATURE_LIST"><param name="Local" value="core.html#R_SIGNATURE_LIST"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_data_desc"><param name="Local" value="core.html#r_data_desc"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_data_compact"><param name="Local" value="core.html#r_data_compact"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_TYPEOF"><param name="Local" value="core.html#R_TYPEOF"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_data_type"><param name="Local" value="core.html#r_data_type"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_signature"><param name="Local" value="core.html#r_signature"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_call"><param name="Local" value="core.html#r_call"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_seti"><param name="Local" value="core.html#r_seti"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_geti"><param name="Local" value="core.html#r_geti"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_setd"><param name="Local" value="core.html#r_setd"></OBJECT>
@@ -161,17 +152,12 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_hover_cursor"><param name="Local" value="core.html#r_hover_cursor"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_cursor"><param name="Local" value="core.html#r_cursor"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_close_popups"><param name="Local" value="core.html#r_close_popups"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_BIT"><param name="Local" value="core.html#R_BIT"></OBJECT>
 </UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="Low level input"><param name="Local" value="core.html#s-Low-level-input"></OBJECT>
 <UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_post_key_input"><param name="Local" value="core.html#r_post_key_input"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_post_mouse_down"><param name="Local" value="core.html#r_post_mouse_down"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_MOUSE_PRESSED_INITIAL_REPEAT"><param name="Local" value="core.html#RCUT_MOUSE_PRESSED_INITIAL_REPEAT"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_MOUSE_PRESSED_REPEAT"><param name="Local" value="core.html#RCUT_MOUSE_PRESSED_REPEAT"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_MOUSE_HOVER_INITIAL_DELAY"><param name="Local" value="core.html#RCUT_MOUSE_HOVER_INITIAL_DELAY"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_MOUSE_HOVER_REPEAT"><param name="Local" value="core.html#RCUT_MOUSE_HOVER_REPEAT"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_MOUSE_MULTI_CLICK_TIME"><param name="Local" value="core.html#RCUT_MOUSE_MULTI_CLICK_TIME"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_MOUSE_*"><param name="Local" value="core.html#RCUT_MOUSE_*"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_post_mouse_move"><param name="Local" value="core.html#r_post_mouse_move"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_post_mouse_up"><param name="Local" value="core.html#r_post_mouse_up"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_post_mouse_wheel"><param name="Local" value="core.html#r_post_mouse_wheel"></OBJECT>
@@ -179,26 +165,8 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_modifier_flags"><param name="Local" value="core.html#r_modifier_flags"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_event_type"><param name="Local" value="core.html#r_event_type"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_event"><param name="Local" value="core.html#r_event"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_MOUSE_DRAG_DISTANCE_DEFAULT"><param name="Local" value="core.html#RCUT_MOUSE_DRAG_DISTANCE_DEFAULT"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_HIT_STACK_MAX"><param name="Local" value="core.html#RCUT_HIT_STACK_MAX"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_MOUSE_LEFT"><param name="Local" value="core.html#R_MOUSE_LEFT"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_MOUSE_MIDDLE"><param name="Local" value="core.html#R_MOUSE_MIDDLE"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_MOUSE_RIGHT"><param name="Local" value="core.html#R_MOUSE_RIGHT"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_BACKSPACE"><param name="Local" value="core.html#R_KEY_BACKSPACE"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_TAB"><param name="Local" value="core.html#R_KEY_TAB"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_ENTER"><param name="Local" value="core.html#R_KEY_ENTER"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_ALT"><param name="Local" value="core.html#R_KEY_ALT"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_ESCAPE"><param name="Local" value="core.html#R_KEY_ESCAPE"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_SPACE"><param name="Local" value="core.html#R_KEY_SPACE"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_PAGEUP"><param name="Local" value="core.html#R_KEY_PAGEUP"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_PAGEDOWN"><param name="Local" value="core.html#R_KEY_PAGEDOWN"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_END"><param name="Local" value="core.html#R_KEY_END"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_HOME"><param name="Local" value="core.html#R_KEY_HOME"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_LEFT"><param name="Local" value="core.html#R_KEY_LEFT"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_UP"><param name="Local" value="core.html#R_KEY_UP"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_RIGHT"><param name="Local" value="core.html#R_KEY_RIGHT"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_DOWN"><param name="Local" value="core.html#R_KEY_DOWN"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_DELETE"><param name="Local" value="core.html#R_KEY_DELETE"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="R_MOUSE_*"><param name="Local" value="core.html#R_MOUSE_*"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="R_KEY_*"><param name="Local" value="core.html#R_KEY_*"></OBJECT>
 </UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="Low level UI building"><param name="Local" value="core.html#s-Low-level-UI-building"></OBJECT>
 <UL>
@@ -262,11 +230,6 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_software_free"><param name="Local" value="draw.html#r_draw_software_free"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_software_backend"><param name="Local" value="draw.html#r_draw_software_backend"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_software_set_target"><param name="Local" value="draw.html#r_draw_software_set_target"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_atlas"><param name="Local" value="draw.html#r_draw_atlas"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_atlas_alloc"><param name="Local" value="draw.html#r_draw_atlas_alloc"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_atlas_is_valid"><param name="Local" value="draw.html#r_draw_atlas_is_valid"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_atlas_region"><param name="Local" value="draw.html#r_draw_atlas_region"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_atlas_reset"><param name="Local" value="draw.html#r_draw_atlas_reset"></OBJECT>
 </UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="Colors"><param name="Local" value="draw.html#s-Colors"></OBJECT>
 <UL>
@@ -292,6 +255,7 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_theme_border"><param name="Local" value="draw.html#r_theme_border"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_theme_underline"><param name="Local" value="draw.html#r_theme_underline"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_theme_bevel"><param name="Local" value="draw.html#r_theme_bevel"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="r_theme_border_split"><param name="Local" value="draw.html#r_theme_border_split"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_theme_radius"><param name="Local" value="draw.html#r_theme_radius"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_theme_corners"><param name="Local" value="draw.html#r_theme_corners"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_theme_padding"><param name="Local" value="draw.html#r_theme_padding"></OBJECT>
@@ -340,10 +304,8 @@
 </UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="Fonts"><param name="Local" value="draw.html#s-Fonts"></OBJECT>
 <UL>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_USE_HARFBUZZ"><param name="Local" value="draw.html#RCUT_USE_HARFBUZZ"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_USE_*"><param name="Local" value="draw.html#RCUT_USE_*"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_measure_text"><param name="Local" value="draw.html#r_draw_measure_text"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_USE_HB_MINI"><param name="Local" value="draw.html#RCUT_USE_HB_MINI"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_USE_STB_TRUETYPE"><param name="Local" value="draw.html#RCUT_USE_STB_TRUETYPE"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_font"><param name="Local" value="draw.html#r_draw_font"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_font_flags"><param name="Local" value="draw.html#r_draw_font_flags"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_find_system_fonts"><param name="Local" value="draw.html#r_draw_find_system_fonts"></OBJECT>
@@ -352,9 +314,6 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_get_font"><param name="Local" value="draw.html#r_draw_get_font"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_font_line_height"><param name="Local" value="draw.html#r_draw_font_line_height"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_draw_break_text"><param name="Local" value="draw.html#r_draw_break_text"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_DRAW_MAX_GLYPHS"><param name="Local" value="draw.html#RCUT_DRAW_MAX_GLYPHS"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_DRAW_GLYPH_LOAD_LIMIT"><param name="Local" value="draw.html#RCUT_DRAW_GLYPH_LOAD_LIMIT"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_DRAW_FONT_HASHMAP_SIZE"><param name="Local" value="draw.html#RCUT_DRAW_FONT_HASHMAP_SIZE"></OBJECT>
 </UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="Rendering"><param name="Local" value="draw.html#s-Rendering"></OBJECT>
 <UL>
@@ -381,7 +340,6 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_sdl_quit_requested"><param name="Local" value="sdl.html#r_sdl_quit_requested"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_sdl_dialog"><param name="Local" value="sdl.html#r_sdl_dialog"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_sdl_set_scale"><param name="Local" value="sdl.html#r_sdl_set_scale"></OBJECT>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="r_sdl_window"><param name="Local" value="sdl.html#r_sdl_window"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_SDL_MAX_WINDOWS"><param name="Local" value="sdl.html#RCUT_SDL_MAX_WINDOWS"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="RCUT_SDL_CACHE_PIXELS"><param name="Local" value="sdl.html#RCUT_SDL_CACHE_PIXELS"></OBJECT>
 </UL>

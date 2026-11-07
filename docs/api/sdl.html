@@ -36,6 +36,7 @@
 {
 	<span class="e">R_SDL_RESIZABLE</span> = <span class="n">1</span> &lt;&lt; <span class="n">0</span>,
 	<span class="e">R_SDL_VSYNC</span>     = <span class="n">1</span> &lt;&lt; <span class="n">1</span>,
+	<span class="e">R_SDL_HIDDEN</span>    = <span class="n">1</span> &lt;&lt; <span class="n">2</span>,
 };</pre>
 <p><span class="todo">&lt;TODO: Describe each flag&gt;</span></p>
 
@@ -46,7 +47,7 @@
 	<a class="t" href="core.html#r_context">r_context</a> context;
 	<a class="t" href="draw.html#r_draw_software">r_draw_software</a> software;
 
-	<a class="t" href="#r_sdl_window">r_sdl_window</a> windows[<a class="e" href="#RCUT_SDL_MAX_WINDOWS">RCUT_SDL_MAX_WINDOWS</a>];
+	r_sdl_window windows[<a class="e" href="#RCUT_SDL_MAX_WINDOWS">RCUT_SDL_MAX_WINDOWS</a>];
 	<a class="t" href="core.html#r_ui_list">r_ui_list</a>* root;
 	<span class="t">uint64_t</span> last_tick_time;
 	<span class="k">bool</span> no_popup_windows;
@@ -68,6 +69,7 @@
 <h3><a name="r_sdl_close_requested"></a>r_sdl_close_requested</h3>
 <pre class="sig"><span class="k">bool</span> r_sdl_close_requested(<a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* c, <a class="t" href="core.html#r_ui_list">r_ui_list</a>* dialog, <span class="k">bool</span> clear);</pre>
 <p>Returns true if the user requested to close the dialog window, <code>clear</code> resets the request, popup windows are closed automatically instead.</p>
+<p class="see">See also: <a href="#r_sdl_dialog"><code>r_sdl_dialog</code></a>, <a href="core.html#r_destroy_ui_list"><code>r_destroy_ui_list</code></a></p>
 
 <h3><a name="r_sdl_update"></a>r_sdl_update</h3>
 <pre class="sig"><span class="k">void</span> r_sdl_update(<a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* c);</pre>
@@ -80,14 +82,17 @@
 <h3><a name="r_sdl_screenshot"></a>r_sdl_screenshot</h3>
 <pre class="sig"><span class="k">bool</span> r_sdl_screenshot(<a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* c, <span class="k">const</span> <span class="k">char</span>* path);</pre>
 <p>Renders the main window and saves it to <code>path</code> as PNG (BMP before SDL 3.4), returns false on failure.</p>
+<p class="see">See also: <a href="#r_sdl_render_ui"><code>r_sdl_render_ui</code></a></p>
 
 <h3><a name="r_sdl_free"></a>r_sdl_free</h3>
 <pre class="sig"><span class="k">void</span> r_sdl_free(<a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* c);</pre>
 <p>Frees the frontend and closes all its windows.</p>
+<p class="see">See also: <a href="#r_sdl_init"><code>r_sdl_init</code></a></p>
 
 <h3><a name="r_sdl_quit_requested"></a>r_sdl_quit_requested</h3>
 <pre class="sig"><span class="k">bool</span> r_sdl_quit_requested(<a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* c, <span class="k">bool</span> clear);</pre>
 <p>Returns true if the user requested to quit, <code>clear</code> resets the request.</p>
+<p class="see">See also: <a href="#r_sdl_process_event"><code>r_sdl_process_event</code></a>, <a href="#r_sdl_close_requested"><code>r_sdl_close_requested</code></a></p>
 
 <h3><a name="r_sdl_dialog"></a>r_sdl_dialog</h3>
 <pre class="sig"><a class="t" href="core.html#r_ui_list">r_ui_list</a>* r_sdl_dialog(<a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* c, <span class="t">uint64_t</span> root_id, <span class="k">int</span> w, <span class="k">int</span> h, <span class="k">const</span> <span class="k">char</span>* title);</pre>
@@ -96,16 +101,15 @@
 <h3><a name="r_sdl_set_scale"></a>r_sdl_set_scale</h3>
 <pre class="sig"><span class="k">void</span> r_sdl_set_scale(<a class="t" href="#r_sdl_frontend">r_sdl_frontend</a>* c, <span class="k">float</span> scale);</pre>
 <p>Sets the UI scale factor, or follows the display scale if <code>scale</code> is 0 or less.</p>
-
-<h3><a name="r_sdl_window"></a>r_sdl_window</h3>
-<pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_sdl_window r_sdl_window;</pre>
-<p>Internal state of a frontend window.</p>
+<p class="see">See also: <a href="draw.html#r_draw_set_scale"><code>r_draw_set_scale</code></a></p>
 
 <h3><a name="RCUT_SDL_MAX_WINDOWS"></a>RCUT_SDL_MAX_WINDOWS</h3>
 <pre class="sig"><span class="p">#define</span> <span class="e">RCUT_SDL_MAX_WINDOWS</span> <span class="n">128</span></pre>
 <p>Maximum number of windows, including popup windows.</p>
+<p class="see">See also: <a href="#r_sdl_dialog"><code>r_sdl_dialog</code></a></p>
 
 <h3><a name="RCUT_SDL_CACHE_PIXELS"></a>RCUT_SDL_CACHE_PIXELS</h3>
 <pre class="sig"><span class="p">#define</span> <span class="e">RCUT_SDL_CACHE_PIXELS</span> (<span class="n">2048</span> * <span class="n">2048</span>) <span class="c">// Software cache shared by all windows, it must hold everything a frame uses.</span></pre>
 <p>Size in pixels of the software cache shared by all windows, it must hold everything a frame uses.</p>
+<p class="see">See also: <a href="draw.html#r_draw_software_init"><code>r_draw_software_init</code></a></p>
 </body></html>

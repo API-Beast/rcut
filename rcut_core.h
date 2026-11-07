@@ -110,20 +110,20 @@ enum r_style
     R_STATE_MASK      = 0xFF << 16,
 
     R_VARIANT_FLAT            = 1 << 24, // Usually means without border and the element is just implied through icon + label
-    R_VARIANT_RAISED          = 2 << 24, // Raised panel, by default panels are inset.
-    R_VARIANT_PRIMARY         = 3 << 24, // More colorful
-    R_VARIANT_TERTIARY        = 4 << 24, // Less color, flatter
-    R_VARIANT_LIST_ITEM       = 5 << 24, // Embedded in a list, should use a appropriate background for it
-    R_VARIANT_MENU_ITEM       = 6 << 24, // Embedded in a menu, should blend into it
-    R_VARIANT_CUSTOM_1        = 7 << 24,
-    R_VARIANT_CUSTOM_2        = 8 << 24,
-    R_VARIANT_CUSTOM_3        = 9 << 24,
-    R_VARIANT_CUSTOM_4        = 10 << 24,
-    R_VARIANT_CUSTOM_5        = 11 << 24,
-    R_VARIANT_CUSTOM_6        = 12 << 24,
-    R_VARIANT_CUSTOM_7        = 13 << 24,
-    R_VARIANT_CUSTOM_8        = 14 << 24,
-    R_VARIANT_CUSTOM_9        = 15 << 24,
+    R_VARIANT_INSET           = 2 << 24, // Inset panel.
+	R_VARIANT_RAISED          = 3 << 24, // Raised panel.
+    R_VARIANT_PRIMARY         = 4 << 24, // More colorful
+    R_VARIANT_TERTIARY        = 5 << 24, // Less color, flatter
+    R_VARIANT_LIST_ITEM       = 6 << 24, // Embedded in a list, should use a appropriate background for it
+    R_VARIANT_MENU_ITEM       = 7 << 24, // Embedded in a menu, should blend into it
+    R_VARIANT_CUSTOM_1        = 8 << 24,
+    R_VARIANT_CUSTOM_2        = 9 << 24,
+    R_VARIANT_CUSTOM_3        = 10 << 24,
+    R_VARIANT_CUSTOM_4        = 11 << 24,
+    R_VARIANT_CUSTOM_5        = 12 << 24,
+    R_VARIANT_CUSTOM_6        = 13 << 24,
+    R_VARIANT_CUSTOM_7        = 14 << 24,
+    R_VARIANT_CUSTOM_8        = 15 << 24,
     R_VARIANT_MASK            = 0xF << 24,
 
 	R_COMPONENT_JOINED        = 1 << 28, // Part of an complex input, wedged inbetween endcaps.
@@ -300,7 +300,6 @@ typedef struct r_drawable
 	int16_t label_offset_x, label_offset_y;
 
 	void* layout_cache; // The actual positions of each glyph, mainly used for shaped text.
-	bool  wrap_label : 1;
 
 	r_image_buffer* image_data; // Drawn as background inside the stylebox border.
 	struct r_dynamic_rect_data* dynamic;
@@ -455,7 +454,7 @@ typedef struct r_interface
 	rect     (*calc_outer_rect)    (r_context* c, int style, rect* inner);
 	rect     (*calc_inner_rect)    (r_context* c, int style, rect outer);
 	uint64_t (*get_viewport_target)(r_ui_list* parent, rect relative_to);
-	rect     (*measure_text)       (r_context* c, int style, const char* text, int len, int wrap_width);
+	rect     (*measure_text)       (r_context* c, int style, const char* text, int len);
 	rect     (*measure_icon)       (r_context* c, int style, int icon, int* gap);
 	int      (*break_text)         (r_context* c, int style, const char* text, int len, int width, bool force, int* w);
 	void     (*get_layout)         (r_context* c, int style, int* size, int* spacing);
@@ -669,10 +668,7 @@ rect r_remove_margins(r_context* c, int style, rect with_margins);
 
 rect r_measure(r_context* c, int style, const char* label);
 rect r_measure_n(r_context* c, int style, const char* text, int len);
-rect r_measure_wrapped(r_context* c, int style, const char* text, int wrap_width);
 rect r_measure_ex(r_context* c, int style, int icon, const char* text);
-int  r_break_text(r_context* c, int style, const char* text, int len, int width, bool force, int* w);
-int  r_text_index_at(r_context* c, int style, const char* text, int x);
 
 static inline void r_style_measure_all(r_context* c, int style, const char* label, rect* outer_with_margins, rect* outer, rect* inner)
 {
@@ -854,7 +850,6 @@ r_drawable* r_label_ex(r_ui_list* l, rect r, int style, int icon, const char* te
 void r_label_value     (r_ui_list* l, rect r, const char* fmt, r_data_binding binding);
 void r_icon            (r_ui_list* l, rect r, int style, int icon);
 void r_header          (r_ui_list* l, rect r, const char* text);
-void r_paragraph       (r_ui_list* l, rect r, int style, const char* text);
 void r_panel           (r_ui_list* l, rect r, int style);
 void r_separator       (r_ui_list* l, rect r);
 
@@ -870,7 +865,7 @@ void r_slider_h  (r_ui_list* l, rect r, float min, float max, float step, r_data
 void r_slider_v  (r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding);
 void r_slider_box(r_ui_list* l, rect r, const char* text, float min, float max, float step, r_data_binding binding);
 void r_spinbox   (r_ui_list* l, rect r, float min, float max, float step, r_data_binding binding);
-void r_progress  (r_ui_list* l, rect r, float fraction);
+void r_progress  (r_ui_list* l, rect r, float min, float max, r_data_binding binding);
 
 void r_checkbox  (r_ui_list* l, rect r, const char* text, r_data_binding binding);
 void r_toggle    (r_ui_list* l, rect r, const char* text, r_data_binding binding);
@@ -921,6 +916,12 @@ rect r_dialog_begin(r_ui_list* dialog);
 
 void r_tooltip(r_ui_list* l, rect r, const char* text);
 
+typedef enum r_layout_type
+{
+	R_LAYOUT_STACK, // Cuts consecutive rectangles in the direction `dir`.
+	R_LAYOUT_FLOW,  // Places rectangles left to right, wrapping into new lines aligned by `dir`.
+} r_layout_type;
+
 typedef struct r_layout_iter
 {
 	r_ui_list*  l;
@@ -934,6 +935,8 @@ typedef struct r_layout_iter
 	int         style;
 	int         line_h;
 	int         line_first;
+	rect        last;
+	r_layout_type type;
 } r_layout_iter;
 
 r_layout_iter r_layout        (r_ui_list* l, rect area, r_alignment dir, int style);
@@ -946,11 +949,12 @@ rect          r_next_fit      (r_layout_iter* s, int style, const char* text);
 rect          r_next_fit_ex   (r_layout_iter* s, int style, int icon, const char* text);
 rect          r_remaining          (r_layout_iter* s);
 rect          r_next_keyed    (r_layout_iter* s, int size, uint64_t key);
+rect          r_last          (r_layout_iter* s);
 void          r_gap           (r_layout_iter* s, int size);
 r_layout_iter r_row           (r_layout_iter* s, int size, r_alignment dir);
 r_layout_iter r_group_begin   (r_layout_iter* parent, int style);
 rect          r_group_end     (r_layout_iter* group, r_layout_iter* parent);
 //
-r_layout_iter r_flow_begin    (r_layout_iter* parent, int style);
+r_layout_iter r_flow_begin    (r_layout_iter* parent, int style, r_alignment align);
 void          r_text          (r_layout_iter* flow, int style, const char* text);
 rect          r_flow_end      (r_layout_iter* flow, r_layout_iter* parent);

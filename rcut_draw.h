@@ -362,6 +362,7 @@ void r_theme_border      (r_draw* c, float width, uint32_t color);
 void r_theme_border_color(r_draw* c, uint32_t color);
 void r_theme_underline   (r_draw* c, float width, uint32_t color);
 void r_theme_bevel       (r_draw* c, uint32_t top, uint32_t bottom);
+void r_theme_border_split(r_draw* c, float width, uint32_t top_left, uint32_t bottom_right);
 void r_theme_radius      (r_draw* c, float radius);
 void r_theme_corners     (r_draw* c, float top_left, float top_right, float bottom_left, float bottom_right);
 void r_theme_padding     (r_draw* c, float x, float y);
@@ -414,7 +415,6 @@ void r_draw_font_set_fallbacks(r_draw* c, int base_font, int* fallbacks, int num
 r_draw_font* r_draw_get_font   (r_draw* c, int base_font, int size, uint32_t flags);
 int  r_draw_font_line_height  (r_draw_font* font);
 rect r_draw_measure_text      (r_draw* c, r_draw_font* font, const char* text, int len);
-rect r_draw_measure_text_wrapped(r_draw* c, r_draw_font* font, const char* text, int len, int wrap_width);
 int  r_draw_break_text        (r_draw* c, r_draw_font* font, const char* text, int len, int width, bool force, int* w);
 
 // Text
@@ -427,4 +427,4 @@ void r_draw_render_icon    (r_draw* c, uint16_t icon, uint32_t color, rect bound
 void r_draw_render_text    (r_draw* c, r_draw_font* font, const char* text, uint32_t color, rect bounds);
 void r_draw_render_stylebox(r_draw* c, int stylebox, rect outer);
 void r_draw_render_fill    (r_draw* c, uint32_t color, rect bounds);
-void r_draw_render_text_ex (r_draw* c, r_draw_font* font, const char* text, uint32_t color, rect bounds, r_alignment align, int scroll_x, int scroll_y, rect clip, int wrap_width);
+void r_draw_render_text_ex (r_draw* c, r_draw_font* font, const char* text, uint32_t color, rect bounds, r_alignment align, int scroll_x, int scroll_y, rect clip);

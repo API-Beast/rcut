@@ -27,7 +27,7 @@ static void on_close(void) {}
 static void doc_r_create_ui_list(r_sdl_frontend* f, r_ui_list* ui)
 {
 	r_ui_list* l = r_create_ui_list_ex(&f->context, 0, 100, 320, 80, 16, 4);
-	r_label(l, l->root_area, "Hello from a second list");
+	r_label(l, r_shrink(l->root_area, 16), "Hello from a second list");
 }
 
 //! <TODO: Describe destroy semantics>
@@ -72,6 +72,7 @@ static void doc_r_list_clear(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_list_reconcile
 
 //! Shows or hides the list, a hidden list and its child lists are not drawn and receive no input.
+//! @see_also r_list_is_visible r_create_ui_list
 //@function r_list_set_visibility
 
 //! <TODO: Describe important fields>
@@ -107,18 +108,22 @@ static void doc_r_list_clear(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_scroll_to
 
 //! Returns the bounding rectangle of all drawables in the list, in list space.
+//! @see_also r_scroll_end rect_expand
 //@function r_list_get_content_rect
 
 //! <TODO: Describe origin and clip>
 //@function r_list_get_transform
 
 //! Returns false if the list or any of its parent lists is hidden.
+//! @see_also r_list_set_visibility
 //@function r_list_is_visible
 
 //! Prints the list's drawables and interactables to stdout for debugging.
+//! @see_also r_ui_list
 //@function r_list_print
 
 //! Maximum number of elements of a tooltip list, all other lists use @ref RCUT_LIST_MAX_ELEMENTS.
+//! @see_also RCUT_LIST_MAX_ELEMENTS r_tooltip r_popup
 //@define RCUT_EPHEMERAL_MAX_ELEMENTS
 
 //@section Context
@@ -128,9 +133,11 @@ static void doc_r_list_clear(r_sdl_frontend* f, r_ui_list* ui)
 //@struct r_context opaque
 
 //! Initializes the context and reserves memory for its UI lists.
+//! @see_also r_free_context r_context r_create_ui_list
 //@function r_init_context
 
 //! Frees all UI lists and memory owned by the context.
+//! @see_also r_init_context
 //@function r_free_context
 
 //! <TODO: Describe frontend callbacks>
@@ -149,16 +156,12 @@ static void doc_r_list_clear(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_damage_clear
 
 //! Maximum number of regular UI lists per context.
+//! @see_also RCUT_CONTEXT_MAX_EPHEMERAL_LISTS r_create_ui_list
 //@define RCUT_CONTEXT_MAX_LISTS
 
 //! Maximum number of ephemeral UI lists (popups, viewports, tooltips) per context.
+//! @see_also RCUT_CONTEXT_MAX_LISTS r_popup r_viewport
 //@define RCUT_CONTEXT_MAX_EPHEMERAL_LISTS
-
-//! Growable buffer that reserves virtual memory up front and commits pages on demand.
-//@struct r_paged_buffer opaque
-
-//! Internal hash map used by UI lists and the renderer.
-//@struct r_hashmap opaque
 
 //@section Rects and IDs
 //! <TODO: Explain rects and IDs>
@@ -211,36 +214,46 @@ static void doc_r_cut_px(r_sdl_frontend* f, r_ui_list* ui)
 //@enum r_alignment
 
 //! Returns the smallest rectangle containing both `a` and `b` with the ID of `a`, `rect_expand_pt` does the same for a point.
+//! @see_also rect_intersect r_grow
 //@function rect_expand
 
 //! Returns the overlap of `a` and `b` with the ID of `a`, its size is 0 if they don't overlap.
+//! @see_also rect_expand
 //@function rect_intersect
 
-//! Predefined salt values for @ref r_salt and the cutting functions.
+//! Predefined salt values for @ref r_salt and the cutting functions. You can use these freely or use your own values. There are no "bad" salts other than reusing the same salt at multiple places.
+//! @see_also r_salt r_cut_px
 //@enum r_salts
 
 //! <TODO: Describe fraction cutting>
 //@function r_cut_fraction
 
 //! Cuts one rectangle per entry of `r` from `to_cut`, sized by each entry's current width or height.
+//! @see_also r_cut_px r_expand_group
 //@function r_cut_group
 
 //! Grows `to_expand` by `pixels` towards `dir` and returns the added area.
+//! @see_also r_cut_px r_expand_group
 //@function r_expand_px
 
 //! Grows `to_expand` once per entry of `r`, sized by each entry's current width or height, and stores the added areas in `r`.
+//! @see_also r_expand_px r_cut_group
 //@function r_expand_group
 
 //! Moves a rectangle by the given offset, keeping its ID.
+//! @see_also r_grow r_aligned
 //@function r_offset
 
 //! Grows a rectangle by `pixels` on all sides, or per side with `r_grow_sides`, keeping its ID.
+//! @see_also r_shrink r_offset
 //@function r_grow
 
 //! Shrinks a rectangle by `pixels` on all sides, or per side with `r_shrink_sides`, keeping its ID.
+//! @see_also r_grow r_inner
 //@function r_shrink
 
 //! Enlarges the rectangle to at least `w` by `h` pixels.
+//! @see_also r_fill
 //@function r_min_size
 
 //@section Layout
@@ -248,6 +261,9 @@ static void doc_r_cut_px(r_sdl_frontend* f, r_ui_list* ui)
 
 //! <TODO: Describe iterator fields>
 //@struct r_layout_iter
+
+//! How a layout iterator places its rectangles.
+//@enum r_layout_type
 
 //! <TODO: Explain stacking direction, spacing>
 //! @see_also r_next r_remaining
@@ -275,7 +291,11 @@ static void doc_r_next(r_sdl_frontend* f, r_ui_list* ui)
 }
 
 //! Returns all space left in the layout iterator.
+//! @see_also r_next r_stack
 //@function r_remaining
+
+//! Returns the rectangle the layout iterator returned last, to place several elements on the same rectangle.
+//@function r_last
 
 //! <TODO: Rewrite, add usage example>
 //! 
@@ -286,6 +306,7 @@ static void doc_r_next(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_layout
 
 //! Skips `size` pixels of the layout iterator's remaining area.
+//! @see_also r_next r_stack
 //@function r_gap
 
 //! <TODO: Explain nested row layouts>
@@ -297,11 +318,21 @@ static void doc_r_next(r_sdl_frontend* f, r_ui_list* ui)
 //! <TODO: Describe returned group rect>
 //@function r_group_end
 
-//! <TODO: Explain flowing text layout>
+//! Starts a flow layout inside `parent`: elements are placed left to right and wrap into new lines.
+//! The horizontal bits of `align` align each line, the vertical bits align the elements within a line.
 //@function r_flow_begin
 
-//! <TODO: Describe flowing text pieces>
+//! Adds word-wrapped text to a flow layout, split into one label per line, using the flow's style if `style` is 0.
 //@function r_text
+
+//@example screenshot
+static void doc_r_text(r_sdl_frontend* f, r_ui_list* ui)
+{
+	r_layout_iter it = r_stack(ui, r_shrink(ui->root_area, 12), R_TOP);
+	r_layout_iter flow = r_flow_begin(&it, R_STYLE_LABEL, R_TOP_LEFT);
+	r_text(&flow, 0, "Text wraps at word boundaries to fit the width of the flow layout.");
+	r_flow_end(&flow, &it);
+}
 
 //! <TODO: Describe returned flow rect>
 //@function r_flow_end
@@ -319,21 +350,27 @@ static void doc_r_next(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_relative_to
 
 //! Returns the content rectangle of an element with the style, given its outer rectangle.
+//! @see_also r_outer r_draw_stylebox_inner_rect
 //@function r_inner
 
 //! Returns the outer rectangle an element with the style needs to fit the content rectangle `inner`.
+//! @see_also r_inner r_measure r_draw_stylebox_outer_rect
 //@function r_outer
 
 //! Grows the outer rectangle by half the style's default spacing on every side.
+//! @see_also r_remove_margins r_layout_default_spacing
 //@function r_with_margins
 
 //! Removes the margins added by @ref r_with_margins.
+//! @see_also r_with_margins
 //@function r_remove_margins
 
 //! Returns the theme's default element size for the style, 28 if the frontend provides none.
+//! @see_also r_layout_default_spacing r_theme_layout r_interface
 //@function r_layout_default_size
 
 //! Returns the theme's default spacing between elements of the style, 8 if the frontend provides none.
+//! @see_also r_layout_default_size r_theme_layout
 //@function r_layout_default_spacing
 
 //@section Text measurement
@@ -345,11 +382,6 @@ static void doc_r_next(r_sdl_frontend* f, r_ui_list* ui)
 //! <TODO: Explain inner/outer/margin rects>
 //@function r_style_measure_all
 
-//! <TODO: Explain line breaking, force>
-//@function r_break_text
-
-//! Returns the byte index of the character boundary closest to `x` pixels into `text`.
-//@function r_text_index_at
 
 //@section Widgets
 //! <TODO: Introduce high level widgets>
@@ -366,7 +398,7 @@ static void doc_r_button(r_sdl_frontend* f, r_ui_list* ui)
 }
 
 //! <TODO: Describe label variants>
-//! @see_also r_paragraph r_header
+//! @see_also r_text r_header
 //@function r_label
 
 //@example screenshot
@@ -411,7 +443,7 @@ static void doc_r_checkbox(r_sdl_frontend* f, r_ui_list* ui)
 
 //! <TODO: Describe step and binding>
 //! @see_also r_slider_box r_spinbox
-//@function r_slider_h
+//@function r_slider
 
 //@example screenshot
 static void doc_r_slider_h(r_sdl_frontend* f, r_ui_list* ui)
@@ -421,6 +453,16 @@ static void doc_r_slider_h(r_sdl_frontend* f, r_ui_list* ui)
 	r_layout_iter it = r_stack(ui, r_shrink(ui->root_area, 12), R_TOP);
 	r_label_value(ui, r_next(&it, 24), "Volume %.2f", R_PTR(&volume));
 	r_slider_h(ui, r_next(&it, 24), 0, 1, 0.05f, R_PTR(&volume));
+}
+
+//@example screenshot
+static void doc_r_slider_v(r_sdl_frontend* f, r_ui_list* ui)
+{
+	static float levels[3] = { 0.8f, 0.5f, 0.3f };
+	// [...]
+	r_layout_iter row = r_stack(ui, r_shrink(ui->root_area, 12), R_LEFT);
+	for(int i = 0; i < 3; i++)
+		r_slider_v(ui, r_next(&row, 24), 0, 1, 0.05f, R_PTR(&levels[i]));
 }
 
 //! <TODO: Explain style composition>
@@ -439,6 +481,7 @@ static void doc_r_icon(r_sdl_frontend* f, r_ui_list* ui)
 }
 
 //! Draws a label with the header style.
+//! @see_also r_label
 //@function r_header
 
 //@example screenshot
@@ -449,31 +492,27 @@ static void doc_r_header(r_sdl_frontend* f, r_ui_list* ui)
 	r_label(ui, r_next(&it, 20), "Output device");
 }
 
-//! Draws word-wrapped text, using the label style if `style` is 0.
-//@function r_paragraph
-
-//@example screenshot
-static void doc_r_paragraph(r_sdl_frontend* f, r_ui_list* ui)
-{
-	r_paragraph(ui, r_shrink(ui->root_area, 12), 0, "Paragraphs wrap their text at word boundaries to fit the width of the rectangle they are given.");
-}
-
 //! Draws a background panel, using `R_STYLE_PANEL` if `style` is 0.
+//! @see_also r_style r_separator
 //@function r_panel
 
 //@example screenshot
 static void doc_r_panel(r_sdl_frontend* f, r_ui_list* ui)
 {
-	r_layout_iter cols = r_stack(ui, r_shrink(ui->root_area, 12), R_LEFT);
-	rect inset  = r_next_fraction(&cols, 0.5f);
-	rect raised = r_remaining(&cols);
-	r_panel(ui, inset,  0);
-	r_panel(ui, raised, R_STYLE_PANEL | R_VARIANT_RAISED);
-	r_label(ui, r_shrink(inset, 8),  "Inset");
-	r_label(ui, r_shrink(raised, 8), "Raised");
+	r_layout_iter rows = r_stack(ui, r_shrink(ui->root_area, 12), R_TOP);
+	
+	r_panel(ui, r_next(&rows, 64), 0);
+	r_label(ui, r_shrink(r_last(&rows), 8), "R_STYLE_PANEL");
+
+	r_panel(ui, r_next(&rows, 64), R_STYLE_PANEL | R_VARIANT_INSET);
+	r_label(ui, r_shrink(r_last(&rows), 8), "R_VARIANT_INSET");
+
+	r_panel(ui, r_next(&rows, 64), R_STYLE_PANEL | R_VARIANT_RAISED);
+	r_label(ui, r_shrink(r_last(&rows), 8), "R_VARIANT_RAISED");
 }
 
 //! Draws a separator line through the center of `r`, horizontal if `r` is wider than tall, vertical otherwise.
+//! @see_also r_panel r_split
 //@function r_separator
 
 //@example screenshot
@@ -486,6 +525,7 @@ static void doc_r_separator(r_sdl_frontend* f, r_ui_list* ui)
 }
 
 //! A labeled switch that works like @ref r_checkbox.
+//! @see_also r_checkbox r_radio
 //@function r_toggle
 
 //@example screenshot
@@ -528,19 +568,6 @@ static void doc_r_selectable(r_sdl_frontend* f, r_ui_list* ui)
 		r_selectable(ui, r_next(&it, 26), files[i], i, R_PTR(&selected));
 }
 
-//! Vertical version of @ref r_slider_h.
-//@function r_slider_v
-
-//@example screenshot
-static void doc_r_slider_v(r_sdl_frontend* f, r_ui_list* ui)
-{
-	static float levels[3] = { 0.8f, 0.5f, 0.3f };
-	// [...]
-	r_layout_iter row = r_stack(ui, r_shrink(ui->root_area, 12), R_LEFT);
-	for(int i = 0; i < 3; i++)
-		r_slider_v(ui, r_next(&row, 24), 0, 1, 0.05f, R_PTR(&levels[i]));
-}
-
 //! <TODO: Explain drag and input>
 //@function r_slider_box
 
@@ -565,15 +592,16 @@ static void doc_r_spinbox(r_sdl_frontend* f, r_ui_list* ui)
 	r_spinbox(ui, r, 0, 99, 1, R_PTR(&count));
 }
 
-//! Draws a progress bar filled to `fraction`, clamped to the range 0 to 1.
+//! Draws a progress bar filled to the bound value within `min` to `max`, clamped to that range.
 //@function r_progress
 
 //@example screenshot
 static void doc_r_progress(r_sdl_frontend* f, r_ui_list* ui)
 {
+	static float progress = 65.0f;
 	r_layout_iter it = r_stack(ui, r_shrink(ui->root_area, 12), R_TOP);
 	r_label(ui, r_next(&it, 20), "Downloading... 65%");
-	r_progress(ui, r_next(&it, 8), 0.65f);
+	r_progress(ui, r_next(&it, 8), 0, 100, R_PTR(&progress));
 }
 
 //! <TODO: Explain tab pages lists>
@@ -587,8 +615,8 @@ static void doc_r_tabs(r_sdl_frontend* f, r_ui_list* ui)
 	static char* labels[] = { "Files", "Recent" };
 	r_ui_list* pages[2];
 	r_tabs(ui, r_shrink(ui->root_area, 12), labels, 2, R_PTR(&tab), pages);
-	r_label(pages[0], r_shrink(pages[0]->document_area, 8), "Content of the first tab");
-	r_label(pages[1], r_shrink(pages[1]->document_area, 8), "Content of the second tab");
+	r_label(pages[0], r_shrink(pages[0]->document_area, 8), "Contents of the first tab");
+	r_label(pages[1], r_shrink(pages[1]->document_area, 8), "Contents of the second tab");
 }
 
 //! <TODO: Describe dropdown items, binding>
@@ -600,8 +628,12 @@ static void doc_r_dropdown(r_sdl_frontend* f, r_ui_list* ui)
 	static int language = 0;
 	// [...]
 	static char* languages[] = { "English", "Deutsch", "Français" };
-	rect r = r_aligned(R_CENTER, ui->root_area, (rect){ .w = 160, .h = 28 });
+	rect r = r_aligned(R_TOP, r_shrink(ui->root_area, 16), (rect){ .w = 160, .h = 28 });
 	r_dropdown(ui, r, languages, 3, R_PTR(&language));
+	//@example_end
+	r_post_mouse_down(&f->context, 0, R_MOUSE_LEFT, 110, 30);
+	r_post_mouse_up  (&f->context, 0, R_MOUSE_LEFT, 110, 30);
+	r_post_mouse_move(&f->context, 0, 110, 92);
 }
 
 //! <TODO: Describe segmented choices>
@@ -664,6 +696,9 @@ static void doc_r_line_edit(r_sdl_frontend* f, r_ui_list* ui)
 	r_layout_iter it = r_stack(ui, r_shrink(ui->root_area, 12), R_TOP);
 	r_line_edit(ui, r_next(&it, -1), name, sizeof(name), "Your name");
 	r_line_edit(ui, r_next(&it, -1), search, sizeof(search), "Search");
+	//@example_end
+	r_post_mouse_down(&f->context, 0, R_MOUSE_LEFT, 240, 68);
+	r_post_mouse_up  (&f->context, 0, R_MOUSE_LEFT, 240, 68);
 }
 
 //! <TODO: Describe multiline editing>
@@ -675,6 +710,9 @@ static void doc_r_text_area(r_sdl_frontend* f, r_ui_list* ui)
 	static char notes[256] = "Meeting notes\n- Ship the docs\n- Review the theme";
 	// [...]
 	r_text_area(ui, r_shrink(ui->root_area, 12), notes, sizeof(notes), "Write something...");
+	//@example_end
+	r_post_mouse_down(&f->context, 0, R_MOUSE_LEFT, 240, 90);
+	r_post_mouse_up  (&f->context, 0, R_MOUSE_LEFT, 240, 90);
 }
 
 //! <TODO: Describe style and multiline>
@@ -687,12 +725,16 @@ static void doc_r_text_edit_ex(r_sdl_frontend* f, r_ui_list* ui)
 	// [...]
 	r_layout_iter it = r_stack(ui, r_shrink(ui->root_area, 12), R_TOP);
 	r_text_edit_ex(ui, r_next(&it, -1), search, sizeof(search), "Search", R_STYLE_INPUT | R_VARIANT_FLAT, false);
+	//@example_end
+	r_post_mouse_down(&f->context, 0, R_MOUSE_LEFT, 200, 28);
+	r_post_mouse_up  (&f->context, 0, R_MOUSE_LEFT, 200, 28);
 }
 
 //! <TODO: Explain editor state storage>
 //@struct r_text_edit_state opaque
 
 //! Shows `text` (at most 511 bytes) in a tooltip while the mouse hovers `r`.
+//! @see_also r_popup RCUT_MOUSE_*
 //@function r_tooltip
 
 //@example
@@ -746,6 +788,11 @@ static void doc_r_menubar(r_sdl_frontend* f, r_ui_list* ui)
 	};
 	rect area = ui->root_area;
 	r_menubar(ui, r_cut_px(R_TOP, &area, 30, R_SALT00), menus);
+	//@example_end
+	r_post_mouse_move(&f->context, 0, 20, 15);
+	r_post_mouse_down(&f->context, 0, R_MOUSE_LEFT, 20, 15);
+	r_post_mouse_up  (&f->context, 0, R_MOUSE_LEFT, 20, 15);
+	r_post_mouse_move(&f->context, 0, 60, 46);
 }
 
 //! <TODO: Describe popup menu placement>
@@ -775,70 +822,63 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 }
 
 //! Binds `LENGTH` bits starting at bit `OFFSET` of the integer at `BASE`.
+//! @see_also R_PTR R_GETSET r_data_binding
 //@define R_BITFIELD
 
 //! <TODO: Explain getter/setter binding>
 //@define R_GETSET
 
-//! X-macro of the value types supported by getter/setter bindings, used internally.
-//@define R_SIGNATURE_LIST
-
 //! <TODO: Explain getter/setter fields>
 //@struct r_data_desc
 
-//! Converts an @ref r_data_desc into an @ref r_data_binding, used by @ref R_GETSET.
-//@function r_data_compact
-
-//! Returns the @ref r_data_type of an expression.
-//@define R_TYPEOF
-
 //! Type of the value a pointer binding refers to.
+//! @see_also R_PTR r_data_binding
 //@enum r_data_type
 
-//! Function signatures of getter/setter bindings, used internally.
-//@enum r_signature
-
-//! Calls `fn` with the arguments that match `signature`, taken from `i`, `d` and `ptr`.
-//@function r_call
-
 //! Writes an integer to the binding, converted to the bound type.
+//! @see_also r_geti r_setd r_data_binding
 //@function r_seti
 
 //! Reads the binding as an integer.
+//! @see_also r_seti r_getd
 //@function r_geti
 
 //! Writes a double to the binding, converted to the bound type.
+//! @see_also r_getd r_seti
 //@function r_setd
 
 //! Reads the binding as a double.
+//! @see_also r_setd r_geti
 //@function r_getd
 
 //@section Low level utility functions
 //! <TODO: Introduce low level utilities>
 
 //! Returns true if the element should look pressed: it is pressed and the mouse is still over it.
+//! @see_also r_draw_take_damage
 //@function r_is_pressed_visual
 
 //! <TODO: Explain event dispatch, return>
 //@function r_dispatch
 
 //! Moves the keyboard focus to `new_focus`, or clears it if NULL, and sends `R_FOCUS_EXIT` and `R_FOCUS_ENTER`.
+//! @see_also r_event_type r_focus_wants_text
 //@function r_change_focus
 
 //! Returns true if the focused element accepts text input.
+//! @see_also r_post_text r_change_focus
 //@function r_focus_wants_text
 
 //! Returns the mouse cursor of the hovered or dragged element.
+//! @see_also r_cursor
 //@function r_hover_cursor
 
 //! Mouse cursor shapes, see @ref r_hover_cursor.
+//! @see_also r_hover_cursor r_interact
 //@enum r_cursor
 
 //! <TODO: Explain only_topmost, return>
 //@function r_close_popups
-
-//! Unsigned integer with bit `x` set.
-//@define R_BIT
 
 //@section Low level input
 //! <TODO: Introduce frontend input posting>
@@ -851,34 +891,35 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //! @param mouse_button `R_MOUSE_LEFT`, `R_MOUSE_MIDDLE` or `R_MOUSE_RIGHT` (same numbering as SDL).
 //@function r_post_mouse_down
 
-//! Seconds a mouse button must be held before `R_MOUSE_PRESSED` starts repeating.
-//@define RCUT_MOUSE_PRESSED_INITIAL_REPEAT
-
-//! Seconds between repeated `R_MOUSE_PRESSED` events.
-//@define RCUT_MOUSE_PRESSED_REPEAT
-
-//! Seconds the mouse must rest on an element before the first `R_MOUSE_HOVER` event.
-//@define RCUT_MOUSE_HOVER_INITIAL_DELAY
-
-//! Seconds between repeated `R_MOUSE_HOVER` events.
-//@define RCUT_MOUSE_HOVER_REPEAT
-
-//! Maximum seconds between clicks on the same element to count as a double or triple click.
-//@define RCUT_MOUSE_MULTI_CLICK_TIME
+//! Mouse timings in seconds and the drag threshold in pixels:
+//! 
+//! - `RCUT_MOUSE_DRAG_DISTANCE_DEFAULT`: Pixels the mouse must move while pressed before a drag starts.
+//! - `RCUT_MOUSE_PRESSED_INITIAL_REPEAT`: Seconds a mouse button must be held before `R_MOUSE_PRESSED` starts repeating.
+//! - `RCUT_MOUSE_PRESSED_REPEAT`: Seconds between repeated `R_MOUSE_PRESSED` events.
+//! - `RCUT_MOUSE_HOVER_INITIAL_DELAY`: Seconds the mouse must rest on an element before the first `R_MOUSE_HOVER` event.
+//! - `RCUT_MOUSE_HOVER_REPEAT`: Seconds between repeated `R_MOUSE_HOVER` events.
+//! - `RCUT_MOUSE_MULTI_CLICK_TIME`: Maximum seconds between clicks on the same element to count as a double or triple click.
+//! @see_also r_event_type r_advance_time
+//@define RCUT_MOUSE_*
 
 //! Sends a mouse move in target space to the context and returns the ID of the element that handled it, or 0.
+//! @see_also r_post_mouse_down r_post_mouse_up r_post_mouse_wheel
 //@function r_post_mouse_move
 
 //! Sends a mouse button release in target space to the context and returns the ID of the element that handled it, or 0.
+//! @see_also r_post_mouse_down r_post_mouse_move
 //@function r_post_mouse_up
 
 //! Sends a scroll event to the elements under the mouse, topmost first, and returns the ID of the one that handled it, or 0.
+//! @see_also r_post_mouse_move r_scroll_begin
 //@function r_post_mouse_wheel
 
 //! Sends committed text to the focused element, `r_post_text_edit` sends IME composition text, both return the ID of the element that handled it, or 0.
+//! @see_also r_post_key_input r_focus_wants_text
 //@function r_post_text
 
 //! Modifier key flags for @ref r_post_key_input.
+//! @see_also r_post_key_input
 //@enum r_modifier_flags
 
 //! <TODO: Describe event order>
@@ -887,65 +928,13 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //! <TODO: Describe event fields>
 //@struct r_event
 
-//! Pixels the mouse must move while pressed before a drag starts.
-//@define RCUT_MOUSE_DRAG_DISTANCE_DEFAULT
+//! Mouse buttons, numbered the same as in SDL.
+//! @see_also r_post_mouse_down r_post_mouse_up
+//@define R_MOUSE_*
 
-//! Maximum number of overlapping interactables considered by a single hit test.
-//@define RCUT_HIT_STACK_MAX
-
-//! Left mouse button.
-//@define R_MOUSE_LEFT
-
-//! Middle mouse button.
-//@define R_MOUSE_MIDDLE
-
-//! Right mouse button.
-//@define R_MOUSE_RIGHT
-
-//! Key code of Backspace.
-//@define R_KEY_BACKSPACE
-
-//! Key code of Tab.
-//@define R_KEY_TAB
-
-//! Key code of Enter.
-//@define R_KEY_ENTER
-
-//! Key code of Alt.
-//@define R_KEY_ALT
-
-//! Key code of Escape.
-//@define R_KEY_ESCAPE
-
-//! Key code of Space.
-//@define R_KEY_SPACE
-
-//! Key code of Page Up.
-//@define R_KEY_PAGEUP
-
-//! Key code of Page Down.
-//@define R_KEY_PAGEDOWN
-
-//! Key code of End.
-//@define R_KEY_END
-
-//! Key code of Home.
-//@define R_KEY_HOME
-
-//! Key code of Left Arrow.
-//@define R_KEY_LEFT
-
-//! Key code of Up Arrow.
-//@define R_KEY_UP
-
-//! Key code of Right Arrow.
-//@define R_KEY_RIGHT
-
-//! Key code of Down Arrow.
-//@define R_KEY_DOWN
-
-//! Key code of Delete.
-//@define R_KEY_DELETE
+//! Key codes of the keys rcut handles specially, they are Windows virtual key codes that frontends need to map their keys to; letters are expected as uppercase ASCII ('A'-'Z') and digits as ASCII.
+//! @see_also r_post_key_input
+//@define R_KEY_*
 
 //@section Low level UI building
 //! <TODO: Introduce low level building>
@@ -973,6 +962,7 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_labeled
 
 //! Returns the drawable with the given ID from the current frame, or NULL.
+//! @see_also r_list_find_last_frame_drawable r_drawable
 //@function r_list_find_this_frame_drawable
 
 //! <TODO: Explain last frame lookup>
@@ -1018,9 +1008,11 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_set_press_group
 
 //! Returns the visible interactable with the given ID, or NULL.
+//! @see_also r_list_find_this_frame_interact r_interact
 //@function r_find_interact
 
 //! Returns the interactable with the given ID from the current frame, or NULL.
+//! @see_also r_list_find_last_frame_interact r_find_interact
 //@function r_list_find_this_frame_interact
 
 //! <TODO: Explain last frame lookup>
@@ -1055,6 +1047,7 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_draw_init
 
 //! Frees all fonts, caches and memory owned by the renderer.
+//! @see_also r_draw_init
 //@function r_draw_free
 
 //! <TODO: Explain rendering a target>
@@ -1069,7 +1062,9 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //! <TODO: Explain when bounds are needed>
 //@function r_draw_target_bounds
 
-//! Sets the DPI scale factor and regenerates fonts and styleboxes at the new resolution.
+//! Sets the DPI scale factor.
+//! This clears the cached stylebox and fonts, so they are recomputed the next time they are rendered.
+//! @see_also r_sdl_set_scale r_draw_clear_cache
 //@function r_draw_set_scale
 
 //! <TODO: Explain when to clear>
@@ -1084,7 +1079,8 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //! <TODO: Describe matrix and clip>
 //@struct r_draw_transform
 
-//! Rectangle with float coordinates.
+//! Rectangle with float coordinates. These are only used by @ref r_draw_quad and passed to the renderer interface that way.
+//! @see_also r_draw_quad
 //@struct r_frect
 
 //@section Software renderer
@@ -1097,6 +1093,7 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_draw_software_init
 
 //! Frees the buffers owned by the software renderer.
+//! @see_also r_draw_software_init
 //@function r_draw_software_free
 
 //! <TODO: Explain backend creation>
@@ -1105,46 +1102,38 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //! <TODO: Describe target pixel buffer>
 //@function r_draw_software_set_target
 
-//! <TODO: Explain atlas allocation scheme>
-//@struct r_draw_atlas opaque
-
-//! <TODO: Describe returned handle>
-//@function r_draw_atlas_alloc
-
-//! <TODO: Explain generation check>
-//@function r_draw_atlas_is_valid
-
-//! <TODO: Describe region from handle>
-//@function r_draw_atlas_region
-
-//! <TODO: Explain invalidation on reset>
-//@function r_draw_atlas_reset
-
 //@section Colors
 //! <TODO: Introduce color format>
 
 //! Packs 8 bit red, green and blue components into an opaque ARGB color.
+//! @see_also r_rgba_u8 r_rgb_f r_hex
 //@function r_rgb_u8
 
 //! Packs 8 bit red, green, blue and alpha components into an ARGB color.
+//! @see_also r_rgb_u8 r_rgba_f r_hexa
 //@function r_rgba_u8
 
 //! Packs red, green and blue components in the range 0 to 1 into an opaque ARGB color.
+//! @see_also r_rgba_f r_rgb_u8
 //@function r_rgb_f
 
 //! Packs red, green, blue and alpha components in the range 0 to 1 into an ARGB color.
+//! @see_also r_rgb_f r_rgba_u8
 //@function r_rgba_f
 
 //! Turns a 0xRRGGBB value into an opaque ARGB color.
+//! @see_also r_hexa r_rgb_u8
 //@function r_hex
 
 //! Turns a 0xRRGGBB value and an alpha in the range 0 to 1 into an ARGB color.
+//! @see_also r_hex r_rgba_u8
 //@function r_hexa
 
 //@section Theme
 //! <TODO: Introduce theme building API>
 
 //! Sets the label color, `r_theme_label_color` uses it exactly as given while `r_theme_label_color_auto` adapts it to stay readable on the element's background.
+//! @see_also r_theme_label r_theme_surface
 //@function r_theme_label_color
 
 //! <TODO: Describe theme options>
@@ -1166,57 +1155,78 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_theme_build
 
 //! Fills the background with a vertical gradient from `top` to `bottom`.
+//! @see_also r_theme_surface r_theme_tint
 //@function r_theme_fill
 
 //! Sets the color assumed behind a translucent background, used to pick readable label colors.
+//! @see_also r_theme_fill r_theme_label_color
 //@function r_theme_surface
 
 //! Blends `color` over the background and border colors set so far.
+//! @see_also r_theme_fill r_theme_border
 //@function r_theme_tint
 
 //! Sets the border width and color, `r_theme_border_color` only changes the color.
+//! @see_also r_theme_underline r_theme_bevel r_theme_border_split
 //@function r_theme_border
 
 //! Replaces the border with a bottom border of the given width and color.
+//! @see_also r_theme_border
 //@function r_theme_underline
 
 //! Sets separate top and bottom border colors.
+//! @see_also r_theme_border r_theme_border_split
 //@function r_theme_bevel
 
+//! Sets the border width with separate top-left and bottom-right colors, for sunken or raised edges.
+//@function r_theme_border_split
+
 //! Sets the radius of all corners.
+//! @see_also r_theme_corners
 //@function r_theme_radius
 
 //! Sets the radius of each corner individually.
+//! @see_also r_theme_radius
 //@function r_theme_corners
 
 //! Sets the horizontal and vertical content padding.
+//! @see_also r_theme_layout r_inner
 //@function r_theme_padding
 
 //! Sets a drop shadow with vertical offset, blur radius and opacity.
+//! @see_also r_theme_shadow2 r_theme_no_shadow r_theme_inset
 //@function r_theme_shadow
 
 //! Sets a second drop shadow, drawn in addition to the one from @ref r_theme_shadow.
+//! @see_also r_theme_shadow r_theme_glow
 //@function r_theme_shadow2
 
 //! Removes both drop shadows.
+//! @see_also r_theme_shadow r_theme_shadow2
 //@function r_theme_no_shadow
 
 //! Sets an inner shadow with vertical offset, blur radius and opacity.
+//! @see_also r_theme_shadow
 //@function r_theme_inset
 
 //! Adds a glow of the given color and width, using the second shadow if the first one is set.
+//! @see_also r_theme_shadow r_theme_shadow2
 //@function r_theme_glow
 
 //! Sets the label color, adapted to stay readable, and the label alignment.
+//! @see_also r_theme_label_color r_theme_font
 //@function r_theme_label
 
 //! Sets the label font.
+//! @see_also r_theme_label r_draw_get_font
 //@function r_theme_font
 
 //! Sets the icon color and size.
+//! @see_also r_icon
 //@function r_theme_icon
 
 //! Sets the default size and spacing returned by @ref r_layout_default_size and @ref r_layout_default_spacing.
+//! @see_also r_layout_default_size r_layout_default_spacing r_theme_padding
 //@function r_theme_layout
 
 //! Enables or disables the focus ring.
@@ -1226,24 +1236,29 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@enum r_theme_focus
 
 //! Draws labels with an outline of the given width and color.
+//! @see_also r_theme_text_shadow
 //@function r_theme_text_outline
 
 //! Draws labels with a shadow of the given offset, blur and color.
+//! @see_also r_theme_text_outline r_theme_shadow
 //@function r_theme_text_shadow
 
 //! <TODO: Describe style rule fields>
 //@struct r_draw_style_rule
 
 //! Returns the style rule for exactly `key`, or NULL.
+//! @see_also r_draw_set_style_rule r_draw_find_style_rule r_draw_style_rule
 //@function r_draw_get_style_rule
 
 //! <TODO: Explain style fallback lookup>
 //@function r_draw_find_style_rule
 
 //! Copies `rule` as the style rule for `key`, replacing any existing one.
+//! @see_also r_draw_get_style_rule r_draw_delete_style_rule
 //@function r_draw_set_style_rule
 
 //! Removes the style rule for `key`.
+//! @see_also r_draw_set_style_rule
 //@function r_draw_delete_style_rule
 
 //@section Styleboxes
@@ -1255,9 +1270,11 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_draw_upload_stylebox
 
 //! Given the outer rect, calculates the inner rect (e.g. where text should be positioned).
+//! @see_also r_draw_stylebox_outer_rect r_inner
 //@function r_draw_stylebox_inner_rect
 
 //! Given the inner rect, calculates the outer rect (e.g. how big the entire drawable needs to be to contain the contents of inner).
+//! @see_also r_draw_stylebox_inner_rect r_outer
 //@function r_draw_stylebox_outer_rect
 
 //! <TODO: Describe stylebox definition>
@@ -1270,15 +1287,18 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_draw_generate_stylebox
 
 //! Frees the stylebox slot and its cached textures.
+//! @see_also r_draw_generate_stylebox r_draw_upload_stylebox
 //@function r_draw_free_stylebox
 
 //! Sets a solid border of the given color, thickness and corner radius on all sides.
+//! @see_also r_draw_stylebox_def r_draw_generate_stylebox
 //@function r_stylebox_set_outline_border
 
 //! <TODO: Describe shadow helper>
 //@function r_stylebox_set_shadow
 
 //! Sets a solid background color.
+//! @see_also r_stylebox_set_bg_vertical_gradient r_draw_stylebox_def
 //@function r_stylebox_set_bg_color
 
 //! <TODO: Describe gradient helper>
@@ -1288,9 +1308,11 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_stylebox_set_raised_borders_simple
 
 //! Number of stylebox slots.
+//! @see_also RCUT_DRAW_USER_STYLEBOXES r_draw_generate_stylebox
 //@define RCUT_DRAW_MAX_STYLEBOXES
 
 //! First stylebox slot for the application, themes only use the slots below.
+//! @see_also RCUT_DRAW_MAX_STYLEBOXES r_draw_upload_stylebox
 //@define RCUT_DRAW_USER_STYLEBOXES
 
 //@section Icons
@@ -1308,24 +1330,20 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@enum r_draw_icon_op
 
 //! Returns the largest square centered in `outer`.
+//! @see_also r_draw_upload_icon r_draw_render_icon
 //@function r_draw_icon_get_rect
 
 //@section Fonts
 //! <TODO: Introduce font handling>
 
-//! Selects the HarfBuzz text backend, if none of `RCUT_USE_HARFBUZZ`, `RCUT_USE_HB_MINI` or `RCUT_USE_STB_TRUETYPE` is defined the backend is detected from previously included headers.
-//@define RCUT_USE_HARFBUZZ
+//! Selects the text backend: `RCUT_USE_HARFBUZZ`, `RCUT_USE_HB_MINI` or `RCUT_USE_STB_TRUETYPE`, if none is defined the backend is detected from previously included headers.
+//! @see_also r_draw_font_register
+//@define RCUT_USE_*
 
 //! <TODO: Describe return rect>
 //! 
 //! Widths are measured to the nearest pixel, so text may overhang its measured width by up to half a pixel (+1 device pixel of truncation).
 //@function r_draw_measure_text
-
-//! Selects the HarfBuzz mini text backend, see @ref RCUT_USE_HARFBUZZ.
-//@define RCUT_USE_HB_MINI
-
-//! Selects the stb_truetype text backend, see @ref RCUT_USE_HARFBUZZ.
-//@define RCUT_USE_STB_TRUETYPE
 
 //! <TODO: Explain font handle usage>
 //@struct r_draw_font opaque
@@ -1346,19 +1364,11 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_draw_get_font
 
 //! Returns the line height of the font in unscaled pixels.
+//! @see_also r_draw_get_font r_draw_measure_text
 //@function r_draw_font_line_height
 
 //! <TODO: Explain line breaking, force>
 //@function r_draw_break_text
-
-//! Capacity of the glyph cache.
-//@define RCUT_DRAW_MAX_GLYPHS
-
-//! <TODO: Explain glyph table limit>
-//@define RCUT_DRAW_GLYPH_LOAD_LIMIT
-
-//! Number of font instances (base font, size and flags) that can be cached.
-//@define RCUT_DRAW_FONT_HASHMAP_SIZE
 
 //@section Rendering
 //! <TODO: Introduce manual render passes>
@@ -1373,15 +1383,19 @@ static void doc_R_PTR(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_draw_render_drawable
 
 //! Draws an icon centered in `bounds` in the current render pass.
+//! @see_also r_draw_render_pass_begin r_draw_upload_icon
 //@function r_draw_render_icon
 
 //! Draws text at the top left of `bounds` in the current render pass.
+//! @see_also r_draw_render_pass_begin r_draw_measure_text
 //@function r_draw_render_text
 
 //! Draws the stylebox in slot `stylebox` stretched to `outer` in the current render pass.
+//! @see_also r_draw_render_pass_begin r_draw_generate_stylebox
 //@function r_draw_render_stylebox
 
 //! Draws a solid rectangle in the current render pass.
+//! @see_also r_draw_render_pass_begin
 //@function r_draw_render_fill
 
 //@module sdl
@@ -1424,6 +1438,7 @@ static void doc_r_sdl_init(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_sdl_process_event
 
 //! Returns true if the user requested to close the dialog window, `clear` resets the request, popup windows are closed automatically instead.
+//! @see_also r_sdl_dialog r_destroy_ui_list
 //@function r_sdl_close_requested
 
 //! <TODO: Explain update responsibilities>
@@ -1433,62 +1448,64 @@ static void doc_r_sdl_init(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_sdl_render_ui
 
 //! Renders the main window and saves it to `path` as PNG (BMP before SDL 3.4), returns false on failure.
+//! @see_also r_sdl_render_ui
 //@function r_sdl_screenshot
 
 //! Frees the frontend and closes all its windows.
+//! @see_also r_sdl_init
 //@function r_sdl_free
 
 //! Returns true if the user requested to quit, `clear` resets the request.
+//! @see_also r_sdl_process_event r_sdl_close_requested
 //@function r_sdl_quit_requested
 
 //! <TODO: Explain dialog windows>
 //@function r_sdl_dialog
 
 //! Sets the UI scale factor, or follows the display scale if `scale` is 0 or less.
+//! @see_also r_draw_set_scale
 //@function r_sdl_set_scale
 
-//! Internal state of a frontend window.
-//@struct r_sdl_window opaque
-
 //! Maximum number of windows, including popup windows.
+//! @see_also r_sdl_dialog
 //@define RCUT_SDL_MAX_WINDOWS
 
 //! Size in pixels of the software cache shared by all windows, it must hold everything a frame uses.
+//! @see_also r_draw_software_init
 //@define RCUT_SDL_CACHE_PIXELS
 
 #define DOC(fn, w, h) { #fn, fn, w, h }
-#define DOC_CLICK(fn, w, h, x, y) { #fn, fn, w, h, x, y }
-static const struct { const char* name; void (*fn)(r_sdl_frontend*, r_ui_list*); int w, h; float click_x, click_y; } docs[] = {
+static const struct { const char* name; void (*fn)(r_sdl_frontend*, r_ui_list*); int w, h; } docs[] = {
 	DOC(doc_r_create_ui_list, 320, 80),
 	DOC(doc_r_salt, 240, 60),
 	DOC(doc_r_cut_px, 360, 200),
 	DOC(doc_r_stack, 200, 140),
 	DOC(doc_r_next, 320, 60),
+	DOC(doc_r_text, 260, 80),
 	DOC(doc_r_button, 240, 80),
 	DOC(doc_r_label, 240, 80),
 	DOC(doc_r_checkbox, 200, 80),
-	DOC(doc_r_slider_h, 260, 80),
 	DOC(doc_r_icon, 200, 48),
 	DOC(doc_r_header, 220, 80),
-	DOC(doc_r_paragraph, 260, 100),
 	DOC(doc_r_panel, 260, 90),
 	DOC(doc_r_separator, 200, 90),
 	DOC(doc_r_toggle, 200, 80),
 	DOC(doc_r_radio, 300, 52),
 	DOC(doc_r_selectable, 220, 112),
+	DOC(doc_r_slider_h, 260, 80),
 	DOC(doc_r_slider_v, 140, 140),
 	DOC(doc_r_slider_box, 260, 56),
 	DOC(doc_r_spinbox, 200, 60),
 	DOC(doc_r_progress, 240, 70),
 	DOC(doc_r_tabs, 280, 140),
-	DOC(doc_r_dropdown, 220, 60),
+	DOC(doc_r_dropdown, 220, 152),
 	DOC(doc_r_segmented, 260, 60),
 	DOC(doc_r_tree_node, 220, 136),
 	DOC(doc_r_split, 300, 120),
 	DOC(doc_r_line_edit, 260, 100),
 	DOC(doc_r_text_area, 260, 110),
 	DOC(doc_r_text_edit_ex, 260, 56),
-	DOC_CLICK(doc_r_menubar, 260, 106, 20, 15),
+	DOC(doc_r_menubar, 260, 106),
 };
 
 int main(int argc, char** argv)
@@ -1503,13 +1520,6 @@ int main(int argc, char** argv)
 		f->no_popup_windows = true;
 		docs[i].fn(f, f->root);
 		r_sdl_update(f);
-		if(docs[i].click_x || docs[i].click_y)
-		{
-			r_post_mouse_move(&f->context, 0, docs[i].click_x, docs[i].click_y);
-			r_post_mouse_down(&f->context, 0, R_MOUSE_LEFT, docs[i].click_x, docs[i].click_y);
-			r_post_mouse_up  (&f->context, 0, R_MOUSE_LEFT, docs[i].click_x, docs[i].click_y);
-			r_sdl_update(f);
-		}
 		char path[512];
 		snprintf(path, sizeof(path), "%s/%s.png", dir, docs[i].name);
 		if(!r_sdl_screenshot(f, path)) fprintf(stderr, "failed: %s\n", path);

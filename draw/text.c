@@ -562,7 +562,7 @@ typedef struct text_layout
 {
     r_draw_font* font;
     uint32_t     generation;
-    int          wrap_width, len;
+    int          len;
     const char*  text;
     int          num_lines, num_glyphs;
     int32_t*     line_w;
@@ -710,28 +710,22 @@ int r_draw_font_line_height(r_draw_font* font)
     return (int)ceilf(line_height_px(font) / font->scale);
 }
 
-rect r_draw_measure_text_wrapped(r_draw* c, r_draw_font* font, const char* text, int len, int wrap_width)
+rect r_draw_measure_text(r_draw* c, r_draw_font* font, const char* text, int len)
 {
     font = default_font(c, font);
     if(!font || !text) return (rect){0};
     if(len < 0) len = (int)strlen(text);
     const char* end = text + len;
     int max_w = 0, lines = 0;
-    wrap_width = (int)(wrap_width * font->scale);
     for(const char* line = text; ; lines++)
     {
         const char* next; int w = 0;
-        const char* eol = next_line(c, font, line, end, wrap_width, true, &next, &w);
+        const char* eol = next_line(c, font, line, end, 0, true, &next, &w);
         max_w = MAX(max_w, w);
         if(eol >= end) break;
         line = next;
     }
     return (rect){.w = (int)roundf(max_w / 64.0f / font->scale), .h = (int)ceilf((lines + 1) * line_height_px(font) / font->scale)};
-}
-
-rect r_draw_measure_text(r_draw* c, r_draw_font* font, const char* text, int len)
-{
-    return r_draw_measure_text_wrapped(c, font, text, len, 0);
 }
 
 int r_draw_break_text(r_draw* c, r_draw_font* font, const char* text, int len, int width, bool force, int* w)
@@ -746,7 +740,7 @@ int r_draw_break_text(r_draw* c, r_draw_font* font, const char* text, int len, i
     return (int)(eol - text);
 }
 
-static text_layout layout_text(r_draw* c, r_draw_font* font, const char* text, int len, int wrap_width)
+static text_layout layout_text(r_draw* c, r_draw_font* font, const char* text, int len)
 {
     struct r_draw_text* t = scratch(c);
     const char* end = text + len;
@@ -754,7 +748,7 @@ static text_layout layout_text(r_draw* c, r_draw_font* font, const char* text, i
     for(const char* line = text; ; )
     {
         const char* next; int w = 0;
-        const char* eol = next_line(c, font, line, end, wrap_width, true, &next, &w);
+        const char* eol = next_line(c, font, line, end, 0, true, &next, &w);
         t->line_w = __draw_grow(t->line_w, &t->cap_lines, lines + 1, sizeof(int32_t));
         t->line_w[lines] = w;
         int count = shape_run(c, font, line, (int)(eol - line)), x = 0;
@@ -769,31 +763,31 @@ static text_layout layout_text(r_draw* c, r_draw_font* font, const char* text, i
         if(eol >= end) break;
         line = next;
     }
-    return (text_layout){ font, t->generation, wrap_width, len, text, lines, n, t->line_w, t->laid };
+    return (text_layout){ font, t->generation, len, text, lines, n, t->line_w, t->laid };
 }
 
-static bool layout_matches(r_draw* c, const text_layout* t, r_draw_font* font, const char* text, int len, int wrap_width)
+static bool layout_matches(r_draw* c, const text_layout* t, r_draw_font* font, const char* text, int len)
 {
-    return t && t->font == font && t->generation == c->text->generation && t->wrap_width == wrap_width && t->len == len && !memcmp(t->text, text, len);
+    return t && t->font == font && t->generation == c->text->generation && t->len == len && !memcmp(t->text, text, len);
 }
 
-static text_layout drawable_layout(r_draw* c, r_drawable* d, r_draw_font* font, int wrap_width)
+static text_layout drawable_layout(r_draw* c, r_drawable* d, r_draw_font* font)
 {
     int len = (int)strlen(d->text);
     scratch(c);
-    if(layout_matches(c, d->layout_cache, font, d->text, len, wrap_width)) return *(text_layout*)d->layout_cache;
+    if(layout_matches(c, d->layout_cache, font, d->text, len)) return *(text_layout*)d->layout_cache;
     r_ui_list* l = c->pass_list;
     int index = l ? (int)(c->pass_item - l->draw_items) : -1;
-    if(index < 0 || index >= l->count_draw_items || d->layout_cache) return layout_text(c, font, d->text, len, wrap_width);
+    if(index < 0 || index >= l->count_draw_items || d->layout_cache) return layout_text(c, font, d->text, len);
 
     text_layout* found = NULL;
     int n = l->count_draw_items_last_frame;
     for(int k = 0; k < n && !found; k++)
     {
         r_drawable* o = &l->draw_items_last_frame[(MIN(index, n - 1) + k) % n];
-        if(o->r.id == d->r.id && layout_matches(c, o->layout_cache, font, d->text, len, wrap_width)) found = o->layout_cache;
+        if(o->r.id == d->r.id && layout_matches(c, o->layout_cache, font, d->text, len)) found = o->layout_cache;
     }
-    text_layout t = found ? *found : layout_text(c, font, d->text, len, wrap_width);
+    text_layout t = found ? *found : layout_text(c, font, d->text, len);
 
     int glyphs = t.num_glyphs * (int)sizeof(laid_glyph), lines = t.num_lines * (int)sizeof(int32_t);
     text_layout* kept = r_storage_alloc(l, (int)sizeof(text_layout) + glyphs + lines + len + 1);
@@ -871,26 +865,25 @@ static void render_layout(r_draw* c, const text_layout* t, uint32_t color, const
     }
 }
 
-void __draw_render_text(r_draw* c, r_drawable* d, const r_draw_style_rule* rule, rect bounds, r_alignment align, rect clip, int wrap_width)
+void __draw_render_text(r_draw* c, r_drawable* d, const r_draw_style_rule* rule, rect bounds, r_alignment align, rect clip)
 {
     r_draw_font* font = default_font(c, rule->label_font);
     if(!font || !d->text) return;
-    wrap_width = (int)(wrap_width * c->scale);
-    text_layout t = font->flags & R_FONT_SHAPED ? drawable_layout(c, d, font, wrap_width) : layout_text(c, font, d->text, (int)strlen(d->text), wrap_width);
+    text_layout t = font->flags & R_FONT_SHAPED ? drawable_layout(c, d, font) : layout_text(c, font, d->text, (int)strlen(d->text));
     render_layout(c, &t, rule->label_color, rule, bounds, align, 0, 0, clip);
 }
 
-void r_draw_render_text_ex(r_draw* c, r_draw_font* font, const char* text, uint32_t color, rect bounds, r_alignment align, int scroll_x, int scroll_y, rect clip, int wrap_width)
+void r_draw_render_text_ex(r_draw* c, r_draw_font* font, const char* text, uint32_t color, rect bounds, r_alignment align, int scroll_x, int scroll_y, rect clip)
 {
     font = default_font(c, font);
     if(!font || !text) return;
-    text_layout t = layout_text(c, font, text, (int)strlen(text), (int)(wrap_width * c->scale));
+    text_layout t = layout_text(c, font, text, (int)strlen(text));
     render_layout(c, &t, color, NULL, bounds, align, scroll_x, scroll_y, clip);
 }
 
 void r_draw_render_text(r_draw* c, r_draw_font* font, const char* text, uint32_t color, rect bounds)
 {
-    r_draw_render_text_ex(c, font, text, color, bounds, R_TOP_LEFT, 0, 0, bounds, 0);
+    r_draw_render_text_ex(c, font, text, color, bounds, R_TOP_LEFT, 0, 0, bounds);
 }
 
 void r_draw_render_icon(r_draw* c, uint16_t icon, uint32_t color, rect bounds)

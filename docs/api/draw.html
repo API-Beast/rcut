@@ -20,6 +20,7 @@
 <h3><a name="r_draw_free"></a>r_draw_free</h3>
 <pre class="sig"><span class="k">void</span> r_draw_free(<a class="t" href="#r_draw">r_draw</a>* d);</pre>
 <p>Frees all fonts, caches and memory owned by the renderer.</p>
+<p class="see">See also: <a href="#r_draw_init"><code>r_draw_init</code></a></p>
 
 <h3><a name="r_draw_render"></a>r_draw_render</h3>
 <pre class="sig"><span class="k">void</span> r_draw_render(<a class="t" href="#r_draw">r_draw</a>* d, <span class="t">uint64_t</span> target);</pre>
@@ -39,7 +40,9 @@
 
 <h3><a name="r_draw_set_scale"></a>r_draw_set_scale</h3>
 <pre class="sig"><span class="k">void</span> r_draw_set_scale(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> scale);</pre>
-<p>Sets the DPI scale factor and regenerates fonts and styleboxes at the new resolution.</p>
+<p>Sets the DPI scale factor.
+This clears the cached stylebox and fonts, so they are recomputed the next time they are rendered.</p>
+<p class="see">See also: <a href="sdl.html#r_sdl_set_scale"><code>r_sdl_set_scale</code></a>, <a href="#r_draw_clear_cache"><code>r_draw_clear_cache</code></a></p>
 
 <h3><a name="r_draw_clear_cache"></a>r_draw_clear_cache</h3>
 <pre class="sig"><span class="k">void</span> r_draw_clear_cache(<a class="t" href="#r_draw">r_draw</a>* c);</pre>
@@ -49,11 +52,12 @@
 <pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_draw_backend
 {
 	<span class="k">void</span>* userptr;
-	<span class="t">uint64_t</span> (*cache_argb)      (<span class="k">void</span>* userptr, <span class="k">int</span> w, <span class="k">int</span> h, <span class="k">const</span> <span class="t">uint32_t</span>* pixels, <span class="k">int</span> stride, <span class="k">bool</span> permanent);
-	<span class="t">uint64_t</span> (*cache_monochrome)(<span class="k">void</span>* userptr, <span class="k">int</span> w, <span class="k">int</span> h, <span class="k">const</span> <span class="t">uint8_t</span>* pixels, <span class="k">int</span> stride, <span class="k">bool</span> permanent);
-	<span class="k">void</span>     (*submit)          (<span class="k">void</span>* userptr, <span class="k">const</span> <a class="t" href="#r_draw_quad">r_draw_quad</a>* quads, <span class="k">int</span> num_quads);
-	<span class="k">bool</span>     (*is_cached)       (<span class="k">void</span>* userptr, <span class="t">uint64_t</span> handle);
-	<span class="k">void</span>     (*invalidate_cache)(<span class="k">void</span>* userptr, <span class="t">uint64_t</span> handle);
+	<span class="t">uint64_t</span> (*cache_argb)        (<span class="k">void</span>* userptr, <span class="k">int</span> w, <span class="k">int</span> h, <span class="k">const</span> <span class="t">uint32_t</span>* pixels, <span class="k">int</span> stride, <span class="k">bool</span> permanent);
+	<span class="t">uint64_t</span> (*cache_monochrome)  (<span class="k">void</span>* userptr, <span class="k">int</span> w, <span class="k">int</span> h, <span class="k">const</span> <span class="t">uint8_t</span>* pixels, <span class="k">int</span> stride, <span class="k">bool</span> permanent);
+	<span class="t">uint64_t</span> (*cache_image_buffer)(<span class="k">void</span>* userptr, r_image_buffer* img);
+	<span class="k">void</span>     (*submit)            (<span class="k">void</span>* userptr, <span class="k">const</span> <a class="t" href="#r_draw_quad">r_draw_quad</a>* quads, <span class="k">int</span> num_quads);
+	<span class="k">bool</span>     (*is_cached)         (<span class="k">void</span>* userptr, <span class="t">uint64_t</span> handle);
+	<span class="k">void</span>     (*invalidate_cache)  (<span class="k">void</span>* userptr, <span class="t">uint64_t</span> handle);
 } r_draw_backend;</pre>
 <p><span class="todo">&lt;TODO: Describe backend callbacks&gt;</span></p>
 
@@ -78,7 +82,8 @@
 
 <h3><a name="r_frect"></a>r_frect</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_frect { <span class="k">float</span> x, y, w, h; } r_frect;</pre>
-<p>Rectangle with float coordinates.</p>
+<p>Rectangle with float coordinates. These are only used by <a href="#r_draw_quad"><code>r_draw_quad</code></a> and passed to the renderer interface that way.</p>
+<p class="see">See also: <a href="#r_draw_quad"><code>r_draw_quad</code></a></p>
 
 <h2><a name="s-Software-renderer"></a>Software renderer</h2>
 <p><span class="todo">&lt;TODO: Introduce software backend&gt;</span></p>
@@ -94,6 +99,7 @@
 <h3><a name="r_draw_software_free"></a>r_draw_software_free</h3>
 <pre class="sig"><span class="k">void</span> r_draw_software_free(<a class="t" href="#r_draw_software">r_draw_software</a>* sw);</pre>
 <p>Frees the buffers owned by the software renderer.</p>
+<p class="see">See also: <a href="#r_draw_software_init"><code>r_draw_software_init</code></a></p>
 
 <h3><a name="r_draw_software_backend"></a>r_draw_software_backend</h3>
 <pre class="sig"><a class="t" href="#r_draw_backend">r_draw_backend</a> r_draw_software_backend(<a class="t" href="#r_draw_software">r_draw_software</a>* sw);</pre>
@@ -103,52 +109,38 @@
 <pre class="sig"><span class="k">void</span> r_draw_software_set_target(<a class="t" href="#r_draw_software">r_draw_software</a>* sw, <span class="t">uint32_t</span>* pixels, <span class="k">int</span> w, <span class="k">int</span> h, <span class="k">int</span> stride, <span class="k">int</span> x, <span class="k">int</span> y);</pre>
 <p><span class="todo">&lt;TODO: Describe target pixel buffer&gt;</span></p>
 
-<h3><a name="r_draw_atlas"></a>r_draw_atlas</h3>
-<pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_draw_atlas r_draw_atlas;</pre>
-<p><span class="todo">&lt;TODO: Explain atlas allocation scheme&gt;</span></p>
-
-<h3><a name="r_draw_atlas_alloc"></a>r_draw_atlas_alloc</h3>
-<pre class="sig"><span class="t">uint64_t</span> r_draw_atlas_alloc(<a class="t" href="#r_draw_atlas">r_draw_atlas</a>* a, <span class="k">int</span> w, <span class="k">int</span> h);</pre>
-<p><span class="todo">&lt;TODO: Describe returned handle&gt;</span></p>
-
-<h3><a name="r_draw_atlas_is_valid"></a>r_draw_atlas_is_valid</h3>
-<pre class="sig"><span class="k">bool</span> r_draw_atlas_is_valid(<a class="t" href="#r_draw_atlas">r_draw_atlas</a>* a, <span class="t">uint64_t</span> handle);</pre>
-<p><span class="todo">&lt;TODO: Explain generation check&gt;</span></p>
-
-<h3><a name="r_draw_atlas_region"></a>r_draw_atlas_region</h3>
-<pre class="sig"><a class="t" href="core.html#rect">rect</a> r_draw_atlas_region(<span class="t">uint64_t</span> handle);</pre>
-<p><span class="todo">&lt;TODO: Describe region from handle&gt;</span></p>
-
-<h3><a name="r_draw_atlas_reset"></a>r_draw_atlas_reset</h3>
-<pre class="sig"><span class="k">void</span> r_draw_atlas_reset(<a class="t" href="#r_draw_atlas">r_draw_atlas</a>* a);</pre>
-<p><span class="todo">&lt;TODO: Explain invalidation on reset&gt;</span></p>
-
 <h2><a name="s-Colors"></a>Colors</h2>
 <p><span class="todo">&lt;TODO: Introduce color format&gt;</span></p>
 
 <h3><a name="r_rgb_u8"></a>r_rgb_u8</h3>
 <pre class="sig"><span class="t">uint32_t</span> r_rgb_u8(<span class="t">uint8_t</span> R, <span class="t">uint8_t</span> G, <span class="t">uint8_t</span> B);</pre>
 <p>Packs 8 bit red, green and blue components into an opaque ARGB color.</p>
+<p class="see">See also: <a href="#r_rgba_u8"><code>r_rgba_u8</code></a>, <a href="#r_rgb_f"><code>r_rgb_f</code></a>, <a href="#r_hex"><code>r_hex</code></a></p>
 
 <h3><a name="r_rgba_u8"></a>r_rgba_u8</h3>
 <pre class="sig"><span class="t">uint32_t</span> r_rgba_u8(<span class="t">uint8_t</span> R, <span class="t">uint8_t</span> G, <span class="t">uint8_t</span> B, <span class="t">uint8_t</span> A);</pre>
 <p>Packs 8 bit red, green, blue and alpha components into an ARGB color.</p>
+<p class="see">See also: <a href="#r_rgb_u8"><code>r_rgb_u8</code></a>, <a href="#r_rgba_f"><code>r_rgba_f</code></a>, <a href="#r_hexa"><code>r_hexa</code></a></p>
 
 <h3><a name="r_rgb_f"></a>r_rgb_f</h3>
 <pre class="sig"><span class="t">uint32_t</span> r_rgb_f(<span class="k">float</span> R, <span class="k">float</span> G, <span class="k">float</span> B);</pre>
 <p>Packs red, green and blue components in the range 0 to 1 into an opaque ARGB color.</p>
+<p class="see">See also: <a href="#r_rgba_f"><code>r_rgba_f</code></a>, <a href="#r_rgb_u8"><code>r_rgb_u8</code></a></p>
 
 <h3><a name="r_rgba_f"></a>r_rgba_f</h3>
 <pre class="sig"><span class="t">uint32_t</span> r_rgba_f(<span class="k">float</span> R, <span class="k">float</span> G, <span class="k">float</span> B, <span class="k">float</span> A);</pre>
 <p>Packs red, green, blue and alpha components in the range 0 to 1 into an ARGB color.</p>
+<p class="see">See also: <a href="#r_rgb_f"><code>r_rgb_f</code></a>, <a href="#r_rgba_u8"><code>r_rgba_u8</code></a></p>
 
 <h3><a name="r_hex"></a>r_hex</h3>
 <pre class="sig"><span class="t">uint32_t</span> r_hex(<span class="t">uint32_t</span> rgb);</pre>
 <p>Turns a 0xRRGGBB value into an opaque ARGB color.</p>
+<p class="see">See also: <a href="#r_hexa"><code>r_hexa</code></a>, <a href="#r_rgb_u8"><code>r_rgb_u8</code></a></p>
 
 <h3><a name="r_hexa"></a>r_hexa</h3>
 <pre class="sig"><span class="t">uint32_t</span> r_hexa(<span class="t">uint32_t</span> rgb, <span class="k">float</span> alpha);</pre>
 <p>Turns a 0xRRGGBB value and an alpha in the range 0 to 1 into an ARGB color.</p>
+<p class="see">See also: <a href="#r_hex"><code>r_hex</code></a>, <a href="#r_rgba_u8"><code>r_rgba_u8</code></a></p>
 
 <h2><a name="s-Theme"></a>Theme</h2>
 <p><span class="todo">&lt;TODO: Introduce theme building API&gt;</span></p>
@@ -157,6 +149,7 @@
 <pre class="sig"><span class="k">void</span> r_theme_label_color(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color);
 <span class="k">void</span> r_theme_label_color_auto(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color);</pre>
 <p>Sets the label color, <code>r_theme_label_color</code> uses it exactly as given while <code>r_theme_label_color_auto</code> adapts it to stay readable on the element's background.</p>
+<p class="see">See also: <a href="#r_theme_label"><code>r_theme_label</code></a>, <a href="#r_theme_surface"><code>r_theme_surface</code></a></p>
 
 <h3><a name="r_draw_theme_options"></a>r_draw_theme_options</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_draw_theme_options
@@ -194,7 +187,8 @@
 <p><span class="todo">&lt;TODO: Describe palette colors&gt;</span></p>
 
 <h3><a name="r_theme"></a>r_theme</h3>
-<pre class="sig"><span class="k">void</span> r_theme(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">int</span> key);</pre>
+<pre class="sig"><span class="k">void</span> r_theme(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">int</span> key);
+<span class="k">void</span> r_theme_hover(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color);</pre>
 <p><span class="todo">&lt;TODO: Explain theme rule builder&gt;</span></p>
 
 <h3><a name="r_theme_tweak"></a>r_theme_tweak</h3>
@@ -210,91 +204,116 @@
 <h3><a name="r_theme_fill"></a>r_theme_fill</h3>
 <pre class="sig"><span class="k">void</span> r_theme_fill(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> top, <span class="t">uint32_t</span> bottom);</pre>
 <p>Fills the background with a vertical gradient from <code>top</code> to <code>bottom</code>.</p>
+<p class="see">See also: <a href="#r_theme_surface"><code>r_theme_surface</code></a>, <a href="#r_theme_tint"><code>r_theme_tint</code></a></p>
 
 <h3><a name="r_theme_surface"></a>r_theme_surface</h3>
 <pre class="sig"><span class="k">void</span> r_theme_surface(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color);</pre>
 <p>Sets the color assumed behind a translucent background, used to pick readable label colors.</p>
+<p class="see">See also: <a href="#r_theme_fill"><code>r_theme_fill</code></a>, <a href="#r_theme_label_color"><code>r_theme_label_color</code></a></p>
 
 <h3><a name="r_theme_tint"></a>r_theme_tint</h3>
 <pre class="sig"><span class="k">void</span> r_theme_tint(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color);</pre>
 <p>Blends <code>color</code> over the background and border colors set so far.</p>
+<p class="see">See also: <a href="#r_theme_fill"><code>r_theme_fill</code></a>, <a href="#r_theme_border"><code>r_theme_border</code></a></p>
 
 <h3><a name="r_theme_border"></a>r_theme_border</h3>
 <pre class="sig"><span class="k">void</span> r_theme_border(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> width, <span class="t">uint32_t</span> color);
 <span class="k">void</span> r_theme_border_color(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color);</pre>
 <p>Sets the border width and color, <code>r_theme_border_color</code> only changes the color.</p>
+<p class="see">See also: <a href="#r_theme_underline"><code>r_theme_underline</code></a>, <a href="#r_theme_bevel"><code>r_theme_bevel</code></a>, <a href="#r_theme_border_split"><code>r_theme_border_split</code></a></p>
 
 <h3><a name="r_theme_underline"></a>r_theme_underline</h3>
 <pre class="sig"><span class="k">void</span> r_theme_underline(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> width, <span class="t">uint32_t</span> color);</pre>
 <p>Replaces the border with a bottom border of the given width and color.</p>
+<p class="see">See also: <a href="#r_theme_border"><code>r_theme_border</code></a></p>
 
 <h3><a name="r_theme_bevel"></a>r_theme_bevel</h3>
 <pre class="sig"><span class="k">void</span> r_theme_bevel(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> top, <span class="t">uint32_t</span> bottom);</pre>
 <p>Sets separate top and bottom border colors.</p>
+<p class="see">See also: <a href="#r_theme_border"><code>r_theme_border</code></a>, <a href="#r_theme_border_split"><code>r_theme_border_split</code></a></p>
+
+<h3><a name="r_theme_border_split"></a>r_theme_border_split</h3>
+<pre class="sig"><span class="k">void</span> r_theme_border_split(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> width, <span class="t">uint32_t</span> top_left, <span class="t">uint32_t</span> bottom_right);</pre>
+<p>Sets the border width with separate top-left and bottom-right colors, for sunken or raised edges.</p>
 
 <h3><a name="r_theme_radius"></a>r_theme_radius</h3>
 <pre class="sig"><span class="k">void</span> r_theme_radius(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> radius);</pre>
 <p>Sets the radius of all corners.</p>
+<p class="see">See also: <a href="#r_theme_corners"><code>r_theme_corners</code></a></p>
 
 <h3><a name="r_theme_corners"></a>r_theme_corners</h3>
 <pre class="sig"><span class="k">void</span> r_theme_corners(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> top_left, <span class="k">float</span> top_right, <span class="k">float</span> bottom_left, <span class="k">float</span> bottom_right);</pre>
 <p>Sets the radius of each corner individually.</p>
+<p class="see">See also: <a href="#r_theme_radius"><code>r_theme_radius</code></a></p>
 
 <h3><a name="r_theme_padding"></a>r_theme_padding</h3>
 <pre class="sig"><span class="k">void</span> r_theme_padding(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> x, <span class="k">float</span> y);</pre>
 <p>Sets the horizontal and vertical content padding.</p>
+<p class="see">See also: <a href="#r_theme_layout"><code>r_theme_layout</code></a>, <a href="core.html#r_inner"><code>r_inner</code></a></p>
 
 <h3><a name="r_theme_shadow"></a>r_theme_shadow</h3>
 <pre class="sig"><span class="k">void</span> r_theme_shadow(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> y, <span class="k">float</span> blur, <span class="k">float</span> opacity);</pre>
 <p>Sets a drop shadow with vertical offset, blur radius and opacity.</p>
+<p class="see">See also: <a href="#r_theme_shadow2"><code>r_theme_shadow2</code></a>, <a href="#r_theme_no_shadow"><code>r_theme_no_shadow</code></a>, <a href="#r_theme_inset"><code>r_theme_inset</code></a></p>
 
 <h3><a name="r_theme_shadow2"></a>r_theme_shadow2</h3>
 <pre class="sig"><span class="k">void</span> r_theme_shadow2(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> y, <span class="k">float</span> blur, <span class="k">float</span> opacity);</pre>
 <p>Sets a second drop shadow, drawn in addition to the one from <a href="#r_theme_shadow"><code>r_theme_shadow</code></a>.</p>
+<p class="see">See also: <a href="#r_theme_shadow"><code>r_theme_shadow</code></a>, <a href="#r_theme_glow"><code>r_theme_glow</code></a></p>
 
 <h3><a name="r_theme_no_shadow"></a>r_theme_no_shadow</h3>
 <pre class="sig"><span class="k">void</span> r_theme_no_shadow(<a class="t" href="#r_draw">r_draw</a>* c);</pre>
 <p>Removes both drop shadows.</p>
+<p class="see">See also: <a href="#r_theme_shadow"><code>r_theme_shadow</code></a>, <a href="#r_theme_shadow2"><code>r_theme_shadow2</code></a></p>
 
 <h3><a name="r_theme_inset"></a>r_theme_inset</h3>
 <pre class="sig"><span class="k">void</span> r_theme_inset(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> y, <span class="k">float</span> blur, <span class="k">float</span> opacity);</pre>
 <p>Sets an inner shadow with vertical offset, blur radius and opacity.</p>
+<p class="see">See also: <a href="#r_theme_shadow"><code>r_theme_shadow</code></a></p>
 
 <h3><a name="r_theme_glow"></a>r_theme_glow</h3>
 <pre class="sig"><span class="k">void</span> r_theme_glow(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color, <span class="k">float</span> width);</pre>
 <p>Adds a glow of the given color and width, using the second shadow if the first one is set.</p>
+<p class="see">See also: <a href="#r_theme_shadow"><code>r_theme_shadow</code></a>, <a href="#r_theme_shadow2"><code>r_theme_shadow2</code></a></p>
 
 <h3><a name="r_theme_label"></a>r_theme_label</h3>
 <pre class="sig"><span class="k">void</span> r_theme_label(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color, <a class="t" href="core.html#r_alignment">r_alignment</a> align);</pre>
 <p>Sets the label color, adapted to stay readable, and the label alignment.</p>
+<p class="see">See also: <a href="#r_theme_label_color"><code>r_theme_label_color</code></a>, <a href="#r_theme_font"><code>r_theme_font</code></a></p>
 
 <h3><a name="r_theme_font"></a>r_theme_font</h3>
 <pre class="sig"><span class="k">void</span> r_theme_font(<a class="t" href="#r_draw">r_draw</a>* c, <a class="t" href="#r_draw_font">r_draw_font</a>* font);</pre>
 <p>Sets the label font.</p>
+<p class="see">See also: <a href="#r_theme_label"><code>r_theme_label</code></a>, <a href="#r_draw_get_font"><code>r_draw_get_font</code></a></p>
 
 <h3><a name="r_theme_icon"></a>r_theme_icon</h3>
 <pre class="sig"><span class="k">void</span> r_theme_icon(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color, <span class="k">int</span> size);</pre>
 <p>Sets the icon color and size.</p>
+<p class="see">See also: <a href="core.html#r_icon"><code>r_icon</code></a></p>
 
 <h3><a name="r_theme_layout"></a>r_theme_layout</h3>
 <pre class="sig"><span class="k">void</span> r_theme_layout(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">int</span> size, <span class="k">int</span> spacing);</pre>
 <p>Sets the default size and spacing returned by <a href="core.html#r_layout_default_size"><code>r_layout_default_size</code></a> and <a href="core.html#r_layout_default_spacing"><code>r_layout_default_spacing</code></a>.</p>
+<p class="see">See also: <a href="core.html#r_layout_default_size"><code>r_layout_default_size</code></a>, <a href="core.html#r_layout_default_spacing"><code>r_layout_default_spacing</code></a>, <a href="#r_theme_padding"><code>r_theme_padding</code></a></p>
 
 <h3><a name="r_theme_focus"></a>r_theme_focus</h3>
-<pre class="sig"><span class="k">void</span> r_theme_focus(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">enum</span> r_theme_focus ring);</pre>
+<pre class="sig"><span class="k">void</span> r_theme_focus(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">enum</span> r_theme_focus ring);
+<span class="k">void</span> r_theme_focus_border(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color);</pre>
 <p>Enables or disables the focus ring.</p>
 
 <h3><a name="enum-r_theme_focus"></a>r_theme_focus</h3>
-<pre class="sig"><span class="k">enum</span> <a class="f" href="#r_theme_focus">r_theme_focus</a> { <span class="e">R_FOCUS_NONE</span>, <span class="e">R_FOCUS_RING</span> };</pre>
+<pre class="sig"><span class="k">enum</span> <a class="f" href="#r_theme_focus">r_theme_focus</a> { <span class="e">R_FOCUS_NONE</span>, <span class="e">R_FOCUS_RING</span>, <span class="e">R_FOCUS_BORDER</span> };</pre>
 <p>Focus indicator styles for the <code>r_theme_focus</code> function.</p>
 
 <h3><a name="r_theme_text_outline"></a>r_theme_text_outline</h3>
 <pre class="sig"><span class="k">void</span> r_theme_text_outline(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> width, <span class="t">uint32_t</span> color);</pre>
 <p>Draws labels with an outline of the given width and color.</p>
+<p class="see">See also: <a href="#r_theme_text_shadow"><code>r_theme_text_shadow</code></a></p>
 
 <h3><a name="r_theme_text_shadow"></a>r_theme_text_shadow</h3>
 <pre class="sig"><span class="k">void</span> r_theme_text_shadow(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">float</span> x, <span class="k">float</span> y, <span class="k">float</span> blur, <span class="t">uint32_t</span> color);</pre>
 <p>Draws labels with a shadow of the given offset, blur and color.</p>
+<p class="see">See also: <a href="#r_theme_text_outline"><code>r_theme_text_outline</code></a>, <a href="#r_theme_shadow"><code>r_theme_shadow</code></a></p>
 
 <h3><a name="r_draw_style_rule"></a>r_draw_style_rule</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_draw_style_rule
@@ -303,6 +322,7 @@
 
 	<span class="k">int</span> bg_stylebox;
 	<span class="k">int</span> overlay;
+	<span class="k">int</span> padding_x, padding_y;
 	<a class="t" href="#r_draw_font">r_draw_font</a>* label_font;
 	<span class="t">uint32_t</span>    label_color;
 	<span class="k">int</span> icon_size;
@@ -324,6 +344,7 @@
 <h3><a name="r_draw_get_style_rule"></a>r_draw_get_style_rule</h3>
 <pre class="sig"><a class="t" href="#r_draw_style_rule">r_draw_style_rule</a>* r_draw_get_style_rule(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">enum</span> <a class="t" href="core.html#r_style">r_style</a> key);</pre>
 <p>Returns the style rule for exactly <code>key</code>, or NULL.</p>
+<p class="see">See also: <a href="#r_draw_set_style_rule"><code>r_draw_set_style_rule</code></a>, <a href="#r_draw_find_style_rule"><code>r_draw_find_style_rule</code></a>, <a href="#r_draw_style_rule"><code>r_draw_style_rule</code></a></p>
 
 <h3><a name="r_draw_find_style_rule"></a>r_draw_find_style_rule</h3>
 <pre class="sig"><a class="t" href="#r_draw_style_rule">r_draw_style_rule</a>* r_draw_find_style_rule(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">int</span> style);</pre>
@@ -332,10 +353,12 @@
 <h3><a name="r_draw_set_style_rule"></a>r_draw_set_style_rule</h3>
 <pre class="sig"><span class="k">void</span> r_draw_set_style_rule(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">enum</span> <a class="t" href="core.html#r_style">r_style</a> key, <a class="t" href="#r_draw_style_rule">r_draw_style_rule</a>* rule);</pre>
 <p>Copies <code>rule</code> as the style rule for <code>key</code>, replacing any existing one.</p>
+<p class="see">See also: <a href="#r_draw_get_style_rule"><code>r_draw_get_style_rule</code></a>, <a href="#r_draw_delete_style_rule"><code>r_draw_delete_style_rule</code></a></p>
 
 <h3><a name="r_draw_delete_style_rule"></a>r_draw_delete_style_rule</h3>
 <pre class="sig"><span class="k">void</span> r_draw_delete_style_rule(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">enum</span> <a class="t" href="core.html#r_style">r_style</a> key);</pre>
 <p>Removes the style rule for <code>key</code>.</p>
+<p class="see">See also: <a href="#r_draw_set_style_rule"><code>r_draw_set_style_rule</code></a></p>
 
 <h2><a name="s-Styleboxes"></a>Styleboxes</h2>
 <p><span class="todo">&lt;TODO: Introduce stylebox concept&gt;</span></p>
@@ -349,10 +372,12 @@
 <h3><a name="r_draw_stylebox_inner_rect"></a>r_draw_stylebox_inner_rect</h3>
 <pre class="sig"><a class="t" href="core.html#rect">rect</a> r_draw_stylebox_inner_rect(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">int</span> slot, <a class="t" href="core.html#rect">rect</a> outer);</pre>
 <p>Given the outer rect, calculates the inner rect (e.g. where text should be positioned).</p>
+<p class="see">See also: <a href="#r_draw_stylebox_outer_rect"><code>r_draw_stylebox_outer_rect</code></a>, <a href="core.html#r_inner"><code>r_inner</code></a></p>
 
 <h3><a name="r_draw_stylebox_outer_rect"></a>r_draw_stylebox_outer_rect</h3>
 <pre class="sig"><a class="t" href="core.html#rect">rect</a> r_draw_stylebox_outer_rect(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">int</span> slot, <a class="t" href="core.html#rect">rect</a>* inner);</pre>
 <p>Given the inner rect, calculates the outer rect (e.g. how big the entire drawable needs to be to contain the contents of inner).</p>
+<p class="see">See also: <a href="#r_draw_stylebox_inner_rect"><code>r_draw_stylebox_inner_rect</code></a>, <a href="core.html#r_outer"><code>r_outer</code></a></p>
 
 <h3><a name="r_draw_stylebox_def"></a>r_draw_stylebox_def</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_draw_stylebox_def
@@ -412,10 +437,12 @@
 <h3><a name="r_draw_free_stylebox"></a>r_draw_free_stylebox</h3>
 <pre class="sig"><span class="k">void</span> r_draw_free_stylebox(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">int</span> slot);</pre>
 <p>Frees the stylebox slot and its cached textures.</p>
+<p class="see">See also: <a href="#r_draw_generate_stylebox"><code>r_draw_generate_stylebox</code></a>, <a href="#r_draw_upload_stylebox"><code>r_draw_upload_stylebox</code></a></p>
 
 <h3><a name="r_stylebox_set_outline_border"></a>r_stylebox_set_outline_border</h3>
 <pre class="sig"><span class="k">void</span> r_stylebox_set_outline_border(<a class="t" href="#r_draw_stylebox_def">r_draw_stylebox_def</a>* box, <span class="t">uint32_t</span> color, <span class="k">float</span> border_thickness, <span class="k">float</span> border_radius);</pre>
 <p>Sets a solid border of the given color, thickness and corner radius on all sides.</p>
+<p class="see">See also: <a href="#r_draw_stylebox_def"><code>r_draw_stylebox_def</code></a>, <a href="#r_draw_generate_stylebox"><code>r_draw_generate_stylebox</code></a></p>
 
 <h3><a name="r_stylebox_set_shadow"></a>r_stylebox_set_shadow</h3>
 <pre class="sig"><span class="k">void</span> r_stylebox_set_shadow(<a class="t" href="#r_draw_stylebox_def">r_draw_stylebox_def</a>* box, <span class="k">int</span> slot, <span class="k">float</span> offset_x, <span class="k">float</span> offset_y, <span class="k">float</span> blur, <span class="k">float</span> opacity, <span class="k">bool</span> inset);</pre>
@@ -424,6 +451,7 @@
 <h3><a name="r_stylebox_set_bg_color"></a>r_stylebox_set_bg_color</h3>
 <pre class="sig"><span class="k">void</span> r_stylebox_set_bg_color(<a class="t" href="#r_draw_stylebox_def">r_draw_stylebox_def</a>* box, <span class="t">uint32_t</span> color);</pre>
 <p>Sets a solid background color.</p>
+<p class="see">See also: <a href="#r_stylebox_set_bg_vertical_gradient"><code>r_stylebox_set_bg_vertical_gradient</code></a>, <a href="#r_draw_stylebox_def"><code>r_draw_stylebox_def</code></a></p>
 
 <h3><a name="r_stylebox_set_bg_vertical_gradient"></a>r_stylebox_set_bg_vertical_gradient</h3>
 <pre class="sig"><span class="k">void</span> r_stylebox_set_bg_vertical_gradient(<a class="t" href="#r_draw_stylebox_def">r_draw_stylebox_def</a>* box, <span class="t">uint32_t</span>* stops, <span class="k">int</span> num_stops);</pre>
@@ -436,10 +464,12 @@
 <h3><a name="RCUT_DRAW_MAX_STYLEBOXES"></a>RCUT_DRAW_MAX_STYLEBOXES</h3>
 <pre class="sig"><span class="p">#define</span> <span class="e">RCUT_DRAW_MAX_STYLEBOXES</span> <span class="n">512</span></pre>
 <p>Number of stylebox slots.</p>
+<p class="see">See also: <a href="#RCUT_DRAW_USER_STYLEBOXES"><code>RCUT_DRAW_USER_STYLEBOXES</code></a>, <a href="#r_draw_generate_stylebox"><code>r_draw_generate_stylebox</code></a></p>
 
 <h3><a name="RCUT_DRAW_USER_STYLEBOXES"></a>RCUT_DRAW_USER_STYLEBOXES</h3>
 <pre class="sig"><span class="p">#define</span> <span class="e">RCUT_DRAW_USER_STYLEBOXES</span> <span class="n">256</span> <span class="c">// Stylebox slots from here on are for the application, themes only use the ones below.</span></pre>
 <p>First stylebox slot for the application, themes only use the slots below.</p>
+<p class="see">See also: <a href="#RCUT_DRAW_MAX_STYLEBOXES"><code>RCUT_DRAW_MAX_STYLEBOXES</code></a>, <a href="#r_draw_upload_stylebox"><code>r_draw_upload_stylebox</code></a></p>
 
 <h2><a name="s-Icons"></a>Icons</h2>
 <p><span class="todo">&lt;TODO: Introduce icon definitions&gt;</span></p>
@@ -471,27 +501,22 @@
 <h3><a name="r_draw_icon_get_rect"></a>r_draw_icon_get_rect</h3>
 <pre class="sig"><a class="t" href="core.html#rect">rect</a> r_draw_icon_get_rect(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">int</span> slot, <a class="t" href="core.html#rect">rect</a> outer);</pre>
 <p>Returns the largest square centered in <code>outer</code>.</p>
+<p class="see">See also: <a href="#r_draw_upload_icon"><code>r_draw_upload_icon</code></a>, <a href="#r_draw_render_icon"><code>r_draw_render_icon</code></a></p>
 
 <h2><a name="s-Fonts"></a>Fonts</h2>
 <p><span class="todo">&lt;TODO: Introduce font handling&gt;</span></p>
 
-<h3><a name="RCUT_USE_HARFBUZZ"></a>RCUT_USE_HARFBUZZ</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_USE_HARFBUZZ</span></pre>
-<p>Selects the HarfBuzz text backend, if none of <code>RCUT_USE_HARFBUZZ</code>, <code>RCUT_USE_HB_MINI</code> or <code>RCUT_USE_STB_TRUETYPE</code> is defined the backend is detected from previously included headers.</p>
+<h3><a name="RCUT_USE_*"></a>RCUT_USE_*</h3>
+<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_USE_HB_MINI</span>
+<span class="p">#define</span> <span class="e">RCUT_USE_HARFBUZZ</span>
+<span class="p">#define</span> <span class="e">RCUT_USE_STB_TRUETYPE</span></pre>
+<p>Selects the text backend: <code>RCUT_USE_HARFBUZZ</code>, <code>RCUT_USE_HB_MINI</code> or <code>RCUT_USE_STB_TRUETYPE</code>, if none is defined the backend is detected from previously included headers.</p>
+<p class="see">See also: <a href="#r_draw_font_register"><code>r_draw_font_register</code></a></p>
 
 <h3><a name="r_draw_measure_text"></a>r_draw_measure_text</h3>
-<pre class="sig"><a class="t" href="core.html#rect">rect</a> r_draw_measure_text(<a class="t" href="#r_draw">r_draw</a>* c, <a class="t" href="#r_draw_font">r_draw_font</a>* font, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> len);
-<a class="t" href="core.html#rect">rect</a> r_draw_measure_text_wrapped(<a class="t" href="#r_draw">r_draw</a>* c, <a class="t" href="#r_draw_font">r_draw_font</a>* font, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> len, <span class="k">int</span> wrap_width);</pre>
+<pre class="sig"><a class="t" href="core.html#rect">rect</a> r_draw_measure_text(<a class="t" href="#r_draw">r_draw</a>* c, <a class="t" href="#r_draw_font">r_draw_font</a>* font, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> len);</pre>
 <p><span class="todo">&lt;TODO: Describe return rect&gt;</span></p>
 <p>Widths are measured to the nearest pixel, so text may overhang its measured width by up to half a pixel (+1 device pixel of truncation).</p>
-
-<h3><a name="RCUT_USE_HB_MINI"></a>RCUT_USE_HB_MINI</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_USE_HB_MINI</span></pre>
-<p>Selects the HarfBuzz mini text backend, see <a href="#RCUT_USE_HARFBUZZ"><code>RCUT_USE_HARFBUZZ</code></a>.</p>
-
-<h3><a name="RCUT_USE_STB_TRUETYPE"></a>RCUT_USE_STB_TRUETYPE</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_USE_STB_TRUETYPE</span></pre>
-<p>Selects the stb_truetype text backend, see <a href="#RCUT_USE_HARFBUZZ"><code>RCUT_USE_HARFBUZZ</code></a>.</p>
 
 <h3><a name="r_draw_font"></a>r_draw_font</h3>
 <pre class="sig"><span class="k">typedef</span> <span class="k">struct</span> r_draw_font r_draw_font;</pre>
@@ -535,22 +560,11 @@
 <h3><a name="r_draw_font_line_height"></a>r_draw_font_line_height</h3>
 <pre class="sig"><span class="k">int</span> r_draw_font_line_height(<a class="t" href="#r_draw_font">r_draw_font</a>* font);</pre>
 <p>Returns the line height of the font in unscaled pixels.</p>
+<p class="see">See also: <a href="#r_draw_get_font"><code>r_draw_get_font</code></a>, <a href="#r_draw_measure_text"><code>r_draw_measure_text</code></a></p>
 
 <h3><a name="r_draw_break_text"></a>r_draw_break_text</h3>
 <pre class="sig"><span class="k">int</span> r_draw_break_text(<a class="t" href="#r_draw">r_draw</a>* c, <a class="t" href="#r_draw_font">r_draw_font</a>* font, <span class="k">const</span> <span class="k">char</span>* text, <span class="k">int</span> len, <span class="k">int</span> width, <span class="k">bool</span> force, <span class="k">int</span>* w);</pre>
 <p><span class="todo">&lt;TODO: Explain line breaking, force&gt;</span></p>
-
-<h3><a name="RCUT_DRAW_MAX_GLYPHS"></a>RCUT_DRAW_MAX_GLYPHS</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_DRAW_MAX_GLYPHS</span> <span class="n">8192</span></pre>
-<p>Capacity of the glyph cache.</p>
-
-<h3><a name="RCUT_DRAW_GLYPH_LOAD_LIMIT"></a>RCUT_DRAW_GLYPH_LOAD_LIMIT</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_DRAW_GLYPH_LOAD_LIMIT</span> (<a class="e" href="#RCUT_DRAW_MAX_GLYPHS">RCUT_DRAW_MAX_GLYPHS</a> * <span class="n">3</span> / <span class="n">4</span>) <span class="c">// The glyph tables count as full from here on, probing gets slow beyond it.</span></pre>
-<p><span class="todo">&lt;TODO: Explain glyph table limit&gt;</span></p>
-
-<h3><a name="RCUT_DRAW_FONT_HASHMAP_SIZE"></a>RCUT_DRAW_FONT_HASHMAP_SIZE</h3>
-<pre class="sig"><span class="p">#define</span> <span class="e">RCUT_DRAW_FONT_HASHMAP_SIZE</span> <span class="n">256</span></pre>
-<p>Number of font instances (base font, size and flags) that can be cached.</p>
 
 <h2><a name="s-Rendering"></a>Rendering</h2>
 <p><span class="todo">&lt;TODO: Introduce manual render passes&gt;</span></p>
@@ -570,17 +584,21 @@
 <h3><a name="r_draw_render_icon"></a>r_draw_render_icon</h3>
 <pre class="sig"><span class="k">void</span> r_draw_render_icon(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint16_t</span> icon, <span class="t">uint32_t</span> color, <a class="t" href="core.html#rect">rect</a> bounds);</pre>
 <p>Draws an icon centered in <code>bounds</code> in the current render pass.</p>
+<p class="see">See also: <a href="#r_draw_render_pass_begin"><code>r_draw_render_pass_begin</code></a>, <a href="#r_draw_upload_icon"><code>r_draw_upload_icon</code></a></p>
 
 <h3><a name="r_draw_render_text"></a>r_draw_render_text</h3>
 <pre class="sig"><span class="k">void</span> r_draw_render_text(<a class="t" href="#r_draw">r_draw</a>* c, <a class="t" href="#r_draw_font">r_draw_font</a>* font, <span class="k">const</span> <span class="k">char</span>* text, <span class="t">uint32_t</span> color, <a class="t" href="core.html#rect">rect</a> bounds);
-<span class="k">void</span> r_draw_render_text_ex(<a class="t" href="#r_draw">r_draw</a>* c, <a class="t" href="#r_draw_font">r_draw_font</a>* font, <span class="k">const</span> <span class="k">char</span>* text, <span class="t">uint32_t</span> color, <a class="t" href="core.html#rect">rect</a> bounds, <a class="t" href="core.html#r_alignment">r_alignment</a> align, <span class="k">int</span> scroll_x, <span class="k">int</span> scroll_y, <a class="t" href="core.html#rect">rect</a> clip, <span class="k">int</span> wrap_width);</pre>
+<span class="k">void</span> r_draw_render_text_ex(<a class="t" href="#r_draw">r_draw</a>* c, <a class="t" href="#r_draw_font">r_draw_font</a>* font, <span class="k">const</span> <span class="k">char</span>* text, <span class="t">uint32_t</span> color, <a class="t" href="core.html#rect">rect</a> bounds, <a class="t" href="core.html#r_alignment">r_alignment</a> align, <span class="k">int</span> scroll_x, <span class="k">int</span> scroll_y, <a class="t" href="core.html#rect">rect</a> clip);</pre>
 <p>Draws text at the top left of <code>bounds</code> in the current render pass.</p>
+<p class="see">See also: <a href="#r_draw_render_pass_begin"><code>r_draw_render_pass_begin</code></a>, <a href="#r_draw_measure_text"><code>r_draw_measure_text</code></a></p>
 
 <h3><a name="r_draw_render_stylebox"></a>r_draw_render_stylebox</h3>
 <pre class="sig"><span class="k">void</span> r_draw_render_stylebox(<a class="t" href="#r_draw">r_draw</a>* c, <span class="k">int</span> stylebox, <a class="t" href="core.html#rect">rect</a> outer);</pre>
 <p>Draws the stylebox in slot <code>stylebox</code> stretched to <code>outer</code> in the current render pass.</p>
+<p class="see">See also: <a href="#r_draw_render_pass_begin"><code>r_draw_render_pass_begin</code></a>, <a href="#r_draw_generate_stylebox"><code>r_draw_generate_stylebox</code></a></p>
 
 <h3><a name="r_draw_render_fill"></a>r_draw_render_fill</h3>
 <pre class="sig"><span class="k">void</span> r_draw_render_fill(<a class="t" href="#r_draw">r_draw</a>* c, <span class="t">uint32_t</span> color, <a class="t" href="core.html#rect">rect</a> bounds);</pre>
 <p>Draws a solid rectangle in the current render pass.</p>
+<p class="see">See also: <a href="#r_draw_render_pass_begin"><code>r_draw_render_pass_begin</code></a></p>
 </body></html>
