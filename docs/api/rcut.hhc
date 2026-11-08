@@ -91,7 +91,7 @@
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_measure"><param name="Local" value="core.html#r_measure"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_style_measure_all"><param name="Local" value="core.html#r_style_measure_all"></OBJECT>
 </UL>
-<LI><OBJECT type="text/sitemap"><param name="Name" value="Widgets"><param name="Local" value="core.html#s-Widgets"></OBJECT>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="UI elements"><param name="Local" value="core.html#s-UI-elements"></OBJECT>
 <UL>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_button"><param name="Local" value="core.html#r_button"></OBJECT>
 <LI><OBJECT type="text/sitemap"><param name="Name" value="r_label"><param name="Local" value="core.html#r_label"></OBJECT>

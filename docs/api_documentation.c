@@ -383,7 +383,7 @@ static void doc_r_text(r_sdl_frontend* f, r_ui_list* ui)
 //@function r_style_measure_all
 
 
-//@section Widgets
+//@section UI elements
 //! <TODO: Introduce high level widgets>
 
 //! <TODO: Describe button, add see_also>

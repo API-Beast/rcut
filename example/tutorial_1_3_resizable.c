@@ -15,6 +15,8 @@ static void on_ok(void)
 	quit = true;
 }
 
+// This is a build function, which is very common in rcut codebases.
+// You will often have multiple of these, like build_exit_dialog or build_main_window.
 static void build(r_ui_list* ui)
 {
 	r_list_clear(ui);
@@ -43,10 +45,10 @@ int main(void)
 	while(!quit && !r_sdl_quit_requested(f, true))
 	{
 		SDL_Event e;
-		if(SDL_WaitEventTimeout(&e, 50))
-		{
-			do r_sdl_process_event(f, &e); while(SDL_PollEvent(&e));
-		}
+		SDL_WaitEventTimeout(NULL, 5); // Wait up to 5ms for an event. This is optional: it simply reduces battery usage.
+		while(SDL_PollEvent(&e))
+			r_sdl_process_event(f, &e);
+
 		if(ui->resized) build(ui);
 		r_sdl_update(f);
 		r_sdl_render_ui(f);

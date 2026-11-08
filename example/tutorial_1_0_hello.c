@@ -22,10 +22,11 @@ int main(void)
 	while(!quit && !r_sdl_quit_requested(f, true))
 	{
 		SDL_Event e;
-		if(SDL_WaitEventTimeout(&e, 50))
-		{
-			do r_sdl_process_event(f, &e); while(SDL_PollEvent(&e));
-		}
+
+		SDL_WaitEventTimeout(NULL, 5); // Wait up to 5ms for an event. This is optional: it simply reduces battery usage.
+		while(SDL_PollEvent(&e))
+			r_sdl_process_event(f, &e);
+
 		r_sdl_update(f);
 		r_sdl_render_ui(f);
 	}
