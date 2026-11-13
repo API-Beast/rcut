@@ -1,6 +1,5 @@
 @echo off
 cd /d "%~dp0"
-copy /y draw\stb_truetype.h . >nul
 
 > rcut_core.c (
 	echo #include "rcut_core.h"

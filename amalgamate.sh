@@ -1,6 +1,5 @@
 #!/bin/sh
 cd "$(dirname "$0")" || exit 1
-cp draw/stb_truetype.h .
 src() { for f in "$@"; do grep -v -F -e '#include "internal.h"' -e '#include "../' -e '#define _DEFAULT_SOURCE' "$f"; done; }
 
 {
