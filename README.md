@@ -1,6 +1,6 @@
 # rcut
 
-Sorry, very technical for now.
+Provisional README, very technical.
 
 ## Modules
 
