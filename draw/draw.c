@@ -64,6 +64,7 @@ void r_draw_set_scale(r_draw* c, float scale)
     }
     for(r_ui_list* l = c->context->chain_start; l; l = l->chain_next)
         l->needs_redraw = true;
+    if(c->backend.scale_changed) c->backend.scale_changed(c->backend.userptr, c);
 }
 
 void __draw_invalidate(r_draw* c, uint64_t* handle)

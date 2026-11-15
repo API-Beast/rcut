@@ -656,45 +656,49 @@ static int run_width(r_draw* c, r_draw_font* font, const char* text, int len)
     return w;
 }
 
-static const char* next_line(r_draw* c, r_draw_font* font, const char* line, const char* end, int wrap_width, bool force, const char** next, int* width)
+static const char* next_line(r_draw* c, r_draw_font* font, const char* line, int len, int wrap_width, bool force, const char** next, int* width)
 {
-    const char* p = line;
-    int w = 0;
+    int p = 0, w = 0;
     // Widths are measured to the nearest pixel, so text may overhang its measured width by up to half a pixel (+1 device pixel of truncation).
     int limit = (wrap_width << 6) + (int)(font->scale * 32) + 64;
     if(wrap_width <= 0)
     {
-        while(p < end && *p != '\n') p++;
-        w = run_width(c, font, line, (int)(p - line));
+        while(p < len && line[p] && line[p] != '\n') p++;
+        w = run_width(c, font, line, p);
     }
-    else while(p < end && *p != '\n')
+    else while(p < len && line[p] && line[p] != '\n')
     {
-        const char* q = p;
-        while(q < end && *q != ' ' && *q != '\n') q++;
-        int word_w = run_width(c, font, p, (int)(q - p));
+        int q = p;
+        while(q < len && line[q] && line[q] != ' ' && line[q] != '\n') q++;
+        int word_w = run_width(c, font, line + p, q - p);
         if(w + word_w > limit)
         {
-            if(p > line || !force) { *next = p; return p; }
-            int n = shape_run(c, font, p, (int)(q - p)), cut = (int)(q - p);
+            if(p > 0 || !force) { *next = line + p; return line + p; }
+            int n = shape_run(c, font, line + p, q - p), cut = q - p;
             for(int i = 0; i < n; i++)
             {
                 run_glyph* g = &c->text->run[i];
                 if(w + g->x_advance > limit && g->cluster > 0) { cut = g->cluster; break; }
                 w += g->x_advance;
             }
-            *next = p + cut; *width = w;
-            return p + cut;
+            *next = line + p + cut; *width = w;
+            return line + p + cut;
         }
         w += word_w;
         *width = w;
-        const char* s = q;
-        while(s < end && *s == ' ') s++;
-        w += run_width(c, font, q, (int)(s - q));
+        int s = q;
+        while(s < len && line[s] == ' ') s++;
+        w += run_width(c, font, line + q, s - q);
         p = s;
     }
-    *next = p < end && *p == '\n' ? p + 1 : p;
+    *next = p < len && line[p] == '\n' ? line + p + 1 : line + p;
     *width = w;
-    return p;
+    return line + p;
+}
+
+static bool line_end(const char* line, const char* eol, int len)
+{
+    return eol - line >= len || !*eol;
 }
 
 static int line_height_px(r_draw_font* font)
@@ -714,15 +718,15 @@ rect r_draw_measure_text(r_draw* c, r_draw_font* font, const char* text, int len
 {
     font = default_font(c, font);
     if(!font || !text) return (rect){0};
-    if(len < 0) len = (int)strlen(text);
-    const char* end = text + len;
+    if(len == -1) len = INT_MAX;
     int max_w = 0, lines = 0;
     for(const char* line = text; ; lines++)
     {
         const char* next; int w = 0;
-        const char* eol = next_line(c, font, line, end, 0, true, &next, &w);
+        const char* eol = next_line(c, font, line, len, 0, true, &next, &w);
         max_w = MAX(max_w, w);
-        if(eol >= end) break;
+        if(line_end(line, eol, len)) break;
+        len -= (int)(next - line);
         line = next;
     }
     return (rect){.w = (int)roundf(max_w / 64.0f / font->scale), .h = (int)ceilf((lines + 1) * line_height_px(font) / font->scale)};
@@ -733,9 +737,9 @@ int r_draw_break_text(r_draw* c, r_draw_font* font, const char* text, int len, i
     font = default_font(c, font);
     *w = 0;
     if(!font || !text) return 0;
-    if(len < 0) len = (int)strlen(text);
+    if(len == -1) len = INT_MAX;
     const char* next; int line_w = 0;
-    const char* eol = next_line(c, font, text, text + len, MAX((int)(width * font->scale), 1), force, &next, &line_w);
+    const char* eol = next_line(c, font, text, len, MAX((int)(width * font->scale), 1), force, &next, &line_w);
     *w = (int)roundf(line_w / 64.0f / font->scale);
     return (int)(eol - text);
 }
@@ -748,8 +752,8 @@ static text_layout layout_text(r_draw* c, r_draw_font* font, const char* text, i
     for(const char* line = text; ; )
     {
         const char* next; int w = 0;
-        const char* eol = next_line(c, font, line, end, 0, true, &next, &w);
-        t->line_w = __draw_grow(t->line_w, &t->cap_lines, lines + 1, sizeof(int32_t));
+        const char* eol = next_line(c, font, line, (int)(end - line), 0, true, &next, &w);
+        t->line_w =__draw_grow(t->line_w, &t->cap_lines, lines + 1, sizeof(int32_t));
         t->line_w[lines] = w;
         int count = shape_run(c, font, line, (int)(eol - line)), x = 0;
         t->laid = __draw_grow(t->laid, &t->cap_laid, n + count, sizeof(laid_glyph));

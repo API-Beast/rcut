@@ -161,7 +161,7 @@ int main(int argc, char** argv)
     r_sdl_frontend* f = r_sdl_init("rcut styles", 800, 720, R_SDL_RESIZABLE);
     if(!f) return 1;
 
-    r_theme_default(&f->draw, &(r_draw_theme_options){.background=r_rgb_u8(242, 242, 242)});
+    r_theme_default(&f->draw, r_rgb_u8(242, 242, 242), 0, 0);
 
     window_ui = f->root;
     rebuild_ui(f);

@@ -396,7 +396,7 @@ bool r_close_popups(r_context* c, bool only_topmost)
 	for(r_ui_list* l = c->chain_end; l; l = l->chain_prev)
 	{
 		if(!l->close_on_outside_click || l->is_marked_as_to_delete || !r_list_is_visible(l)) continue;
-		r_ephemeral_mark_to_delete(l->ephemeral_parent, l->root_area.id);
+		r_destroy_ui_list(r_ephemeral_find(l->ephemeral_parent, l->root_area.id));
 		closed = true;
 		if(only_topmost) break;
 	}
@@ -409,7 +409,7 @@ static void close_popups_outside(r_context* c, r_interact* hit)
 	{
 		if(!l->close_on_outside_click || l->is_marked_as_to_delete || !r_list_is_visible(l)) continue;
 		if(hit && (hit->owner == l || is_descendant(hit->owner, l) || hit->r.id == l->anchor_id)) continue;
-		r_ephemeral_mark_to_delete(l->ephemeral_parent, l->root_area.id);
+		r_destroy_ui_list(r_ephemeral_find(l->ephemeral_parent, l->root_area.id));
 	}
 }
 

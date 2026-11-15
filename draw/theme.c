@@ -1,84 +1,68 @@
 #include "internal.h"
 
 // Icons (24x24 grid, 2 unit strokes)
-
-#define OP(...) (const float[]){ __VA_ARGS__, R_ICON_OP_END }
-#define LINE(x0, y0, x1, y1)      R_ICON_OP_POLYLINE, 2, x0, y0, x1, y1
-#define PLINE(n, ...)             R_ICON_OP_POLYLINE, n, __VA_ARGS__
-#define ARC(cx, cy, r, a0, a1)    R_ICON_OP_ARC, cx, cy, r, a0, a1
-#define CIRCLE(cx, cy, r)         ARC(cx, cy, r, 0, 360)
-#define DISC(cx, cy, r)           WIDTH(0), CIRCLE(cx, cy, r) // Leaves the width at 0 (filled)
-#define RECT(x, y, w, h, r)       R_ICON_OP_RECT, x, y, w, h, r
-#define WIDTH(w)                  R_ICON_OP_WIDTH, w
-
-#define CHEVRON_DOWN  PLINE(3, 6,9, 12,15, 18,9)
-#define CHEVRON_UP    PLINE(3, 6,15, 12,9, 18,15)
-#define CHEVRON_LEFT  PLINE(3, 15,18, 9,12, 15,6)
-#define CHEVRON_RIGHT PLINE(3, 9,18, 15,12, 9,6)
-#define MAGNIFIER     CIRCLE(11,11,7), LINE(21,21, 16,16)
+#define CHEVRON_DOWN  R_PLINE(3, 6,9, 12,15, 18,9)
+#define CHEVRON_UP    R_PLINE(3, 6,15, 12,9, 18,15)
+#define CHEVRON_LEFT  R_PLINE(3, 15,18, 9,12, 15,6)
+#define CHEVRON_RIGHT R_PLINE(3, 9,18, 15,12, 9,6)
+#define MAGNIFIER     R_CIRCLE(11,11,7), R_LINE(21,21, 16,16)
 
 static const float* default_icons[R_ICON_USER] =
 {
-	[R_ICON_DROPDOWN_INDICATOR] = OP(CHEVRON_DOWN),
-	[R_ICON_UP]           = OP(CHEVRON_UP),
-	[R_ICON_DOWN]         = OP(CHEVRON_DOWN),
-	[R_ICON_LEFT]         = OP(CHEVRON_LEFT),
-	[R_ICON_RIGHT]        = OP(CHEVRON_RIGHT),
-	[R_ICON_BACK]         = OP(LINE(19,12, 5,12), PLINE(3, 12,19, 5,12, 12,5)),
-	[R_ICON_MORE]         = OP(DISC(5,12,1.6f), DISC(12,12,1.6f), DISC(19,12,1.6f)),
-	[R_ICON_EXPANDED]     = OP(RECT(3,3,18,18,3), LINE(8,12, 16,12)),
-	[R_ICON_COLLAPSED]    = OP(RECT(3,3,18,18,3), LINE(8,12, 16,12), LINE(12,8, 12,16)),
-	[R_ICON_SHOW_DETAILS] = OP(CHEVRON_RIGHT),
-	[R_ICON_HIDE_DETAILS] = OP(CHEVRON_DOWN),
-	[R_ICON_ADD]          = OP(LINE(12,5, 12,19), LINE(5,12, 19,12)),
-	[R_ICON_SUBTRACT]     = OP(LINE(5,12, 19,12)),
-	[R_ICON_EDIT]         = OP(PLINE(6, 17,3, 21,7, 7.5f,20.5f, 2.5f,21.5f, 3.5f,16.5f, 17,3), LINE(15,5, 19,9)),
-	[R_ICON_SEARCH]       = OP(MAGNIFIER),
-	[R_ICON_RELOAD]       = OP(ARC(12,12,9, 0,270), PLINE(3, 12,3, 18.4f,5.6f, 21,8), PLINE(3, 21,3, 21,8, 16,8)),
-	[R_ICON_ZOOM_IN]      = OP(MAGNIFIER, LINE(11,8, 11,14), LINE(8,11, 14,11)),
-	[R_ICON_ZOOM_OUT]     = OP(MAGNIFIER, LINE(8,11, 14,11)),
-	[R_ICON_ROTATE_LEFT]  = OP(ARC(12,12,9, 270,180), PLINE(3, 12,3, 5.6f,5.6f, 3,8), PLINE(3, 3,3, 3,8, 8,8)),
-	[R_ICON_ROTATE_RIGHT] = OP(ARC(12,12,9, 0,270), PLINE(3, 12,3, 18.4f,5.6f, 21,8), PLINE(3, 21,3, 21,8, 16,8)),
-	[R_ICON_LOCK]         = OP(RECT(4,11,16,10,2), LINE(8,11, 8,7), LINE(16,7, 16,11), ARC(12,7,4, 180,360)),
-	[R_ICON_UNLOCK]       = OP(RECT(4,11,16,10,2), LINE(8,11, 8,7), ARC(12,7,4, 180,345)),
-	[R_ICON_CHECKED]      = OP(WIDTH(3), PLINE(3, 20,6, 9.5f,16.5f, 4,11)),
-	[R_ICON_UNCHECKED]    = OP(RECT(3,3,18,18,3)),
-	[R_ICON_MARKED]       = OP(DISC(12,12,12)),
-	[R_ICON_INFO]         = OP(CIRCLE(12,12,10), LINE(12,16, 12,12), DISC(12,8,1.25f)),
-	[R_ICON_WARNING]      = OP(PLINE(4, 12,3.5f, 21.5f,20, 2.5f,20, 12,3.5f), LINE(12,9.5f, 12,13.5f), DISC(12,16.8f,1.25f)),
-	[R_ICON_ERROR]        = OP(CIRCLE(12,12,10), LINE(15,9, 9,15), LINE(9,9, 15,15)),
-	[R_ICON_MINIMIZE]     = OP(WIDTH(1.5f), LINE(6,12, 18,12)),
-	[R_ICON_MAXIMIZE]     = OP(WIDTH(1.5f), RECT(6,6,12,12,1)),
-	[R_ICON_UNMAXIMIZE]   = OP(WIDTH(1.5f), RECT(5,8,11,11,1), PLINE(5, 8,8, 8,5, 19,5, 19,16, 16,16)),
-	[R_ICON_CLOSE]        = OP(LINE(18,6, 6,18), LINE(6,6, 18,18)),
-	[R_ICON_MENU]         = OP(LINE(4,6, 20,6), LINE(4,12, 20,12), LINE(4,18, 20,18)),
-	[R_ICON_SETTINGS]     = OP(PLINE(33, 18.81f,9.66f, 21.85f,10.26f, 21.85f,13.74f, 18.81f,14.34f, 18.47f,15.16f, 20.19f,17.74f, 17.74f,20.19f, 15.16f,18.47f, 14.34f,18.81f, 13.74f,21.85f, 10.26f,21.85f, 9.66f,18.81f, 8.84f,18.47f, 6.26f,20.19f, 3.81f,17.74f, 5.53f,15.16f, 5.19f,14.34f, 2.15f,13.74f, 2.15f,10.26f, 5.19f,9.66f, 5.53f,8.84f, 3.81f,6.26f, 6.26f,3.81f, 8.84f,5.53f, 9.66f,5.19f, 10.26f,2.15f, 13.74f,2.15f, 14.34f,5.19f, 15.16f,5.53f, 17.74f,3.81f, 20.19f,6.26f, 18.47f,8.84f, 18.81f,9.66f), CIRCLE(12,12,3)),
-	[R_ICON_HOME]         = OP(PLINE(3, 3,10, 12,3, 21,10), PLINE(4, 5,9, 5,21, 19,21, 19,9), PLINE(4, 9.5f,21, 9.5f,14, 14.5f,14, 14.5f,21)),
-	[R_ICON_FOLDER]       = OP(PLINE(7, 2,4, 9,4, 11,7, 22,7, 22,20, 2,20, 2,4)),
-	[R_ICON_FILE]         = OP(PLINE(6, 15,2, 4,2, 4,22, 20,22, 20,7, 15,2), PLINE(3, 14,2, 14,8, 20,8)),
-	[R_ICON_SAVE]         = OP(PLINE(6, 3,3, 16,3, 21,8, 21,21, 3,21, 3,3), PLINE(4, 17,21, 17,13, 7,13, 7,21), PLINE(3, 7,3, 7,8, 15,8)),
-	[R_ICON_TRASH]        = OP(LINE(3,6, 21,6), PLINE(4, 19,6, 19,21, 5,21, 5,6), PLINE(4, 8,6, 8,3, 16,3, 16,6), LINE(10,11, 10,16), LINE(14,11, 14,16)),
-	[R_ICON_COPY]         = OP(RECT(8,8,14,14,2), PLINE(5, 4,16, 2,16, 2,2, 16,2, 16,4)),
-	[R_ICON_CUT]          = OP(CIRCLE(6,6,3), CIRCLE(6,18,3), LINE(20,4, 8.12f,15.88f), LINE(14.47f,14.48f, 20,20), LINE(8.12f,8.12f, 12,12)),
-	[R_ICON_PASTE]        = OP(RECT(8,2,8,4,1), PLINE(6, 16,4, 20,4, 20,22, 4,22, 4,4, 8,4)),
-	[R_ICON_UNDO]         = OP(PLINE(3, 9,14, 4,9, 9,4), LINE(4,9, 14.5f,9), ARC(14.5f,14.5f,5.5f, 270,90), LINE(14.5f,20, 11,20)),
-	[R_ICON_REDO]         = OP(PLINE(3, 15,14, 20,9, 15,4), LINE(20,9, 9.5f,9), ARC(9.5f,14.5f,5.5f, 90,270), LINE(9.5f,20, 13,20)),
-	[R_ICON_STAR]         = OP(PLINE(11, 12.00f,2.80f, 14.53f,9.32f, 21.51f,9.71f, 16.09f,14.13f, 17.88f,20.89f, 12.00f,17.10f, 6.12f,20.89f, 7.91f,14.13f, 2.49f,9.71f, 9.47f,9.32f, 12.00f,2.80f)),
-	[R_ICON_HEART]        = OP(ARC(8,9,4.5f, 135,333), ARC(16,9,4.5f, 207,45), PLINE(3, 4.8f,12.2f, 12,20, 19.2f,12.2f)),
-	[R_ICON_BELL]         = OP(ARC(12,8,6, 180,360), PLINE(6, 6,8, 6,12, 3.5f,16.5f, 20.5f,16.5f, 18,12, 18,8), ARC(12,19,2.2f, 0,180)),
-	[R_ICON_PLAY]         = OP(PLINE(4, 6,3, 20,12, 6,21, 6,3)),
-	[R_ICON_PAUSE]        = OP(RECT(6,4,4,16,1), RECT(14,4,4,16,1)),
-	[R_ICON_EYE]          = OP(ARC(12,15.64f,10.64f, 200,340), ARC(12,8.36f,10.64f, 20,160), CIRCLE(12,12,3)),
-	[R_ICON_PERSON]       = OP(CIRCLE(12,7,4), ARC(9,19,4, 180,270), ARC(15,19,4, 270,360), LINE(5,19, 5,21), LINE(19,19, 19,21), LINE(9,15, 15,15)),
+	[R_ICON_DROPDOWN_INDICATOR] = R_OP(CHEVRON_DOWN),
+	[R_ICON_UP]           = R_OP(CHEVRON_UP),
+	[R_ICON_DOWN]         = R_OP(CHEVRON_DOWN),
+	[R_ICON_LEFT]         = R_OP(CHEVRON_LEFT),
+	[R_ICON_RIGHT]        = R_OP(CHEVRON_RIGHT),
+	[R_ICON_BACK]         = R_OP(R_LINE(19,12, 5,12), R_PLINE(3, 12,19, 5,12, 12,5)),
+	[R_ICON_MORE]         = R_OP(R_DISC(5,12,1.6f), R_DISC(12,12,1.6f), R_DISC(19,12,1.6f)),
+	[R_ICON_EXPANDED]     = R_OP(R_RECT(3,3,18,18,3), R_LINE(8,12, 16,12)),
+	[R_ICON_COLLAPSED]    = R_OP(R_RECT(3,3,18,18,3), R_LINE(8,12, 16,12), R_LINE(12,8, 12,16)),
+	[R_ICON_SHOW_DETAILS] = R_OP(CHEVRON_RIGHT),
+	[R_ICON_HIDE_DETAILS] = R_OP(CHEVRON_DOWN),
+	[R_ICON_ADD]          = R_OP(R_LINE(12,5, 12,19), R_LINE(5,12, 19,12)),
+	[R_ICON_SUBTRACT]     = R_OP(R_LINE(5,12, 19,12)),
+	[R_ICON_EDIT]         = R_OP(R_PLINE(6, 17,3, 21,7, 7.5f,20.5f, 2.5f,21.5f, 3.5f,16.5f, 17,3), R_LINE(15,5, 19,9)),
+	[R_ICON_SEARCH]       = R_OP(MAGNIFIER),
+	[R_ICON_RELOAD]       = R_OP(R_ARC(12,12,9, 0,270), R_PLINE(3, 12,3, 18.4f,5.6f, 21,8), R_PLINE(3, 21,3, 21,8, 16,8)),
+	[R_ICON_ZOOM_IN]      = R_OP(MAGNIFIER, R_LINE(11,8, 11,14), R_LINE(8,11, 14,11)),
+	[R_ICON_ZOOM_OUT]     = R_OP(MAGNIFIER, R_LINE(8,11, 14,11)),
+	[R_ICON_ROTATE_LEFT]  = R_OP(R_ARC(12,12,9, 270,180), R_PLINE(3, 12,3, 5.6f,5.6f, 3,8), R_PLINE(3, 3,3, 3,8, 8,8)),
+	[R_ICON_ROTATE_RIGHT] = R_OP(R_ARC(12,12,9, 0,270), R_PLINE(3, 12,3, 18.4f,5.6f, 21,8), R_PLINE(3, 21,3, 21,8, 16,8)),
+	[R_ICON_LOCK]         = R_OP(R_RECT(4,11,16,10,2), R_LINE(8,11, 8,7), R_LINE(16,7, 16,11), R_ARC(12,7,4, 180,360)),
+	[R_ICON_UNLOCK]       = R_OP(R_RECT(4,11,16,10,2), R_LINE(8,11, 8,7), R_ARC(12,7,4, 180,345)),
+	[R_ICON_CHECKED]      = R_OP(R_WIDTH(3), R_PLINE(3, 20,6, 9.5f,16.5f, 4,11)),
+	[R_ICON_UNCHECKED]    = R_OP(R_RECT(3,3,18,18,3)),
+	[R_ICON_MARKED]       = R_OP(R_DISC(12,12,12)),
+	[R_ICON_INFO]         = R_OP(R_CIRCLE(12,12,10), R_LINE(12,16, 12,12), R_DISC(12,8,1.25f)),
+	[R_ICON_WARNING]      = R_OP(R_PLINE(4, 12,3.5f, 21.5f,20, 2.5f,20, 12,3.5f), R_LINE(12,9.5f, 12,13.5f), R_DISC(12,16.8f,1.25f)),
+	[R_ICON_ERROR]        = R_OP(R_CIRCLE(12,12,10), R_LINE(15,9, 9,15), R_LINE(9,9, 15,15)),
+	[R_ICON_MINIMIZE]     = R_OP(R_WIDTH(1.5f), R_LINE(6,12, 18,12)),
+	[R_ICON_MAXIMIZE]     = R_OP(R_WIDTH(1.5f), R_RECT(6,6,12,12,1)),
+	[R_ICON_UNMAXIMIZE]   = R_OP(R_WIDTH(1.5f), R_RECT(5,8,11,11,1), R_PLINE(5, 8,8, 8,5, 19,5, 19,16, 16,16)),
+	[R_ICON_CLOSE]        = R_OP(R_LINE(18,6, 6,18), R_LINE(6,6, 18,18)),
+	[R_ICON_MENU]         = R_OP(R_LINE(4,6, 20,6), R_LINE(4,12, 20,12), R_LINE(4,18, 20,18)),
+	[R_ICON_SETTINGS]     = R_OP(R_PLINE(33, 18.81f,9.66f, 21.85f,10.26f, 21.85f,13.74f, 18.81f,14.34f, 18.47f,15.16f, 20.19f,17.74f, 17.74f,20.19f, 15.16f,18.47f, 14.34f,18.81f, 13.74f,21.85f, 10.26f,21.85f, 9.66f,18.81f, 8.84f,18.47f, 6.26f,20.19f, 3.81f,17.74f, 5.53f,15.16f, 5.19f,14.34f, 2.15f,13.74f, 2.15f,10.26f, 5.19f,9.66f, 5.53f,8.84f, 3.81f,6.26f, 6.26f,3.81f, 8.84f,5.53f, 9.66f,5.19f, 10.26f,2.15f, 13.74f,2.15f, 14.34f,5.19f, 15.16f,5.53f, 17.74f,3.81f, 20.19f,6.26f, 18.47f,8.84f, 18.81f,9.66f), R_CIRCLE(12,12,3)),
+	[R_ICON_HOME]         = R_OP(R_PLINE(3, 3,10, 12,3, 21,10), R_PLINE(4, 5,9, 5,21, 19,21, 19,9), R_PLINE(4, 9.5f,21, 9.5f,14, 14.5f,14, 14.5f,21)),
+	[R_ICON_FOLDER]       = R_OP(R_PLINE(7, 2,4, 9,4, 11,7, 22,7, 22,20, 2,20, 2,4)),
+	[R_ICON_FILE]         = R_OP(R_PLINE(6, 15,2, 4,2, 4,22, 20,22, 20,7, 15,2), R_PLINE(3, 14,2, 14,8, 20,8)),
+	[R_ICON_SAVE]         = R_OP(R_PLINE(6, 3,3, 16,3, 21,8, 21,21, 3,21, 3,3), R_PLINE(4, 17,21, 17,13, 7,13, 7,21), R_PLINE(3, 7,3, 7,8, 15,8)),
+	[R_ICON_TRASH]        = R_OP(R_LINE(3,6, 21,6), R_PLINE(4, 19,6, 19,21, 5,21, 5,6), R_PLINE(4, 8,6, 8,3, 16,3, 16,6), R_LINE(10,11, 10,16), R_LINE(14,11, 14,16)),
+	[R_ICON_COPY]         = R_OP(R_RECT(8,8,14,14,2), R_PLINE(5, 4,16, 2,16, 2,2, 16,2, 16,4)),
+	[R_ICON_CUT]          = R_OP(R_CIRCLE(6,6,3), R_CIRCLE(6,18,3), R_LINE(20,4, 8.12f,15.88f), R_LINE(14.47f,14.48f, 20,20), R_LINE(8.12f,8.12f, 12,12)),
+	[R_ICON_PASTE]        = R_OP(R_RECT(8,2,8,4,1), R_PLINE(6, 16,4, 20,4, 20,22, 4,22, 4,4, 8,4)),
+	[R_ICON_UNDO]         = R_OP(R_PLINE(3, 9,14, 4,9, 9,4), R_LINE(4,9, 14.5f,9), R_ARC(14.5f,14.5f,5.5f, 270,90), R_LINE(14.5f,20, 11,20)),
+	[R_ICON_REDO]         = R_OP(R_PLINE(3, 15,14, 20,9, 15,4), R_LINE(20,9, 9.5f,9), R_ARC(9.5f,14.5f,5.5f, 90,270), R_LINE(9.5f,20, 13,20)),
+	[R_ICON_STAR]         = R_OP(R_PLINE(11, 12.00f,2.80f, 14.53f,9.32f, 21.51f,9.71f, 16.09f,14.13f, 17.88f,20.89f, 12.00f,17.10f, 6.12f,20.89f, 7.91f,14.13f, 2.49f,9.71f, 9.47f,9.32f, 12.00f,2.80f)),
+	[R_ICON_HEART]        = R_OP(R_ARC(8,9,4.5f, 135,333), R_ARC(16,9,4.5f, 207,45), R_PLINE(3, 4.8f,12.2f, 12,20, 19.2f,12.2f)),
+	[R_ICON_BELL]         = R_OP(R_ARC(12,8,6, 180,360), R_PLINE(6, 6,8, 6,12, 3.5f,16.5f, 20.5f,16.5f, 18,12, 18,8), R_ARC(12,19,2.2f, 0,180)),
+	[R_ICON_PLAY]         = R_OP(R_PLINE(4, 6,3, 20,12, 6,21, 6,3)),
+	[R_ICON_PAUSE]        = R_OP(R_RECT(6,4,4,16,1), R_RECT(14,4,4,16,1)),
+	[R_ICON_EYE]          = R_OP(R_ARC(12,15.64f,10.64f, 200,340), R_ARC(12,8.36f,10.64f, 20,160), R_CIRCLE(12,12,3)),
+	[R_ICON_PERSON]       = R_OP(R_CIRCLE(12,7,4), R_ARC(9,19,4, 180,270), R_ARC(15,19,4, 270,360), R_LINE(5,19, 5,21), R_LINE(19,19, 19,21), R_LINE(9,15, 15,15)),
 };
 
 //
-
-const r_draw_theme_options r_draw_default_theme_options =
-{
-	.background = 0xFF222226, .primary = 0xFFE8305E,
-	.font_size = 14,
-};
 
 #define WHITE 0xFFFFFFFF
 #define BLACK 0xFF000000
@@ -106,7 +90,20 @@ static uint32_t text_on(uint32_t s, int strength)
 
 static uint32_t text_on_accent(uint32_t s){ return lightness(luminance(s)) >= 65 ? text_on(s, 2) : WHITE; }
 
-static void grays(r_draw_palette* p, uint32_t bg, bool light)
+typedef struct palette
+{
+	bool     dark;
+	float    light;
+	uint32_t window, panel, view, card, input, menu, tooltip, tooltip_text;
+	uint32_t control, control_hover, control_pressed, track, thumb;
+	uint32_t border, border_strong, border_hover;
+	uint32_t text, text_strong, text_dim;
+	uint32_t primary;
+	uint32_t accent_text, selection_subtle;
+	uint32_t hover_overlay;
+} palette;
+
+static void grays(palette* p, uint32_t bg, bool light)
 {
 	#define LIGHTER(a) mix(bg, WHITE, a)
 	#define DARKER(a)  mix(bg, BLACK, a)
@@ -130,18 +127,18 @@ static void grays(r_draw_palette* p, uint32_t bg, bool light)
 	#undef DARKER
 }
 
-static r_draw_palette make_palette(const r_draw_theme_options* o)
+static palette make_palette(uint32_t bg, uint32_t primary)
 {
-	uint32_t bg = o->background | 0xFF000000;
+	bg |= 0xFF000000;
 	float l = lightness(luminance(bg));
 	float t = fminf(fmaxf((l - 30) / 40, 0), 1);
-	r_draw_palette p = { .dark = l < 50, .light = t * t * (3 - 2 * t) };
-	p.text = o->text ? o->text | 0xFF000000 : text_on(bg, 1);
-	p.text_strong = o->text ? mix(p.text, p.dark ? WHITE : BLACK, 0.5f) : text_on(bg, 2);
+	palette p = { .dark = l < 50, .light = t * t * (3 - 2 * t) };
+	p.text = text_on(bg, 1);
+	p.text_strong = text_on(bg, 2);
 	p.text_dim = text_on(bg, 0);
 	p.hover_overlay = alpha(p.text_strong, 0.05f);
 
-	r_draw_palette light = p;
+	palette light = p;
 	grays(&p, bg, false);
 	grays(&light, bg, true);
 	#define BLEND(f) p.f = mix(p.f, light.f, p.light);
@@ -151,15 +148,14 @@ static r_draw_palette make_palette(const r_draw_theme_options* o)
 	#undef BLEND
 	p.tooltip_text = text_on(p.tooltip, 2);
 
-	p.primary = o->primary | 0xFF000000; p.checked = o->checked | 0xFF000000; p.highlight = o->highlight | 0xFF000000;
-	p.value = o->value | 0xFF000000; p.selection = o->selection | 0xFF000000; p.focus = o->focus | 0xFF000000;
+	p.primary = primary | 0xFF000000;
 	p.accent_text = text_on_accent(p.primary);
-	p.selection_subtle = alpha(p.selection, 0.22f - 0.08f * p.light);
+	p.selection_subtle = alpha(p.primary, 0.22f - 0.08f * p.light);
 	return p;
 }
 
-static inline float dl(const r_draw_palette* p, float dark, float light){ return dark + (light - dark) * p->light; }
-static inline uint32_t dlc(const r_draw_palette* p, uint32_t dark, uint32_t light){ return mix(dark, light, p->light); }
+static inline float dl(const palette* p, float dark, float light){ return dark + (light - dark) * p->light; }
+static inline uint32_t dlc(const palette* p, uint32_t dark, uint32_t light){ return mix(dark, light, p->light); }
 
 typedef struct shadow_desc { float x, y, blur, grow; uint32_t color; } shadow_desc;
 
@@ -184,11 +180,11 @@ typedef struct theme_decl { int key, num_ops; theme_op ops[12]; } theme_decl;
 typedef struct r_theme
 {
 	r_draw* c;
+	palette palette;
 	int next_slot;
 	r_draw_font *font, *bold, *small, *header;
 	uint32_t focus_ring;
 	int control_h;
-	bool custom_text;
 	bool dirty;
 	theme_decl* cur;
 	theme_decl decls[128];
@@ -279,6 +275,9 @@ static uint32_t deepen(uint32_t c, float a)
 	return r;
 }
 
+// The theme builder is a tiny virtual machine.
+// Each rule is a list of operations so we can create derivative rules by running multiple functions after each other.
+// These are the opcodes, each is basically a setter.
 enum { OP_FILL, OP_SURFACE, OP_BORDER, OP_BORDER_COLOR, OP_UNDERLINE, OP_BEVEL, OP_BORDER_SPLIT, OP_RADIUS, OP_CORNERS, OP_PADDING, OP_SHADOW, OP_SHADOW2,
 	OP_NO_SHADOW, OP_INSET, OP_GLOW, OP_TINT, OP_HOVER, OP_LABEL, OP_LABEL_COLOR, OP_FONT, OP_ICON, OP_LAYOUT, OP_FOCUS, OP_TEXT_OUTLINE, OP_TEXT_SHADOW };
 
@@ -458,11 +457,11 @@ static void make(theme_state* t, int key, bool hover)
 		if(comp != R_COMPONENT_ENDCAP_END)   b.corners[1] = b.corners[3] = 0.001f;
 	}
 
-	const r_draw_palette* p = &t->c->palette;
+	const palette* p = &t->palette;
 	uint32_t surface = (b.bg >> 24) >= 0x80 ? b.bg : b.surface ? b.surface : p->panel;
 	uint32_t* colors[] = { &r.label_color, &r.icon_color };
 	bool fixed[] = { fixed_label, false };
-	for(int i = 0; i < 2 && !t->custom_text; i++)
+	for(int i = 0; i < 2; i++)
 	if(!fixed[i])
 	{
 		uint32_t roles[] = { p->text_dim, p->text, p->text_strong };
@@ -544,7 +543,7 @@ void r_theme_build_joined(r_draw* c, int states)
 
 static void raised(r_draw* c)
 {
-	const r_draw_palette* p = &c->palette;
+	const palette* p = &c->theme->palette;
 	r_theme_fill(c, p->control, 0);
 	r_theme_border(c, 1, p->border);
 	r_theme_shadow(c, 1, 1, dl(p, 0.6f, 0.2f));
@@ -552,11 +551,11 @@ static void raised(r_draw* c)
 
 static void selection_and_caret(r_draw* c, int key)
 {
-	const r_draw_palette* p = &c->palette;
+	const palette* p = &c->theme->palette;
 	for(int caret = 0; caret < 2; caret++)
 	{
 		r_theme(c, key | (caret ? R_COMPONENT_CARET : R_COMPONENT_SELECTION));
-		r_theme_fill(c, caret ? p->focus : alpha(p->selection, dl(p, 0.45f, 0.28f)), 0);
+		r_theme_fill(c, caret ? p->primary : alpha(p->primary, dl(p, 0.45f, 0.28f)), 0);
 		r_theme_border(c, 0, 0);
 		r_theme_surface(c, p->input);
 		r_theme_radius(c, caret ? 0 : 2);
@@ -568,11 +567,11 @@ static void selection_and_caret(r_draw* c, int key)
 
 static void field(r_draw* c, int key, r_alignment align)
 {
-	const r_draw_palette* p = &c->palette;
+	const palette* p = &c->theme->palette;
 
 	r_theme(c, key | R_STATE_FOCUS);
-	r_theme_border_color(c, p->focus);
-	r_theme_glow(c, alpha(p->focus, dl(p, 0.35f, 0.25f)), 2);
+	r_theme_border_color(c, p->primary);
+	r_theme_glow(c, alpha(p->primary, dl(p, 0.35f, 0.25f)), 2);
 
 	r_theme(c, key);
 	r_theme_fill(c, p->input, 0);
@@ -589,7 +588,7 @@ static void text_field(r_draw* c, int key, r_alignment align)
 	r_theme_build_states(c, R_STATE_HOVER | R_STATE_FOCUS);
 
 	r_theme(c, key | R_VARIANT_TERTIARY);
-	r_theme_label_color_auto(c, c->palette.text_dim);
+	r_theme_label_color_auto(c, c->theme->palette.text_dim);
 	r_theme_build(c);
 
 	selection_and_caret(c, key);
@@ -640,21 +639,11 @@ void __draw_theme_flush(r_draw* c)
 	disabled_rules(t, 0.4f);
 }
 
-void r_theme_default(r_draw* c, const r_draw_theme_options* o)
+void r_theme_default(r_draw* c, uint32_t background, uint32_t primary, float font_size)
 {
-	const r_draw_theme_options* d = &r_draw_default_theme_options;
-	if(!o) o = d;
-	uint32_t primary = o->primary ? o->primary : d->primary;
-	#define ACCENT(name) .name = o->name ? o->name : primary
-	r_draw_theme_options resolved = {
-		.background = o->background ? o->background : d->background,
-		.text       = o->text,
-		.primary    = primary, ACCENT(checked), ACCENT(highlight), ACCENT(value), ACCENT(selection), ACCENT(focus),
-		.font_size  = o->font_size > 0 ? o->font_size : d->font_size,
-		.scrollbar_buttons = o->scrollbar_buttons,
-	};
-	#undef ACCENT
-	const r_draw_theme_options* options = &resolved;
+	if(!background) background = 0xFF222226;
+	if(!primary)    primary    = 0xFFE8305E;
+	if(font_size <= 0) font_size = 14;
 
 	for(int i = 0; i < R_ICON_USER; i++)
 	if(default_icons[i])
@@ -671,19 +660,18 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	theme_state* t = c->theme;
 	memset(t, 0, sizeof(*t));
 	t->c = c; t->next_slot = 1;
-	c->palette = make_palette(options);
-	const r_draw_palette* p = &c->palette;
-	int fs = (int)(options->font_size + 0.5f);
+	t->palette = make_palette(background, primary);
+	const palette* p = &t->palette;
+	int fs = (int)(font_size + 0.5f);
 	t->control_h = fs + 18;
-	t->custom_text = options->text != 0;
 	t->font   = r_draw_get_font(c, 0, fs, R_FONT_SHAPED);
 	t->bold   = r_draw_get_font(c, 0, fs, R_FONT_BOLD | R_FONT_SHAPED);
 	t->small  = r_draw_get_font(c, 0, fs - 1, R_FONT_SHAPED);
 	t->header = r_draw_get_font(c, 0, (fs * 9 + 3) / 7, R_FONT_BOLD | R_FONT_SHAPED);
 	c->clear_color = p->panel;
-	uint32_t checked = deepen(p->checked, 0.15f), value = deepen(p->value, 0.15f);
+	uint32_t checked = deepen(p->primary, 0.15f), value = checked;
 
-	t->focus_ring = alpha(p->focus, dl(p, 0.75f, 0.55f));
+	t->focus_ring = alpha(p->primary, dl(p, 0.75f, 0.55f));
 
 	r_theme(c, R_STYLE_FALLBACK);
 	r_theme_font(c, t->font);
@@ -759,7 +747,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_build(c);
 
 	r_theme(c, R_STYLE_SEPARATOR | R_STATE_HOVER);
-	r_theme_fill(c, p->focus, 0);
+	r_theme_fill(c, p->primary, 0);
 
 	r_theme(c, R_STYLE_SEPARATOR);
 	r_theme_fill(c, p->border, 0);
@@ -776,7 +764,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 			r_theme(c, style | joined[i]);
 			r_theme_padding(c, 0, 4);
 			r_theme_no_shadow(c);
-			r_theme_focus_border(c, p->focus);
+			r_theme_focus_border(c, p->primary);
 
 			r_theme(c, style | joined[i] | R_STATE_TOGGLED);
 			r_theme_focus_border(c, alpha(p->accent_text, 0.8f));
@@ -848,7 +836,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_corners(c, 3, 0, 3, 0);
 	r_theme_build(c);
 	r_theme(c, R_STYLE_SPINBOX | R_STATE_FOCUS);
-	r_theme_border_color(c, c->palette.focus);
+	r_theme_border_color(c, c->theme->palette.primary);
 	r_theme_build_states(c, R_STATE_HOVER | R_STATE_FOCUS);
 
 	selection_and_caret(c, R_STYLE_SPINBOX);
@@ -915,7 +903,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_build(c);
 
 	r_theme(c, R_STYLE_SLIDER | R_COMPONENT_THUMB | R_STATE_HOVER);
-	r_theme_glow(c, alpha(p->value, 0.35f), 3);
+	r_theme_glow(c, alpha(p->primary, 0.35f), 3);
 
 	r_theme(c, R_STYLE_SLIDER | R_COMPONENT_THUMB);
 	r_theme_fill(c, p->thumb, 0);
@@ -956,7 +944,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	for(int end = 0; end < 2; end++)
 	{
 		r_theme(c, R_STYLE_SCROLLBAR | (end ? R_COMPONENT_ENDCAP_END : R_COMPONENT_ENDCAP_START));
-		r_theme_layout(c, options->scrollbar_buttons ? 12 : -1, 0);
+		r_theme_layout(c, 12, 0);
 		r_theme_radius(c, 2);
 		r_theme_label(c, p->text_dim, R_CENTER);
 		r_theme_icon(c, 0, 10);
@@ -975,7 +963,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	int menu_states = R_STATE_HOVER | R_STATE_FOCUS | R_STATE_SELECTED;
 
 	r_theme(c, R_STYLE_MENU_ITEM | R_STATE_SELECTED);
-	r_theme_fill(c, alpha(p->highlight, dl(p, 0.22f, 0.14f)), 0);
+	r_theme_fill(c, alpha(p->primary, dl(p, 0.22f, 0.14f)), 0);
 	r_theme_icon(c, 0, 0);
 
 	r_theme(c, R_STYLE_MENU_ITEM | R_VARIANT_TERTIARY | R_STATE_SELECTED);
@@ -986,7 +974,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 		int state = i ? R_STATE_FOCUS : R_STATE_HOVER;
 
 		r_theme(c, R_STYLE_MENU_ITEM | state);
-		r_theme_fill(c, p->highlight, 0);
+		r_theme_fill(c, p->primary, 0);
 		r_theme_label_color_auto(c, p->accent_text);
 		r_theme_icon(c, 0, 0);
 
@@ -1072,7 +1060,7 @@ void r_theme_default(r_draw* c, const r_draw_theme_options* o)
 	r_theme_label_color_auto(c, p->text_strong);
 
 	r_theme(c, R_STYLE_LIST_ITEM | R_STATE_SELECTED);
-	r_theme_fill(c, p->selection, 0);
+	r_theme_fill(c, p->primary, 0);
 	r_theme_label_color_auto(c, p->accent_text);
 
 	r_theme(c, R_STYLE_LIST_ITEM | R_STATE_SELECTED | R_STATE_HOVER);

@@ -65,6 +65,9 @@ table.params td:first-child { white-space: nowrap; }
 div.example { margin: 12px 0 4px; padding: 10px 12px; background: #f6f8fa; border: 1px solid #d8dee4; border-radius: 4px; display: flex; }
 div.example pre { margin: 0; padding: 0; border: 0; background: none; border-radius: 0; flex: 1 1 auto; min-width: 0; align-self: center; }
 div.example img.shot { flex: none; align-self: flex-start; margin-left: 16px; border: 1px solid #d8dee4; border-radius: 4px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15); }
+div.example.below { flex-direction: column; }
+div.example.below pre { align-self: stretch; }
+div.example.below img.shot { margin: 12px 0 0; }
 div.caption { margin: 0 0 12px; color: #57606a; }
 div.caption p { margin: 4px 0; }
 
@@ -82,5 +85,27 @@ ul.index li { margin: 4px 0; font: 15px Consolas, "Cascadia Mono", Menlo, monosp
 .f { color: #795e26; }
 .e { color: #0070c1; }
 
-div.note { margin: 12px 0; padding: 8px 12px; background: #eef5ff; border-left: 4px solid #3d6fb4; border-radius: 0 4px 4px 0; }
+div.note { margin: 12px 0; padding: 6px 12px; background: #f4f4f4; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 14px; }
+div.note strong { color: #444; }
 span.todo { background: #fff3a0; color: #8a5300; padding: 0 3px; font-style: italic; }
+
+nav.toc { margin: 0 0 24px; padding: 8px 12px; background: #f6f8fa; border: 1px solid #d8dee4; border-radius: 4px; font-size: 13px; line-height: 1.6; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; }
+nav.toc li.current > a { font-weight: 600; color: #1f2328; }
+nav.toc li ul { padding-left: 14px; }
+nav.toc li.l2, nav.toc li.other ul { display: none; }
+nav.toc summary { display: block; }
+
+@media (min-width: 1100px) {
+	.web body { margin-left: 300px; }
+	.web nav.toc { position: fixed; top: 0; bottom: 0; left: 0; width: 280px; margin: 0; padding: 16px 16px 32px; box-sizing: border-box; overflow-y: auto; border-width: 0 1px 0 0; border-radius: 0; }
+	.web nav.toc li ul { margin: 4px 0 8px; padding: 0; }
+	.web nav.toc li.l2, .web nav.toc li.other ul { display: block; }
+	.web nav.toc summary { display: list-item; cursor: pointer; }
+	.web nav.toc li.l1 > details > ul { padding-left: 14px; }
+	.web nav.toc li.current, .web nav.toc li.other { margin-top: 6px; font-weight: 600; }
+	.web nav.toc li.l1, .web nav.toc li.l2 { font-weight: normal; }
+	.web nav.toc li.l2 a { font-family: Consolas, "Cascadia Mono", Menlo, monospace; font-size: 12px; }
+}
+a.self { color: inherit; text-decoration: none; }
+a.self:hover { text-decoration: underline; }

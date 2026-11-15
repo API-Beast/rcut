@@ -1,3 +1,26 @@
+/*
+MIT License
+
+Copyright (c) 2026 Manuel Riecke
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 #pragma once
 #include "rcut_core.h"
 
@@ -43,6 +66,8 @@ typedef struct r_draw_quad
 	const r_draw_transform* transform;
 } r_draw_quad;
 
+struct r_draw;
+
 typedef struct r_draw_backend
 {
 	void* userptr;
@@ -52,6 +77,7 @@ typedef struct r_draw_backend
 	void     (*submit)            (void* userptr, const r_draw_quad* quads, int num_quads);
 	bool     (*is_cached)         (void* userptr, uint64_t handle);
 	void     (*invalidate_cache)  (void* userptr, uint64_t handle);
+	void     (*scale_changed)     (void* userptr, struct r_draw* d);
 } r_draw_backend;
 
 typedef struct r_draw_atlas
@@ -116,7 +142,7 @@ typedef struct r_draw_font
 	uint32_t flags;
 	uint32_t resolved_flags;
 
-	struct r_draw_face_inst* font;
+	struct r_draw_face_inst* font; // Opaque pointer to backend specific font data, either stb_truetype or harfbuzz specific structs.
 } r_draw_font;
 
 typedef struct r_draw_gradient
@@ -172,6 +198,8 @@ void r_stylebox_set_bg_color(r_draw_stylebox_def* box, uint32_t color);
 void r_stylebox_set_bg_vertical_gradient(r_draw_stylebox_def* box, uint32_t* stops, int num_stops);
 void r_stylebox_set_raised_borders_simple(r_draw_stylebox_def* box, float angle, uint32_t light_color, uint32_t ambient_color, float border_thickness, float border_radius, float blur);
 
+// Icons are a tiny VM, the only state is the current draw color and width.
+// The canvas is always 24x24 but rasterized at whatever size is needed, based on the font size.
 typedef enum r_draw_icon_op
 {
 	R_ICON_OP_END = 0,
@@ -182,9 +210,18 @@ typedef enum r_draw_icon_op
 	R_ICON_OP_COLOR,    // r g b a        : Color of the following shapes (0-1, default white). Icons with a color are not tinted.
 } r_draw_icon_op;
 
+#define R_OP(...) (const float[]){ __VA_ARGS__, R_ICON_OP_END }
+#define R_LINE(x0, y0, x1, y1)      R_ICON_OP_POLYLINE, 2, x0, y0, x1, y1
+#define R_PLINE(n, ...)             R_ICON_OP_POLYLINE, n, __VA_ARGS__
+#define R_ARC(cx, cy, r, a0, a1)    R_ICON_OP_ARC, cx, cy, r, a0, a1
+#define R_CIRCLE(cx, cy, r)         R_ARC(cx, cy, r, 0, 360)
+#define R_DISC(cx, cy, r)           R_WIDTH(0), R_CIRCLE(cx, cy, r)
+#define R_RECT(x, y, w, h, r)       R_ICON_OP_RECT, x, y, w, h, r
+#define R_WIDTH(w)                  R_ICON_OP_WIDTH, w
+
 typedef struct r_draw_icon_def
 {
-	const float* ops;
+	const float* ops; // The OP codes, yes float* is a bit weird but all our data is float, we simply cast the OP code to int.
 } r_draw_icon_def;
 
 typedef struct r_draw_style_rule
@@ -211,42 +248,12 @@ typedef struct r_draw_style_rule
 	float    text_shadow_x, text_shadow_y, text_shadow_blur;
 } r_draw_style_rule;
 
-typedef struct r_draw_theme_options
-{
-	uint32_t background;
-	uint32_t text;
-	uint32_t primary;
-	uint32_t checked;
-	uint32_t highlight;
-	uint32_t value;
-	uint32_t selection;
-	uint32_t focus;
-	float    font_size;
-	bool     scrollbar_buttons;
-} r_draw_theme_options;
-
-extern const r_draw_theme_options r_draw_default_theme_options;
-
-typedef struct r_draw_palette
-{
-	bool     dark;
-	float    light;
-	uint32_t window, panel, view, card, input, menu, tooltip, tooltip_text;
-	uint32_t control, control_hover, control_pressed, track, thumb;
-	uint32_t border, border_strong, border_hover;
-	uint32_t text, text_strong, text_dim;
-	uint32_t primary, checked, highlight, value, selection, focus;
-	uint32_t accent_text, selection_subtle;
-	uint32_t hover_overlay;
-} r_draw_palette;
-
 typedef struct r_draw
 {
 	r_context*     context;
 	r_draw_backend backend;
 	float    scale;
 	uint32_t clear_color;
-	r_draw_palette palette;
 	struct r_theme* theme;
 	bool     cache_full;
 	bool     glyphs_full;
@@ -343,7 +350,7 @@ void r_draw_render(r_draw* d, uint64_t target);
 rect r_draw_take_damage(r_draw* d, uint64_t target);
 void r_draw_render_area(r_draw* d, uint64_t target, rect area);
 rect r_draw_target_bounds(r_draw* d, uint64_t target);
-void r_theme_default(r_draw* c, const r_draw_theme_options* options);
+void r_theme_default(r_draw* c, uint32_t background, uint32_t primary, float font_size); // 0 = 14pt
 
 //
 //

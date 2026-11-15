@@ -1,3 +1,26 @@
+/*
+MIT License
+
+Copyright (c) 2026 Manuel Riecke
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 #pragma once
 #include <stdint.h>
 #include <stdbool.h>
@@ -560,23 +583,21 @@ void r_free_context(r_context* r);
 r_ui_list* r_create_ui_list(r_context* c, uint64_t target, uint64_t root_id, int width, int height);
 r_ui_list* r_create_ui_list_ex(r_context* c, uint64_t target, uint64_t root_id, int width, int height, int max_drawables, int max_interactables);
 void       r_destroy_ui_list(r_ui_list* list);
-// Ephemerals are UI list attached to a rectangle with automatic lifetime managment.
-// Note here: Salt the r parameter here with r_salt to allow for multiple popups on a single item.
-r_ui_list* r_ephemeral_keep_alive(r_ui_list* parent, uint64_t id);
-void       r_ephemeral_mark_to_delete(r_ui_list* parent, uint64_t id);
+// Ephemerals are garbage collected unless created or kept alive during a rebuild.
+// id is the lookup key (e.g. r_salt(anchor, X).id), anchor.id is stored as anchor_id.
+r_ui_list* r_ephemeral_create        (r_ui_list* parent, rect anchor, uint64_t id); // Create or revive + clear, keeps alive.
+r_ui_list* r_ephemeral_create_ex     (r_ui_list* parent, rect anchor, uint64_t id, int max_drawables, int max_interactables);
+r_ui_list* r_ephemeral_create_or_find(r_ui_list* parent, rect anchor, uint64_t id); // Existing list unchanged, keeps alive.
+r_ui_list* r_ephemeral_find          (r_ui_list* parent, uint64_t id);              // NULL if missing/marked to delete, doesn't keep alive.
+r_ui_list* r_ephemeral_keep_alive    (r_ui_list* parent, uint64_t id);              // find + keep alive.
 
 typedef enum r_popup_flags
 {
 	R_POPUP_TOOLTIP   = 1 << 0, // Only shows something: no input (the mouse goes to what's below), at most RCUT_EPHEMERAL_MAX_ELEMENTS elements.
 	R_POPUP_AUTOCLOSE = 1 << 1, // Clicking outside of it (and its child popups) or pressing Escape closes it (close_on_outside_click). For menus.
 } r_popup_flags;
-r_ui_list* r_popup               (r_ui_list* parent, rect r, uint32_t flags, uint64_t salt);
-r_ui_list* r_popup_keep_alive    (r_ui_list* parent, rect r, uint64_t salt);
-void       r_popup_mark_to_delete(r_ui_list* parent, rect r, uint64_t salt);
-
-r_ui_list* r_viewport(r_ui_list* parent, rect r);
-r_ui_list* r_viewport_keep_alive(r_ui_list* parent, rect r);
-void       r_viewport_mark_to_delete(r_ui_list* parent, rect r);
+r_ui_list* r_popup   (r_ui_list* parent, rect anchor, uint32_t flags, uint64_t id); // create_or_find, own window if the frontend supports it.
+r_ui_list* r_viewport(r_ui_list* parent, rect anchor, uint64_t id);                 // create, masked to anchor.
 
 r_ui_list* r_scroll_begin(r_ui_list* parent, rect r);
 r_ui_list* r_scroll_begin_ex(r_ui_list* parent, rect r, int frame_style);

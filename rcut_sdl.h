@@ -1,3 +1,26 @@
+/*
+MIT License
+
+Copyright (c) 2026 Manuel Riecke
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 #pragma once
 #include "rcut_draw.h"
 #include <SDL3/SDL.h>
@@ -34,7 +57,6 @@ typedef struct r_sdl_frontend
 	bool no_popup_windows;
 	bool quit_requested;
 	SDL_Window* text_input_window;
-	bool auto_scale;
 	bool vsync;
 	char* clipboard;
 	int   cursor;
@@ -56,5 +78,4 @@ r_ui_list* r_sdl_dialog(r_sdl_frontend* c, uint64_t root_id, int w, int h, const
 bool r_sdl_close_requested(r_sdl_frontend* c, r_ui_list* dialog, bool clear);
 void r_sdl_update(r_sdl_frontend* c);
 void r_sdl_render_ui(r_sdl_frontend* c);
-void r_sdl_set_scale(r_sdl_frontend* c, float scale);
 bool r_sdl_screenshot(r_sdl_frontend* c, const char* path);

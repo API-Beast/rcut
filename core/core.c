@@ -470,14 +470,14 @@ static void destroy_root(r_context* c, r_ui_list* l)
 
 void r_destroy_ui_list(r_ui_list* l)
 {
-	r_context* c = l->context;
-	if(!c) return;
-	if(l->ephemeral_parent) { r_ephemeral_mark_to_delete(l->ephemeral_parent, l->root_area.id); return; }
+	if(!l || !l->context) return;
 	l->is_marked_as_to_delete = true;
 	r_list_set_visibility(l, false);
+	for(r_ui_list* p = l->ephemeral_parent; p; p = p->ephemeral_parent)
+		p->needs_ephemeral_sweep = true;
 }
 
-static r_ui_list* create_ephemeral(r_ui_list* parent, rect root, uint64_t target, bool viewport, int capacity)
+static r_ui_list* create_ephemeral(r_ui_list* parent, rect root, uint64_t target, bool viewport, int max_drawables, int max_interactables)
 {
 	r_context* c = parent->context;
 	r_ui_list* l = NULL;
@@ -505,7 +505,7 @@ static r_ui_list* create_ephemeral(r_ui_list* parent, rect root, uint64_t target
 	l->drawn_area   = keep.drawn_area;
 	l->drawn_target = keep.drawn_target;
 
-	init_ui_list(l, capacity, capacity);
+	init_ui_list(l, max_drawables, max_interactables);
 	l->ephemeral_parent  = parent;
 	l->parent_generation = parent->generation;
 	l->is_ephemeral = true;
@@ -571,77 +571,77 @@ r_ui_list* r_ephemeral_keep_alive(r_ui_list* parent, uint64_t id)
 	return result;
 }
 
-void r_ephemeral_mark_to_delete(r_ui_list* parent, uint64_t id)
+r_ui_list* r_ephemeral_find(r_ui_list* parent, uint64_t id)
 {
-	r_context* c = parent->context;
-	r_ui_list* result = hash_getv(&c->ephemeral_id_map, id);
-	if(result != NULL)
-	{
-		result->is_marked_as_to_delete = true;
-		r_list_set_visibility(result, false);
-		r_ui_list* p = result->ephemeral_parent;
-		while(p != NULL)
-		{
-			p->needs_ephemeral_sweep = true;
-			p = p->ephemeral_parent;
-		}
-		return;
-	}
+	r_ui_list* l = hash_getv(&parent->context->ephemeral_id_map, id);
+	return (l && !l->is_marked_as_to_delete) ? l : NULL;
 }
 
-r_ui_list* r_popup(r_ui_list* parent, rect root, uint32_t flags, uint64_t salt)
+// Revives + clears an existing list, otherwise creates one. root_area.id == id is the hash key.
+static r_ui_list* ephemeral_create(r_ui_list* parent, rect anchor, uint64_t id, bool viewport, int max_drawables, int max_interactables, bool* created)
 {
-	bool tooltip = flags & R_POPUP_TOOLTIP;
-	r_context* c = parent->context;
-	uint64_t anchor = root.id;
-	root = r_salt(root, salt);
-	r_ui_list* result = hash_getv(&c->ephemeral_id_map, root.id);
-	if(result != NULL)
+	r_ui_list* l = hash_getv(&parent->context->ephemeral_id_map, id);
+	*created = l == NULL;
+	if(l)
 	{
-		if(result->is_marked_as_to_delete)
-		{
-			result->is_marked_as_to_delete = false;
-			result->is_hidden = false;
-			r_list_clear(result);
-		}
-		result->is_marked_as_unused = false;
-		return result;
+		l->is_marked_as_to_delete = false;
+		l->is_hidden = false;
+		r_list_clear(l);
 	}
-
-	uint64_t target = parent->target;
-	if(c->interface.get_viewport_target)
-		target = c->interface.get_viewport_target(parent, root);
-
-	result = create_ephemeral(parent, root, target, false, tooltip ? RCUT_EPHEMERAL_MAX_ELEMENTS : RCUT_LIST_MAX_ELEMENTS);
-	result->anchor_id = anchor;
-	result->is_tooltip = tooltip;
-	result->close_on_outside_click = (flags & R_POPUP_AUTOCLOSE) != 0;
-	return result;
+	else
+	{
+		rect root = anchor;
+		root.id = id;
+		l = create_ephemeral(parent, root, parent->target, viewport, max_drawables, max_interactables);
+	}
+	l->anchor_id = anchor.id;
+	l->is_marked_as_unused = false;
+	return l;
 }
 
-r_ui_list* r_viewport(r_ui_list* parent, rect target)
+r_ui_list* r_ephemeral_create(r_ui_list* parent, rect anchor, uint64_t id)
 {
-	r_context* c = parent->context;
-	r_ui_list* result = hash_getv(&c->ephemeral_id_map, target.id);
-	if(result == NULL)
-	{
-		result = create_ephemeral(parent, target, parent->target, true, RCUT_LIST_MAX_ELEMENTS);
-		result->anchor_id = target.id;
-		result->is_masked = true;
-	}
-
-	result->is_marked_as_unused = false;
-	result->is_marked_as_to_delete = false;
-	result->root_area = target;
-	r_list_clear(result);
-	result->document_area = (rect){0, 0, target.w, 0, target.id};
-	return result;
+	return r_ephemeral_create_ex(parent, anchor, id, RCUT_LIST_MAX_ELEMENTS, RCUT_LIST_MAX_ELEMENTS);
 }
 
-r_ui_list* r_popup_keep_alive(r_ui_list* parent, rect r, uint64_t salt)   { r = r_salt(r, salt); return r_ephemeral_keep_alive    (parent, r.id); }
-void       r_popup_mark_to_delete(r_ui_list* parent, rect r, uint64_t salt){ r = r_salt(r, salt);       r_ephemeral_mark_to_delete(parent, r.id); }
-r_ui_list* r_viewport_keep_alive(r_ui_list* parent, rect r){ return r_ephemeral_keep_alive    (parent, r.id); }
-void       r_viewport_mark_to_delete(r_ui_list* parent, rect r){    r_ephemeral_mark_to_delete(parent, r.id); }
+r_ui_list* r_ephemeral_create_ex(r_ui_list* parent, rect anchor, uint64_t id, int max_drawables, int max_interactables)
+{
+	bool created;
+	return ephemeral_create(parent, anchor, id, false, max_drawables, max_interactables, &created);
+}
+
+r_ui_list* r_ephemeral_create_or_find(r_ui_list* parent, rect anchor, uint64_t id)
+{
+	r_ui_list* l = r_ephemeral_keep_alive(parent, id);
+	return l ? l : r_ephemeral_create(parent, anchor, id);
+}
+
+r_ui_list* r_popup(r_ui_list* parent, rect anchor, uint32_t flags, uint64_t id)
+{
+	r_ui_list* l = r_ephemeral_keep_alive(parent, id);
+	if(l) return l;
+
+	bool created, tooltip = flags & R_POPUP_TOOLTIP;
+	int cap = tooltip ? RCUT_EPHEMERAL_MAX_ELEMENTS : RCUT_LIST_MAX_ELEMENTS;
+	l = ephemeral_create(parent, anchor, id, false, cap, cap, &created);
+	r_context* c = parent->context;
+	if(created && c->interface.get_viewport_target)
+		l->target = c->interface.get_viewport_target(parent, l->root_area);
+	l->is_tooltip = tooltip;
+	l->close_on_outside_click = (flags & R_POPUP_AUTOCLOSE) != 0;
+	return l;
+}
+
+r_ui_list* r_viewport(r_ui_list* parent, rect anchor, uint64_t id)
+{
+	bool created;
+	r_ui_list* l = ephemeral_create(parent, anchor, id, true, RCUT_LIST_MAX_ELEMENTS, RCUT_LIST_MAX_ELEMENTS, &created);
+	if(created) l->is_masked = true;
+	l->root_area = anchor;
+	l->root_area.id = id;
+	l->document_area = (rect){0, 0, anchor.w, 0, id};
+	return l;
+}
 
 void r_list_clear(r_ui_list* l)
 {

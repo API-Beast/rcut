@@ -50,6 +50,12 @@ rect r_cut_px(r_alignment dir, rect* target, int pixels, uint64_t salt)
 	}
 }
 
+rect r_cut_fraction(r_alignment dir, rect* to_cut, float fraction, uint64_t salt)
+{
+	int len = (dir & (R_LEFT | R_RIGHT)) ? to_cut->w : to_cut->h;
+	return r_cut_px(dir, to_cut, (int)(len * fraction), salt);
+}
+
 rect r_expand_px(r_alignment dir, rect* target, int pixels, uint64_t salt)
 {
 	rect result = {0};
@@ -360,9 +366,11 @@ rect r_measure_n(r_context* c, int style, const char* text, int len)
 	if(!text) return (rect){0};
 	if(c->interface.measure_text)
 		return c->interface.measure_text(c, style, text, len);
-	if(len < 0) len = (int)strlen(text);
+	// Naive and stupid fallback if interface.measure_text isn't implemented.
+	WARN_ONCE("interface.measure_text not implemented, your text won't look right.");
+	if(len == -1) len = INT_MAX;
 	int lines = 1, w = 0, max_w = 0;
-	for(int i = 0; i < len; i++)
+	for(int i = 0; i < len && text[i] != '\0'; i++)
 	{
 		if(text[i] == '\n') { lines++; w = 0; continue; }
 		if((text[i] & 0xC0) != 0x80) w += 8;

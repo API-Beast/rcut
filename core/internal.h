@@ -6,7 +6,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#define STUB {static bool wrote_warning = false; if(!wrote_warning){ wrote_warning = true; fprintf(stderr, "STUB: %s uses a dumb placeholder implementation.\n", __func__); }}
+#define WARN_ONCE(MSG) {static bool wrote_warning = false; if(!wrote_warning){ wrote_warning = true; fprintf(stderr, "RCUT warning %s: "MSG"\n", __func__); }}
 
 #define MAX(a, b) (((a) < (b)) ? (b) : (a))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))

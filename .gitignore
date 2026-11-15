@@ -2,4 +2,4 @@
 build*/
 /rcut_core.c
 /rcut_draw.c
-docs/api/rcut.chm
+docs/api/

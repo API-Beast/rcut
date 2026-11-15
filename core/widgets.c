@@ -235,7 +235,7 @@ static bool tab_activate(const r_event* e, r_callback* self)
 	toggle_activate(e, self);
 	for(int i = 0; i < data->count; i++)
 	{
-		r_ui_list* page = r_viewport_keep_alive(e->ui_list, r_salt(data->pages, P720 + i));
+		r_ui_list* page = r_ephemeral_find(e->ui_list, r_salt(data->pages, P720 + i).id);
 		if(page) r_list_set_visibility(page, i == data->toggle.value);
 	}
 	return true;
@@ -266,7 +266,7 @@ void r_tabs(r_ui_list* l, rect r, char** labels, int count, r_data_binding selec
 	int64_t sel = r_geti(selected);
 	for(int i = 0; i < count; i++)
 	{
-		pages[i] = r_viewport(l, r_salt(content, P720 + i));
+		pages[i] = r_viewport(l, content, r_salt(content, P720 + i).id);
 		pages[i]->document_area.h = content.h;
 		pages[i]->is_hidden = i != sel;
 	}
@@ -698,9 +698,8 @@ r_ui_list* r_scroll_begin_ex(r_ui_list* parent, rect r, int frame_style)
 		r_style(parent, r, frame_style);
 		vr = r_inner(c, frame_style, r);
 	}
-	vr.id = r_salt(r, P650).id;
 	vr.w -= r_layout_default_size(c, R_STYLE_SCROLLBAR | R_COMPONENT_TRACK);
-	return r_viewport(parent, vr);
+	return r_viewport(parent, vr, r_salt(r, P650).id);
 }
 
 void r_scroll_end(r_ui_list* parent, r_ui_list* v)

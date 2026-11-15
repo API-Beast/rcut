@@ -4,6 +4,7 @@
 static void     __sdl_frontend_set_clipboard      (r_context* ctx, const char* text);
 static char*    __sdl_frontend_get_clipboard      (r_context* ctx);
 static uint64_t __sdl_frontend_get_viewport_target(r_ui_list* parent, rect r);
+static void     __sdl_frontend_scale_changed      (void* userptr, r_draw* d);
 
 r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags)
 {
@@ -19,7 +20,6 @@ r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags)
     c->windows[0].window = root_window;
     c->windows[0].hidden = flags & R_SDL_HIDDEN;
 
-    c->auto_scale = true;
     c->vsync = flags & R_SDL_VSYNC;
     float scale = SDL_GetWindowDisplayScale(root_window);
     if(scale <= 0.0f) scale = 1.0f;
@@ -27,6 +27,7 @@ r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags)
     r_init_context(&c->context);
     r_draw_software_init(&c->software, 0, 0, RCUT_SDL_CACHE_PIXELS);
     r_draw_backend backend = r_draw_software_backend(&c->software);
+    backend.scale_changed = __sdl_frontend_scale_changed;
     r_draw_init(&c->draw, &c->context, &backend, scale);
     c->context.interface.set_clipboard       = __sdl_frontend_set_clipboard;
     c->context.interface.get_clipboard       = __sdl_frontend_get_clipboard;
@@ -37,7 +38,7 @@ r_sdl_frontend* r_sdl_init(const char* title, int w, int h, int flags)
     c->last_tick_time = SDL_GetTicksNS();
 
     r_draw_find_system_fonts(&c->draw, true);
-    r_theme_default(&c->draw, NULL);
+    r_theme_default(&c->draw, 0, 0, 0);
     return c;
 }
 
@@ -153,14 +154,9 @@ static void update_root_sizes(r_sdl_frontend* c)
     }
 }
 
-void r_sdl_set_scale(r_sdl_frontend* c, float scale)
+static void __sdl_frontend_scale_changed(void* userptr, r_draw* d)
 {
-    c->auto_scale = scale <= 0.0f;
-    if(c->auto_scale) scale = SDL_GetWindowDisplayScale(c->windows[0].window);
-    if(scale <= 0.0f) scale = 1.0f;
-    if(scale == c->draw.scale) return;
-    r_draw_set_scale(&c->draw, scale);
-    update_root_sizes(c);
+    update_root_sizes((r_sdl_frontend*)((char*)d - offsetof(r_sdl_frontend, draw)));
 }
 
 static void __sdl_frontend_set_clipboard(r_context* ctx, const char* text)
@@ -404,7 +400,7 @@ bool r_sdl_process_event(r_sdl_frontend* c, SDL_Event* e)
             else if(i > 0) // A popup: closed.
             for(r_ui_list* l = ctx->chain_start; l; l = l->chain_next)
                 if(l->target == (uint64_t)i && l->ephemeral_parent && l->ephemeral_parent->target != l->target)
-                    r_ephemeral_mark_to_delete(l->ephemeral_parent, l->root_area.id);
+                    r_destroy_ui_list(r_ephemeral_find(l->ephemeral_parent, l->root_area.id));
             break;
         case SDL_EVENT_WINDOW_DESTROYED:
             if(window_index(c, e->window.windowID) == 0) c->quit_requested = true;
@@ -439,7 +435,7 @@ bool r_sdl_process_event(r_sdl_frontend* c, SDL_Event* e)
             if(i >= 0) c->windows[i].last_window_surface = NULL;
             return true;
         case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-            if(c->auto_scale && window_index(c, e->window.windowID) == 0) r_sdl_set_scale(c, 0);
+            if(window_index(c, e->window.windowID) == 0) r_draw_set_scale(&c->draw, SDL_GetWindowDisplayScale(c->windows[0].window));
             return false;
     }
     return false;

@@ -19,10 +19,9 @@ static struct
 	char  status[128];
 	int   theme, loaded_theme;
 	float background;
-	r_draw_theme_options look, loaded_look;
-	bool  custom_text;
+	uint32_t look_background, look_primary, loaded_background, loaded_primary;
+	float font_size, loaded_font_size;
 	bool  pill_tabs, loaded_pill_tabs;
-	uint32_t text_color;
 	float split;
 	char  notes[1024];
 	bool  tree_open[16];
@@ -33,7 +32,7 @@ static struct
 	.name = "", .section_open = true, .advanced_open = true, .show_grid = true,
 	.status = "Ready",
 	.split = 0.62f,
-	.text_color = 0xFFD4D4D5,
+	.look_primary = 0xFFE8305E, .font_size = 14,
 	.notes = "Meeting notes\n- Ship the gallery\n- Review the theme\n- Profile on the Pi Zero",
 	.tree_open = { [0] = true, [1] = true },
 	.tree_selected = 2,
@@ -164,28 +163,26 @@ static void column_end(r_ui_list* l, r_ui_list* page, r_layout_iter* column)
 
 static void pill_tabs(r_draw* c)
 {
-	const r_draw_palette* p = &c->palette;
 	r_theme(c, R_STYLE_TAB_BAR); r_theme_build(c);
-	r_theme(c, R_STYLE_TAB | R_STATE_HOVER);    r_theme_label_color_auto(c, p->text);
-	r_theme(c, R_STYLE_TAB | R_STATE_SELECTED); r_theme_fill(c, p->selection_subtle, 0); r_theme_label_color_auto(c, p->text_strong);
-	r_theme(c, R_STYLE_TAB); r_theme_radius(c, 13); r_theme_padding(c, 12, 0); r_theme_label(c, p->text_dim, R_CENTER); r_theme_focus(c, R_FOCUS_RING);
+	r_theme_tweak(c, R_STYLE_TAB | R_STATE_SELECTED); r_theme_fill(c, (app.look_primary & 0xFFFFFF) | 0x38000000, 0); r_theme_bevel(c, 0, 0);
+	r_theme_font(c, r_draw_get_font(c, 0, (int)(app.font_size + 0.5f), R_FONT_SHAPED));
+	r_theme_tweak(c, R_STYLE_TAB); r_theme_fill(c, 0, 0); r_theme_border(c, 0, 0); r_theme_radius(c, 13);
 	r_theme_build(c); r_theme_build_states(c, R_STATE_HOVER | R_STATE_SELECTED);
 }
 
 static void rich_text_styles(r_draw* c)
 {
-	const r_draw_palette* p = &c->palette;
-	int size = (int)(app.look.font_size + 0.5f);
+	int size = (int)(app.font_size + 0.5f);
 	r_theme(c, RICH_TITLE);
 	r_theme_font(c, r_draw_get_font(c, 0, size * 3 / 2, R_FONT_BOLD | R_FONT_SHAPED));
 	r_theme_label_color(c, 0xFFFFFFFF);
-	r_theme_text_outline(c, 2, p->primary);
+	r_theme_text_outline(c, 2, app.look_primary);
 	r_theme_text_shadow(c, 0, 2, 2, r_rgba_f(0, 0, 0, 0.5f));
 	r_theme_build(c);
 	r_theme(c, RICH_SHADOWED);
 	r_theme_font(c, r_draw_get_font(c, 0, size, R_FONT_SEMIBOLD | R_FONT_SHAPED));
-	r_theme_label_color(c, p->primary);
-	r_theme_text_shadow(c, 1, 1, 1, r_rgba_f(0, 0, 0, p->dark ? 0.8f : 0.3f));
+	r_theme_label_color(c, app.look_primary);
+	r_theme_text_shadow(c, 1, 1, 1, r_rgba_f(0, 0, 0, app.background < 50 ? 0.8f : 0.3f));
 	r_theme_build(c);
 }
 
@@ -193,18 +190,19 @@ static void update_theme(r_sdl_frontend* f)
 {
 	if(app.theme != app.loaded_theme) app.background = app.theme * 100.0f;
 	app.theme = app.loaded_theme = app.background >= 50;
-	app.look.background = 0xFF000000;
+	app.look_background = 0xFF000000;
 	for(int i = 0; i < 24; i += 8)
 	{
 		float a = (theme_backgrounds[0] >> i) & 0xFF, b = (theme_backgrounds[1] >> i) & 0xFF;
-		app.look.background |= (uint32_t)(a + (b - a) * app.background / 100 + 0.5f) << i;
+		app.look_background |= (uint32_t)(a + (b - a) * app.background / 100 + 0.5f) << i;
 	}
-	app.look.text = app.custom_text ? app.text_color | 0xFF000000 : 0;
-	if(memcmp(&app.look, &app.loaded_look, sizeof(app.look)) == 0 && app.pill_tabs == app.loaded_pill_tabs) return;
-	r_theme_default(&f->draw, &app.look);
+	if(app.look_background == app.loaded_background && app.look_primary == app.loaded_primary && app.font_size == app.loaded_font_size && app.pill_tabs == app.loaded_pill_tabs) return;
+	r_theme_default(&f->draw, app.look_background, app.look_primary, app.font_size);
 	if(app.pill_tabs) pill_tabs(&f->draw);
 	rich_text_styles(&f->draw);
-	memcpy(&app.loaded_look, &app.look, sizeof(app.look));
+	app.loaded_background = app.look_background;
+	app.loaded_primary = app.look_primary;
+	app.loaded_font_size = app.font_size;
 	app.loaded_pill_tabs = app.pill_tabs;
 	dirty = true;
 }
@@ -287,21 +285,14 @@ static void build(r_sdl_frontend* f)
 	r_label_ex(p, r_next(&row, 88), CAPTION, R_ICON_NONE, "Preset");
 	r_segmented(p, r_remaining(&row), themes, 2, R_PTR(&app.theme));
 	r_slider_box(p, r_next(&card, 26), "Brightness", 0, 100, 1, R_PTR(&app.background));
-	struct { char* name; uint32_t* color; } colors[] = { { "Label", &app.text_color }, { "Primary", &app.look.primary } };
-	for(int i = 0; i < (int)(sizeof(colors) / sizeof(colors[0])); i++)
-	{
-		if(i == 0) r_checkbox(p, r_next(&card, 22), "Custom label color", R_PTR(&app.custom_text));
-		if(i == 0 && !app.custom_text) continue;
-		row = r_row(&card, 26, R_LEFT);
-		r_label_ex(p, r_next(&row, 88), CAPTION, R_ICON_NONE, colors[i].name);
-		int w = (row.area.w - 3 * row.spacing) / 3;
-		r_slider_box(p, r_next(&row, w), "R", 0, 255, 1, R_BITFIELD(colors[i].color, 16, 8));
-		r_slider_box(p, r_next(&row, w), "G", 0, 255, 1, R_BITFIELD(colors[i].color, 8, 8));
-		r_slider_box(p, r_remaining(&row), "B", 0, 255, 1, R_BITFIELD(colors[i].color, 0, 8));
-	}
-	r_slider_box(p, r_next(&card, 26), "Font size", 9, 24, 1, R_PTR(&app.look.font_size));
+	row = r_row(&card, 26, R_LEFT);
+	r_label_ex(p, r_next(&row, 88), CAPTION, R_ICON_NONE, "Primary");
+	int w = (row.area.w - 3 * row.spacing) / 3;
+	r_slider_box(p, r_next(&row, w), "R", 0, 255, 1, R_BITFIELD(&app.look_primary, 16, 8));
+	r_slider_box(p, r_next(&row, w), "G", 0, 255, 1, R_BITFIELD(&app.look_primary, 8, 8));
+	r_slider_box(p, r_remaining(&row), "B", 0, 255, 1, R_BITFIELD(&app.look_primary, 0, 8));
+	r_slider_box(p, r_next(&card, 26), "Font size", 9, 24, 1, R_PTR(&app.font_size));
 	r_checkbox(p, r_next(&card, 22), "Pill tabs", R_PTR(&app.pill_tabs));
-	r_checkbox(p, r_next(&card, 22), "Scrollbar buttons", R_PTR(&app.look.scrollbar_buttons));
 	r_group_end(&card, &col);
 	column_end(l, page[0], &col);
 
@@ -466,7 +457,6 @@ int main(int argc, char** argv)
 	r_sdl_frontend* f = r_sdl_init("rcut gallery", 1040, 720, R_SDL_RESIZABLE | R_SDL_VSYNC);
 	if(!f) return 1;
 	frontend = f;
-	app.look = app.loaded_look = r_draw_default_theme_options;
 	rich_text_styles(&f->draw);
 	build(f);
 	while(!r_sdl_quit_requested(f, true))

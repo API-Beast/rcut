@@ -31,7 +31,7 @@ rect r_popup_place(r_ui_list* parent, rect anchor, int w, int h, r_alignment sid
 
 static void close_popup(r_ui_list* p)
 {
-	if(p && p->ephemeral_parent) r_ephemeral_mark_to_delete(p->ephemeral_parent, p->root_area.id);
+	if(p && p->ephemeral_parent) r_destroy_ui_list(r_ephemeral_find(p->ephemeral_parent, p->root_area.id));
 }
 
 static bool popup_is_open(r_context* c, rect r, uint64_t salt)
@@ -75,7 +75,7 @@ static bool tooltip_mouse_hover(const r_event* e, r_callback* self)
 {
 	if(e->context->pressed_id) return false;
 	r_context* c = e->context;
-	r_ui_list* p = r_popup(e->ui_list, self->parent->r, R_POPUP_TOOLTIP, P400);
+	r_ui_list* p = r_popup(e->ui_list, self->parent->r, R_POPUP_TOOLTIP, r_salt(self->parent->r, P400).id);
 	if(p->count_draw_items == 0)
 	{
 		r_drawable* bg = r_style(p, (rect){0}, R_STYLE_TOOLTIP);
@@ -99,13 +99,13 @@ static bool tooltip_mouse_hover(const r_event* e, r_callback* self)
 
 static bool tooltip_close(const r_event* e, r_callback* self)
 {
-	r_popup_mark_to_delete(e->ui_list, self->parent->r, P400);
+	r_destroy_ui_list(r_ephemeral_find(e->ui_list, r_salt(self->parent->r, P400).id));
 	return false;
 }
 
 void r_tooltip(r_ui_list* l, rect r, const char* text)
 {
-	r_popup_keep_alive(l, r, P400);
+	r_ephemeral_keep_alive(l, r_salt(r, P400).id);
 	r_callback* hover = r_attach_callback(l, r, R_MOUSE_HOVER,   tooltip_mouse_hover);
 	r_callback* out   = r_attach_callback(l, r, R_MOUSE_OUT,     tooltip_close);
 	r_callback* press = r_attach_callback(l, r, R_MOUSE_PRESSED, tooltip_close);
@@ -285,7 +285,7 @@ static void menu_build(r_ui_list* p, r_ui_list* parent, rect anchor, const r_men
 
 r_ui_list* r_menu_popup(r_ui_list* parent, rect anchor, const r_menu_item* items, r_alignment side)
 {
-	r_ui_list* p = r_popup(parent, anchor, R_POPUP_AUTOCLOSE, P410);
+	r_ui_list* p = r_popup(parent, anchor, R_POPUP_AUTOCLOSE, r_salt(anchor, P410).id);
 	if(p->count_draw_items == 0)
 		menu_build(p, parent, anchor, items, side, 0);
 	r_list_set_visibility(p, true);
@@ -314,7 +314,7 @@ static char* hotkey_name(r_ui_list* l, uint32_t key, uint32_t modifiers)
 void __core_open_context_menu(r_interact* it, float list_x, float list_y)
 {
 	r_ui_list* l = it->owner;
-	r_ui_list* p = r_popup(l, it->r, R_POPUP_AUTOCLOSE, P430);
+	r_ui_list* p = r_popup(l, it->r, R_POPUP_AUTOCLOSE, r_salt(it->r, P430).id);
 	r_list_clear(p);
 	int n = 0;
 	for(r_interact* part = it; part->r.id == it->r.id; part++)
@@ -346,7 +346,7 @@ static bool context_fn_wrapper(const r_event* e, r_callback* self)
 
 r_callback* r_on_context(r_ui_list* l, rect r, const char* label, void (*on_select)(void))
 {
-	r_popup_keep_alive(l, r, P430);
+	r_ephemeral_keep_alive(l, r_salt(r, P430).id);
 	r_callback* cb = r_attach_callback(l, r, R_CONTEXT, context_fn_wrapper);
 	r_callback_set_data(l, cb, &on_select, sizeof(on_select));
 	cb->menu_label = (char*)label;
@@ -376,7 +376,7 @@ static r_ui_list* open_menubar_popup(r_ui_list* l, uint64_t bar_id, uint64_t exc
 static bool menubar_activate(const r_event* e, r_callback* self)
 {
 	struct menubar_data* data = self->data;
-	r_ui_list* open = r_popup_keep_alive(e->ui_list, data->item_rect, P410);
+	r_ui_list* open = r_ephemeral_find(e->ui_list, r_salt(data->item_rect, P410).id);
 	if(open) close_popup(open);
 	else
 	{
@@ -392,7 +392,7 @@ static bool menubar_key(const r_event* e, r_callback* self)
 	r_context* c = e->context;
 	if(e->keycode == R_KEY_DOWN)
 	{
-		r_ui_list* p = r_popup_keep_alive(e->ui_list, data->item_rect, P410);
+		r_ui_list* p = r_ephemeral_find(e->ui_list, r_salt(data->item_rect, P410).id);
 		if(!p) p = r_menu_popup(e->ui_list, data->item_rect, data->menu->submenu, R_BOTTOM);
 		return popup_focus(c, p, 1, false);
 	}
@@ -445,7 +445,7 @@ void r_menubar(r_ui_list* l, rect r, const r_menu_item* menus)
 		rect inner = r_measure(c, R_STYLE_MENUBAR_ITEM, menus[i].label);
 		rect outer = r_outer(c, R_STYLE_MENUBAR_ITEM, &inner);
 		rect item = r_cut_px(R_LEFT, &row, outer.w, i);
-		r_popup_keep_alive(l, item, P410);
+		r_ephemeral_keep_alive(l, r_salt(item, P410).id);
 		r_drawable* d = r_drawable_custom(l, r_style(l, item, R_STYLE_MENUBAR_ITEM), (r_data_binding){0}, menubar_item_update, NULL);
 		d->text = menus[i].label;
 		if(!menus[i].submenu) { r_on_click(l, item, menus[i].on_click); continue; }
@@ -497,7 +497,7 @@ static bool dropdown_key(const r_event* e, r_callback* self)
 {
 	if(e->keycode != R_KEY_DOWN && e->keycode != R_KEY_UP) return false;
 	struct dropdown_data* data = self->data;
-	if(!r_popup_keep_alive(e->ui_list, data->r, P420))
+	if(!r_ephemeral_find(e->ui_list, r_salt(data->r, P420).id))
 	{
 		e->context->is_in_navigation_mode = true;
 		dropdown_toggle(e, self);
@@ -509,10 +509,10 @@ static bool dropdown_toggle(const r_event* e, r_callback* self)
 {
 	struct dropdown_data* data = self->data;
 	r_context* c = e->context;
-	r_ui_list* open = r_popup_keep_alive(e->ui_list, data->r, P420);
+	r_ui_list* open = r_ephemeral_find(e->ui_list, r_salt(data->r, P420).id);
 	if(open) { close_popup(open); return true; }
 
-	r_ui_list* p = r_popup(e->ui_list, data->r, R_POPUP_AUTOCLOSE, P420);
+	r_ui_list* p = r_popup(e->ui_list, data->r, R_POPUP_AUTOCLOSE, r_salt(data->r, P420).id);
 	r_list_clear(p);
 	int item_h = r_layout_default_size(c, R_STYLE_MENU_ITEM);
 	int w = 0;
@@ -558,7 +558,7 @@ static void dropdown_update(r_context* c, r_drawable* d)
 void r_dropdown(r_ui_list* l, rect r, char** items, int count, r_data_binding selected)
 {
 	r_context* c = l->context;
-	r_popup_keep_alive(l, r, P420);
+	r_ephemeral_keep_alive(l, r_salt(r, P420).id);
 	struct dropdown_data data = { items, count, selected, r, 0, NULL };
 	r_callback* cb = r_attach_callback(l, r, R_ACTIVATION, dropdown_toggle);
 	r_callback_set_data(l, cb, &data, sizeof(data));
