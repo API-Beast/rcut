@@ -178,15 +178,15 @@ static void doc_r_draw_upload_icon(r_sdl_frontend* f, r_ui_list* ui)
 //! `ops` points to a list of @ref r_draw_icon_op terminated by `R_ICON_OP_END`, usually created with `R_OP`.
 //@struct r_draw_icon_def
 
-//! Instructions of the icon language on a 24x24 canvas. The `R_LINE`, `R_PLINE`, `R_ARC`, `R_CIRCLE`, `R_DISC`, `R_RECT` and `R_WIDTH` macros emit them.
+//! Emit @ref r_draw_icon_op instructions. `R_OP` wraps them into a terminated compound literal, which is only static at file scope.
 //!
 //! ```c
-//! static r_draw_icon_def check = { R_OP(R_WIDTH(2.5f), R_PLINE(3, 5, 12, 10, 17, 19, 7)) };
+//! static r_draw_icon_def check = { R_OP(R_WIDTH(2.5f), R_PLINE(3, 5, 12, 10, 17, 19, 7)) }; // File scope
 //! // [...]
 //! r_draw_upload_icon(&f->draw, R_ICON_USER, &check);
 //! r_icon(ui, r, 0, R_ICON_USER);
 //! ```
-//@enum r_draw_icon_op
+//@define R_OP R_LINE R_PLINE R_ARC R_CIRCLE R_DISC R_RECT R_WIDTH
 
 //! Returns the largest square centered in `outer`.
 //! @see_also r_draw_upload_icon r_draw_render_icon
