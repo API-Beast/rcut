@@ -129,7 +129,7 @@ while i < len(lines):
     if kind == "function":
         e.update(code=signatures(name))
     elif kind == "define":
-        e.update(code=defines(name))
+        e.update(code="\n".join(defines(n) for n in [name] + flags))
     elif kind == "struct" and opaque:
         e.update(code="typedef struct %s %s;" % (name, name))
     elif kind in ("enum", "struct"):
