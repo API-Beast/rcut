@@ -1,5 +1,6 @@
 #define _DEFAULT_SOURCE
 #include "internal.h"
+#include <limits.h>
 
 enum r_font_category
 {

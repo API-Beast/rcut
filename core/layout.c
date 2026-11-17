@@ -1,4 +1,5 @@
 #include "internal.h"
+#include <limits.h>
 
 rect r_cut_px(r_alignment dir, rect* target, int pixels, uint64_t salt)
 {
