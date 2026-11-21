@@ -8,8 +8,12 @@
 
 #define WARN_ONCE(MSG) {static bool wrote_warning = false; if(!wrote_warning){ wrote_warning = true; fprintf(stderr, "RCUT warning %s: "MSG"\n", __func__); }}
 
+#undef MAX
+#undef MIN
+
 #define MAX(a, b) (((a) < (b)) ? (b) : (a))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 #define TAU 6.28318530717958647692f // Full turn in radians
 #define COUNTOF(a) ((int)(sizeof(a) / sizeof((a)[0])))
 

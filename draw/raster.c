@@ -148,11 +148,7 @@ rect r_draw_stylebox_outer_rect(r_draw* c, int slot, rect* inner)
     return r_grow_sides(*inner, sb->side_inset[0], sb->side_inset[1], sb->side_inset[2], sb->side_inset[3]);
 }
 
-
 static inline float len(float x, float y){ return sqrtf(x*x+y*y);}
-
-static inline int max(int a, int b){ return a > b ? a : b; }
-static inline float maxf(float a, float b){ return a > b ? a : b; }
 
 typedef struct
 {
@@ -182,14 +178,14 @@ static inline sb_cell calc_cel_size(r_draw_stylebox_def* d, int x, int y)
     if(is_corner)
     {
         int idx = (x == 2) + 2 * (y == 2);
-        r.w = max(r.w, d->corner_radius[idx]);
-        r.h = max(r.h, d->corner_radius[idx]);
+        r.w = MAX(r.w, d->corner_radius[idx]);
+        r.h = MAX(r.h, d->corner_radius[idx]);
         for(int i = 0; i < 4; i++)
         {
             if(!d->shadows[i].color) continue;
             float reach = d->corner_radius[idx] + d->shadows[i].blur / 2;
-            r.w = max(r.w, (int)ceilf((x == 0 ? 1 : -1) * d->shadows[i].offset_x + reach));
-            r.h = max(r.h, (int)ceilf((y == 0 ? 1 : -1) * d->shadows[i].offset_y + reach));
+            r.w = MAX(r.w, (int)ceilf((x == 0 ? 1 : -1) * d->shadows[i].offset_x + reach));
+            r.h = MAX(r.h, (int)ceilf((y == 0 ? 1 : -1) * d->shadows[i].offset_y + reach));
         }
     }
     // Center
@@ -202,8 +198,8 @@ static inline sb_cell calc_cel_size(r_draw_stylebox_def* d, int x, int y)
         }
         else
         {
-            r.w = max(d->bg_raster_width, 4);
-            r.h = max(d->bg_raster_height, 4);
+            r.w = MAX(d->bg_raster_width, 4);
+            r.h = MAX(d->bg_raster_height, 4);
         }
     }
     else
@@ -214,15 +210,15 @@ static inline sb_cell calc_cel_size(r_draw_stylebox_def* d, int x, int y)
         {
             if(d->shadows[i].is_inset)
             {
-                r.inner_w = max(r.inner_w, ext_w_dir * d->shadows[i].offset_x + d->shadows[i].blur + d->shadows[i].grow);
-                r.inner_h = max(r.inner_h, ext_h_dir * d->shadows[i].offset_y + d->shadows[i].blur + d->shadows[i].grow);
+                r.inner_w = MAX(r.inner_w, ext_w_dir * d->shadows[i].offset_x + d->shadows[i].blur + d->shadows[i].grow);
+                r.inner_h = MAX(r.inner_h, ext_h_dir * d->shadows[i].offset_y + d->shadows[i].blur + d->shadows[i].grow);
             }
             else
             {
-                r.drawn_w = max(r.drawn_w, ext_w_dir * d->shadows[i].offset_x + d->shadows[i].blur + d->shadows[i].grow);
-                r.drawn_h = max(r.drawn_h, ext_h_dir * d->shadows[i].offset_y + d->shadows[i].blur + d->shadows[i].grow);
-                r.ext_w = max(r.ext_w, r.drawn_w);
-                r.ext_h = max(r.ext_h, r.drawn_h);
+                r.drawn_w = MAX(r.drawn_w, ext_w_dir * d->shadows[i].offset_x + d->shadows[i].blur + d->shadows[i].grow);
+                r.drawn_h = MAX(r.drawn_h, ext_h_dir * d->shadows[i].offset_y + d->shadows[i].blur + d->shadows[i].grow);
+                r.ext_w = MAX(r.ext_w, r.drawn_w);
+                r.ext_h = MAX(r.ext_h, r.drawn_h);
             }
         }
     }
@@ -546,9 +542,9 @@ bool r_draw_generate_stylebox(r_draw* c, int slot, r_draw_stylebox_def* logical_
         int w = 0, inner_w = 0, ext_w = 0;
         for(int y = 0; y < 3; y++)
         {
-            w       = max(w, sizes[y*3+x].w);
-            inner_w = max(inner_w, sizes[y*3+x].inner_w);
-            ext_w   = max(ext_w, sizes[y*3+x].ext_w);
+            w       = MAX(w, sizes[y*3+x].w);
+            inner_w = MAX(inner_w, sizes[y*3+x].inner_w);
+            ext_w   = MAX(ext_w, sizes[y*3+x].ext_w);
         }
         cur_x += w + inner_w + ext_w;
         for(int y = 0; y < 3; y++)
@@ -564,9 +560,9 @@ bool r_draw_generate_stylebox(r_draw* c, int slot, r_draw_stylebox_def* logical_
         int h = 0, inner_h = 0, ext_h = 0;
         for(int x = 0; x < 3; x++)
         {
-            h       = max(h, sizes[y*3+x].h);
-            inner_h = max(inner_h, sizes[y*3+x].inner_h);
-            ext_h   = max(ext_h, sizes[y*3+x].ext_h);
+            h       = MAX(h, sizes[y*3+x].h);
+            inner_h = MAX(inner_h, sizes[y*3+x].inner_h);
+            ext_h   = MAX(ext_h, sizes[y*3+x].ext_h);
         }
         cur_y += h + inner_h + ext_h;
         for(int x = 0; x < 3; x++)

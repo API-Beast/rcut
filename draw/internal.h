@@ -96,4 +96,10 @@ void __draw_clear_glyph_cache(r_draw* c);
 void __draw_free_text(r_draw* c);
 void __draw_render_text(r_draw* c, r_drawable* d, const r_draw_style_rule* rule, rect bounds, r_alignment align, rect clip);
 
+#undef MAX
+#undef MIN
+
+#define MAX(a, b) (((a) < (b)) ? (b) : (a))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 #endif
